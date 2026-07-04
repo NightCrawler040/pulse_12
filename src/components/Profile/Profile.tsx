@@ -28,16 +28,18 @@ export const Profile: React.FC = () => {
   }
 
   const isOnline = onlineUserIds.includes(currentUser.id);
-  const myTasks = tasks.filter(t => t.assigneeId === currentUser.id);
+  const myDirectTasks = tasks.filter(t => t.assigneeId === currentUser.id);
   
   // Group tasks
   const myGroupIds = groups.filter(g => g.memberIds.includes(currentUser.id)).map(g => g.id);
   const myGroupTasks = tasks.filter(t => t.assigneeGroupId && myGroupIds.includes(t.assigneeGroupId) && t.assigneeId !== currentUser.id);
+  const allMyTasks = tasks.filter(t => t.assigneeId === currentUser.id || (t.assigneeGroupId && myGroupIds.includes(t.assigneeGroupId)));
 
-  const completedTasks = myTasks.filter(t => t.status === 'done');
-  const completionRate = myTasks.length > 0 ? Math.round((completedTasks.length / myTasks.length) * 100) : 0;
-  const totalLoggedHours = myTasks.reduce((sum, t) => sum + (t.loggedHours || 0), 0);
-  const totalStoryPoints = myTasks.reduce((sum, t) => sum + (t.storyPoints || 0), 0);
+  const completedTasks = allMyTasks.filter(t => t.status === 'done');
+  const completionRate = allMyTasks.length > 0 ? Math.round((completedTasks.length / allMyTasks.length) * 100) : 0;
+  const totalLoggedHours = allMyTasks.reduce((sum, t) => sum + (t.loggedHours || 0), 0);
+  const totalEstimatedHours = allMyTasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0);
+  const totalStoryPoints = allMyTasks.reduce((sum, t) => sum + (t.storyPoints || 0), 0);
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -228,8 +230,8 @@ export const Profile: React.FC = () => {
       <div className="profile-stats-grid">
         <div className="profile-stat-box">
           <span className="stat-box-label">🎯 Назначено задач</span>
-          <span className="stat-box-value">{myTasks.length}</span>
-          <span className="stat-box-sub">Всего в текущих спринтах</span>
+          <span className="stat-box-value">{allMyTasks.length}</span>
+          <span className="stat-box-sub">Лично: <strong>{myDirectTasks.length}</strong> • В командах: <strong>{myGroupTasks.length}</strong></span>
         </div>
 
         <div className="profile-stat-box">
@@ -241,7 +243,7 @@ export const Profile: React.FC = () => {
         <div className="profile-stat-box">
           <span className="stat-box-label">⏳ Затрачено времени</span>
           <span className="stat-box-value" style={{ color: '#38bdf8' }}>{totalLoggedHours} ч</span>
-          <span className="stat-box-sub">Залогировано часов в задачах</span>
+          <span className="stat-box-sub">Оценка: {totalEstimatedHours} ч ({Math.round((totalLoggedHours / (totalEstimatedHours || 1)) * 100)}%)</span>
         </div>
 
         <div className="profile-stat-box">
@@ -255,20 +257,20 @@ export const Profile: React.FC = () => {
       <div className="profile-tasks-section">
         <div className="section-title-row">
           <h2 className="section-title">
-            <span>📌</span> Мои назначенные задачи ({myTasks.length})
+            <span>📌</span> Мои назначенные задачи ({myDirectTasks.length})
           </h2>
           <span style={{ fontSize: '0.8rem', color: 'hsl(var(--text-muted))' }}>
             Нажмите на карточку, чтобы открыть детали или сдвинуть статус
           </span>
         </div>
 
-        {myTasks.length === 0 ? (
+        {myDirectTasks.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px', color: 'hsl(var(--text-muted))' }}>
             У вас пока нет назначенных задач в этом проекте 🎉
           </div>
         ) : (
           <div className="my-tasks-grid">
-            {myTasks.map(t => (
+            {myDirectTasks.map(t => (
               <div
                 key={t.id}
                 className="my-task-card"

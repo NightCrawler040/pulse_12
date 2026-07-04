@@ -10,7 +10,7 @@ interface Props {
 }
 
 export const NotificationPopover: React.FC<Props> = ({ isOpen, onClose }) => {
-  const { notifications, markNotificationRead, markAllNotificationsRead, setActiveTaskModalId } = useTaskContext();
+  const { notifications, markNotificationRead, markAllNotificationsRead, setActiveTaskModalId, setViewMode } = useTaskContext();
   const { currentUser } = useAuth();
   const [toastList, setToastList] = useState<any[]>([]);
 
@@ -43,8 +43,10 @@ export const NotificationPopover: React.FC<Props> = ({ isOpen, onClose }) => {
 
   const handleNotificationClick = (notif: any) => {
     markNotificationRead(notif.id);
-    if (notif.linkTaskId) {
-      setActiveTaskModalId(notif.linkTaskId);
+    const targetId = notif.linkTaskId || notif.taskId || notif.linkId || (notif.message?.match(/(NEX-\d+)/)?.[1]);
+    if (targetId) {
+      setViewMode('board');
+      setActiveTaskModalId(targetId);
       onClose();
     }
   };
@@ -70,23 +72,30 @@ export const NotificationPopover: React.FC<Props> = ({ isOpen, onClose }) => {
 
             <div className="notif-list">
               {myNotifications.length > 0 ? (
-                myNotifications.map(n => (
-                  <div
-                    key={n.id}
-                    className={`notif-item ${n.read ? 'read' : 'unread'}`}
-                    onClick={() => handleNotificationClick(n)}
-                  >
-                    <div className="notif-icon-badge">
-                      {n.type === 'task_assigned' ? '👤' : n.type === 'status_changed' ? '🔄' : n.type === 'comment_added' ? '💬' : '📢'}
+                myNotifications.map(n => {
+                  const hasLink = !!(n.linkTaskId || (n as any).taskId || (n as any).linkId || (n.message?.match(/(NEX-\d+)/)?.[1]));
+                  return (
+                    <div
+                      key={n.id}
+                      className={`notif-item ${n.read ? 'read' : 'unread'}`}
+                      onClick={() => handleNotificationClick(n)}
+                      style={{ cursor: hasLink ? 'pointer' : 'default' }}
+                      title={hasLink ? "Нажмите, чтобы открыть задачу на доске" : undefined}
+                    >
+                      <div className="notif-icon-badge">
+                        {n.type === 'task_assigned' ? '👤' : n.type === 'status_changed' ? '🔄' : n.type === 'comment_added' ? '💬' : '📢'}
+                      </div>
+                      <div className="notif-content">
+                        <span className="notif-title">
+                          {n.title} {hasLink && <span style={{ fontSize: '0.75rem', color: 'hsl(var(--primary))', fontWeight: 'bold' }}>↗ Открыть</span>}
+                        </span>
+                        <p className="notif-message">{n.message}</p>
+                        <span className="notif-time">{new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                      {!n.read && <span className="unread-dot" />}
                     </div>
-                    <div className="notif-content">
-                      <span className="notif-title">{n.title}</span>
-                      <p className="notif-message">{n.message}</p>
-                      <span className="notif-time">{new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                    {!n.read && <span className="unread-dot" />}
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <div className="empty-notif">
                   <span>💤</span>

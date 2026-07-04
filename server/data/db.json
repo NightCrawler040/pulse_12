@@ -1,9 +1,39 @@
 {
   "tasks": [
     {
-      "title": "Dnjdnsfjdsjn",
+      "title": "sdfkskldfklsdfjsd",
       "description": "",
       "status": "todo",
+      "priority": "medium",
+      "assigneeId": "usr-1783173872219",
+      "assigneeGroupId": null,
+      "storyPoints": 3,
+      "estimatedHours": 8,
+      "loggedHours": 0,
+      "sprintId": "sprint-1",
+      "tags": [
+        "Engineering"
+      ],
+      "subtasks": [],
+      "attachments": [
+        {
+          "id": "att-1783195755815",
+          "filename": "Все вопаросы (2).docx",
+          "url": "http://localhost:3001/uploads/doc_1783195755796_10296.docx",
+          "size": 31959,
+          "uploadedAt": "2026-07-04T20:09:15.815Z",
+          "uploadedBy": "usr-1"
+        }
+      ],
+      "id": "NEX-968",
+      "createdAt": "2026-07-04T20:09:17.298Z",
+      "updatedAt": "2026-07-04T20:09:17.298Z",
+      "comments": []
+    },
+    {
+      "title": "Dnjdnsfjdsjn",
+      "description": "",
+      "status": "done",
       "priority": "urgent",
       "assigneeId": "usr-1783173872219",
       "assigneeGroupId": null,
@@ -18,7 +48,7 @@
       "attachments": [],
       "id": "NEX-904",
       "createdAt": "2026-07-04T17:53:01.233Z",
-      "updatedAt": "2026-07-04T17:53:01.233Z",
+      "updatedAt": "2026-07-04T20:08:46.962Z",
       "comments": []
     },
     {
@@ -71,7 +101,7 @@
       "description": "Обеспечить возможность Администратору создавать учетные записи с Логином и Паролем. Перевести модальное окно авторизации на форму ввода учетных данных.",
       "status": "review",
       "priority": "high",
-      "assigneeId": "usr-2",
+      "assigneeId": "unassigned",
       "storyPoints": 5,
       "estimatedHours": 12,
       "loggedHours": 6,
@@ -108,7 +138,7 @@
       "description": "Когда сотрудник перемещает задачу на своем ноутбуке, у всех остальных коллег в офисе доска должна обновляться автоматически без перезагрузки браузера.",
       "status": "in-progress",
       "priority": "urgent",
-      "assigneeId": "usr-5",
+      "assigneeId": "unassigned",
       "storyPoints": 8,
       "estimatedHours": 20,
       "loggedHours": 10,
@@ -119,12 +149,12 @@
         "Frontend"
       ],
       "createdAt": "2026-07-02T11:30:00Z",
-      "updatedAt": "2026-07-04T17:17:52.031Z",
+      "updatedAt": "2026-07-04T20:15:42.174Z",
       "subtasks": [
         {
           "id": "sub-7",
           "title": "Подключить socket.io-client в TaskContext",
-          "completed": false
+          "completed": true
         },
         {
           "id": "sub-8",
@@ -145,15 +175,17 @@
           "text": "fsdf",
           "createdAt": "2026-07-04T17:17:52.024Z"
         }
-      ]
+      ],
+      "assigneeGroupId": null,
+      "attachments": []
     },
     {
       "id": "NEX-104",
       "title": "Переключатель IP-адреса сервера в шапке портала",
       "description": "Добавить кнопку в Header, позволяющую сотрудникам в один клик указать IP-адрес центрального ноутбука в Wi-Fi сети.",
-      "status": "in-progress",
+      "status": "review",
       "priority": "medium",
-      "assigneeId": "usr-4",
+      "assigneeId": "unassigned",
       "storyPoints": 3,
       "estimatedHours": 6,
       "loggedHours": 0,
@@ -163,7 +195,7 @@
         "UI/UX"
       ],
       "createdAt": "2026-07-03T14:00:00Z",
-      "updatedAt": "2026-07-04T17:17:34.596Z",
+      "updatedAt": "2026-07-04T20:14:33.204Z",
       "subtasks": [],
       "comments": []
     },
@@ -173,7 +205,7 @@
       "description": "Удалить тяжелые backdrop-filter: blur и непрерывные transition: all для мгновенного отклика при перетаскивании карточек на любых ноутбуках.",
       "status": "done",
       "priority": "high",
-      "assigneeId": "usr-4",
+      "assigneeId": "unassigned",
       "storyPoints": 5,
       "estimatedHours": 10,
       "loggedHours": 10,
@@ -204,7 +236,7 @@
       "description": "Создать вкладку с персональной статистикой KPI, отработанными часами, Story Points и списком закрепленных задач.",
       "status": "done",
       "priority": "medium",
-      "assigneeId": "usr-7",
+      "assigneeId": "unassigned",
       "storyPoints": 5,
       "estimatedHours": 14,
       "loggedHours": 14,
@@ -245,7 +277,7 @@
       "description": "Написать сценарии проверки жизненного цикла задачи: создание -> взятие в работу -> проверка -> завершение.",
       "status": "todo",
       "priority": "medium",
-      "assigneeId": "usr-12",
+      "assigneeId": "unassigned",
       "storyPoints": 5,
       "estimatedHours": 16,
       "loggedHours": 0,
@@ -293,149 +325,6 @@
       "isActive": true
     },
     {
-      "id": "usr-2",
-      "name": "Елена Васильева",
-      "login": "evasilieva",
-      "password": "1234",
-      "role": "Product Manager",
-      "roleType": "manager",
-      "department": "Product",
-      "email": "e.vasilieva@corp.lan",
-      "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
-      "pin": "1234",
-      "isActive": true
-    },
-    {
-      "id": "usr-3",
-      "name": "Дмитрий Волков",
-      "login": "dvolkov",
-      "password": "1234",
-      "role": "Scrum Master",
-      "roleType": "manager",
-      "department": "Agile",
-      "email": "d.volkov@corp.lan",
-      "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
-      "pin": "1234",
-      "isActive": true
-    },
-    {
-      "id": "usr-4",
-      "name": "Сергей Петров",
-      "login": "spetrov",
-      "password": "1234",
-      "role": "Senior Frontend Dev",
-      "roleType": "member",
-      "department": "Frontend",
-      "email": "s.petrov@corp.lan",
-      "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
-      "pin": "1234",
-      "isActive": false
-    },
-    {
-      "id": "usr-5",
-      "name": "Анна Соколова",
-      "login": "asokolova",
-      "password": "1234",
-      "role": "Senior Backend Dev",
-      "roleType": "member",
-      "department": "Backend",
-      "email": "a.sokolova@corp.lan",
-      "avatar": "http://localhost:3001/uploads/avatar_1783185335829_945.jpeg",
-      "pin": "1234",
-      "isActive": false
-    },
-    {
-      "id": "usr-6",
-      "name": "Михаил Иванов",
-      "login": "mivanov",
-      "password": "1234",
-      "role": "Fullstack Dev",
-      "roleType": "member",
-      "department": "Engineering",
-      "email": "m.ivanov@corp.lan",
-      "avatar": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80",
-      "pin": "1234",
-      "isActive": true
-    },
-    {
-      "id": "usr-7",
-      "name": "Полина Кузнецова",
-      "login": "pkuznetsova",
-      "password": "1234",
-      "role": "UX/UI Designer",
-      "roleType": "member",
-      "department": "Design",
-      "email": "p.kuznetsova@corp.lan",
-      "avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80",
-      "pin": "1234",
-      "isActive": true
-    },
-    {
-      "id": "usr-8",
-      "name": "Николай Попов",
-      "login": "npopov",
-      "password": "1234",
-      "role": "DevOps Engineer",
-      "roleType": "member",
-      "department": "Infrastructure",
-      "email": "n.popov@corp.lan",
-      "avatar": "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80",
-      "pin": "1234",
-      "isActive": true
-    },
-    {
-      "id": "usr-9",
-      "name": "Мария Лебедева",
-      "login": "mlebedeva",
-      "password": "1234",
-      "role": "QA Lead",
-      "roleType": "member",
-      "department": "Quality Assurance",
-      "email": "m.lebedeva@corp.lan",
-      "avatar": "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80",
-      "pin": "1234",
-      "isActive": true
-    },
-    {
-      "id": "usr-10",
-      "name": "Артем Морозов",
-      "login": "amorozov",
-      "password": "1234",
-      "role": "Backend Developer",
-      "roleType": "member",
-      "department": "Backend",
-      "email": "a.morozov@corp.lan",
-      "avatar": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80",
-      "pin": "1234",
-      "isActive": true
-    },
-    {
-      "id": "usr-11",
-      "name": "Ольга Новикова",
-      "login": "onovikova",
-      "password": "1234",
-      "role": "Frontend Developer",
-      "roleType": "member",
-      "department": "Frontend",
-      "email": "o.novikova@corp.lan",
-      "avatar": "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=150&auto=format&fit=crop&q=80",
-      "pin": "1234",
-      "isActive": true
-    },
-    {
-      "id": "usr-12",
-      "name": "Иван Козлов",
-      "login": "ikozlov",
-      "password": "1234",
-      "role": "QA Automation",
-      "roleType": "member",
-      "department": "Quality Assurance",
-      "email": "i.kozlov@corp.lan",
-      "avatar": "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150&auto=format&fit=crop&q=80",
-      "pin": "1234",
-      "isActive": true
-    },
-    {
       "name": "Қайратов Біржан",
       "email": "b.kairatov@enpf.kz",
       "login": "b.kairatov",
@@ -455,40 +344,26 @@
       "name": "🚀 Команда Разработки (Engineering)",
       "color": "#3b82f6",
       "memberIds": [
-        "usr-1",
-        "usr-4",
-        "usr-5",
-        "usr-6",
-        "usr-8",
-        "usr-10",
-        "usr-11"
+        "usr-1"
       ]
     },
     {
       "id": "grp-2",
       "name": "🎯 Менеджмент и Продукт (Product & Agile)",
       "color": "#8b5cf6",
-      "memberIds": [
-        "usr-2",
-        "usr-3"
-      ]
+      "memberIds": []
     },
     {
       "id": "grp-3",
       "name": "🛡️ Отдел Тестирования (Quality Assurance)",
       "color": "#10b981",
-      "memberIds": [
-        "usr-9",
-        "usr-12"
-      ]
+      "memberIds": []
     },
     {
       "id": "grp-4",
       "name": "🎨 Дизайн и UX (Design Team)",
       "color": "#ec4899",
-      "memberIds": [
-        "usr-7"
-      ]
+      "memberIds": []
     }
   ]
 }

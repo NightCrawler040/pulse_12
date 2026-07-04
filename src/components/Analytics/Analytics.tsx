@@ -4,7 +4,7 @@ import { BarChart3, TrendingUp, Clock, AlertCircle, Award } from 'lucide-react';
 import './Analytics.css';
 
 export const Analytics: React.FC = () => {
-  const { tasks, users, activeSprintId } = useTaskContext();
+  const { tasks, users, groups, activeSprintId } = useTaskContext();
 
   const currentTasks = activeSprintId === 'all' 
     ? tasks 
@@ -36,7 +36,7 @@ export const Analytics: React.FC = () => {
         <div>
           <h2 className="analytics-title">Аналитика и Дашборд Эффективности</h2>
           <p className="analytics-subtitle">
-            Метрики производительности, распределение Story Points и анализ загрузки 12 сотрудников компании.
+            Метрики производительности, распределение Story Points и анализ загрузки {users.length} сотрудников компании.
           </p>
         </div>
       </div>
@@ -185,16 +185,16 @@ export const Analytics: React.FC = () => {
         </div>
       </div>
 
-      {/* Team Leaderboard (12 employees) */}
+      {/* Team Leaderboard */}
       <div className="leaderboard-panel glass-panel">
         <div className="leaderboard-header">
           <Award className="text-amber" size={20} />
-          <h3 className="chart-title">Вклад команды (12 сотрудников)</h3>
+          <h3 className="chart-title">Вклад сотрудников ({users.length} чел.)</h3>
         </div>
 
         <div className="leaderboard-grid">
           {users.map(u => {
-            const uTasks = tasks.filter(t => t.assigneeId === u.id);
+            const uTasks = currentTasks.filter(t => t.assigneeId === u.id || (t.assigneeGroupId && groups.some(g => g.id === t.assigneeGroupId && g.memberIds?.includes(u.id))));
             const uDone = uTasks.filter(t => t.status === 'done').length;
             const uSP = uTasks.reduce((sum, t) => sum + (t.storyPoints || 0), 0);
             return (
@@ -213,6 +213,36 @@ export const Analytics: React.FC = () => {
           })}
         </div>
       </div>
+
+      {/* Group Leaderboard */}
+      {groups && groups.length > 0 && (
+        <div className="leaderboard-panel glass-panel" style={{ marginTop: '24px' }}>
+          <div className="leaderboard-header">
+            <span style={{ fontSize: '1.2rem' }}>🏢</span>
+            <h3 className="chart-title">Эффективность Команд / Отделов ({groups.length})</h3>
+          </div>
+
+          <div className="leaderboard-grid">
+            {groups.map(grp => {
+              const grpTasks = currentTasks.filter(t => t.assigneeGroupId === grp.id || (t.assigneeId && grp.memberIds?.includes(t.assigneeId)));
+              const grpDone = grpTasks.filter(t => t.status === 'done').length;
+              const grpSP = grpTasks.reduce((sum, t) => sum + (t.storyPoints || 0), 0);
+              return (
+                <div key={grp.id} className="leaderboard-item" style={{ borderLeft: `4px solid ${grp.color || '#3b82f6'}` }}>
+                  <div className="leaderboard-info">
+                    <span className="leader-name">{grp.name}</span>
+                    <span className="leader-role">{grp.memberIds?.length || 0} участников в команде</span>
+                  </div>
+                  <div className="leaderboard-stats">
+                    <span className="leader-sp">{grpSP} SP</span>
+                    <span className="leader-tasks">{grpDone}/{grpTasks.length} задач</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

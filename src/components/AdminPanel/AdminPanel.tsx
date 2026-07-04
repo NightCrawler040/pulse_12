@@ -35,6 +35,16 @@ export const AdminPanel: React.FC = () => {
   // Password reveal confirmation states
   const [revealedUsers, setRevealedUsers] = useState<Record<string, boolean>>({});
 
+  // Bulk selection and confirmation modal states
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState<{
+    isOpen: boolean;
+    type: 'single' | 'bulk';
+    targetUser?: User;
+  }>({ isOpen: false, type: 'single' });
+
+  const isProtectedAdmin = (u: User) => u.id === 'usr-1' || u.login?.toLowerCase() === 'admin';
+
   if (!isAdmin) {
     return (
       <div className="admin-panel-container" style={{ textAlign: 'center', padding: '80px 20px' }}>
@@ -115,10 +125,6 @@ export const AdminPanel: React.FC = () => {
     } else {
       deleteUser(user.id, false);
     }
-  };
-
-  const handleDeletePermanent = (user: User) => {
-    deleteUser(user.id, true);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -232,9 +238,20 @@ export const AdminPanel: React.FC = () => {
         </div>
 
         {activeTab === 'users' ? (
-          <button className="btn-primary" onClick={handleOpenAddModal}>
-            ➕ Добавить нового сотрудника
-          </button>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            {selectedUserIds.length > 0 && (
+              <button
+                className="btn-secondary"
+                style={{ background: '#ef4444', color: 'white', border: 'none', fontWeight: 'bold' }}
+                onClick={() => setDeleteConfirmModal({ isOpen: true, type: 'bulk' })}
+              >
+                🗑️ Удалить выбранных ({selectedUserIds.length})
+              </button>
+            )}
+            <button className="btn-primary" onClick={handleOpenAddModal}>
+              ➕ Добавить нового сотрудника
+            </button>
+          </div>
         ) : (
           <button className="btn-primary" onClick={handleOpenAddGroupModal}>
             ➕ Создать команду / группу
@@ -249,6 +266,22 @@ export const AdminPanel: React.FC = () => {
             <table className="users-admin-table">
               <thead>
                 <tr>
+                  <th style={{ width: '40px', textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={users.filter(u => !isProtectedAdmin(u)).length > 0 && users.filter(u => !isProtectedAdmin(u)).every(u => selectedUserIds.includes(u.id))}
+                      onChange={() => {
+                        const selectable = users.filter(u => !isProtectedAdmin(u));
+                        if (selectable.every(u => selectedUserIds.includes(u.id))) {
+                          setSelectedUserIds([]);
+                        } else {
+                          setSelectedUserIds(selectable.map(u => u.id));
+                        }
+                      }}
+                      title="Выбрать всех (кроме главного администратора)"
+                      style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                    />
+                  </th>
                   <th>Сотрудник</th>
                   <th>Логин (учетка)</th>
                   <th>Должность</th>
@@ -264,13 +297,30 @@ export const AdminPanel: React.FC = () => {
                   const isInactive = u.isActive === false;
                   const isRevealed = !!revealedUsers[u.id];
                   const secret = u.password || u.pin || '1234';
+                  const isProtected = isProtectedAdmin(u);
                   return (
                     <tr key={u.id} className={isInactive ? 'user-disabled' : ''}>
+                      <td style={{ textAlign: 'center' }}>
+                        {isProtected ? (
+                          <span title="Главный администратор защищен от удаления" style={{ fontSize: '1rem', cursor: 'not-allowed' }}>👑</span>
+                        ) : (
+                          <input
+                            type="checkbox"
+                            checked={selectedUserIds.includes(u.id)}
+                            onChange={() => {
+                              setSelectedUserIds(prev =>
+                                prev.includes(u.id) ? prev.filter(id => id !== u.id) : [...prev, u.id]
+                              );
+                            }}
+                            style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                          />
+                        )}
+                      </td>
                       <td>
                         <div className="admin-user-cell">
                           <img src={u.avatar} alt={u.name} className="admin-user-avatar" />
                           <div className="admin-user-details">
-                            <span className="admin-user-name">{u.name}</span>
+                            <span className="admin-user-name">{u.name} {isProtected && <span style={{ color: '#f59e0b', fontSize: '0.8rem' }}>(Главный админ)</span>}</span>
                             <span className="admin-user-email">{u.email}</span>
                           </div>
                         </div>
@@ -321,14 +371,20 @@ export const AdminPanel: React.FC = () => {
                           >
                             {isInactive ? '🔓 Разблокировать' : '🚫 Блокировать'}
                           </button>
-                          <button
-                            className="btn-icon-mini btn-icon-danger"
-                            onClick={() => handleDeletePermanent(u)}
-                            title="Удалить пользователя из базы данных навсегда"
-                            style={{ color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.4)' }}
-                          >
-                            🗑️ Удалить
-                          </button>
+                          {isProtected ? (
+                            <span style={{ color: '#94a3b8', fontSize: '0.8rem', padding: '4px 8px', background: 'rgba(148,163,184,0.1)', borderRadius: '4px', border: '1px solid rgba(148,163,184,0.2)' }}>
+                              👑 Защищен
+                            </span>
+                          ) : (
+                            <button
+                              className="btn-icon-mini btn-icon-danger"
+                              onClick={() => setDeleteConfirmModal({ isOpen: true, type: 'single', targetUser: u })}
+                              title="Удалить пользователя из базы данных навсегда"
+                              style={{ color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.4)' }}
+                            >
+                              🗑️ Удалить
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -606,6 +662,53 @@ export const AdminPanel: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal for User Deletion */}
+      {deleteConfirmModal.isOpen && (
+        <div className="modal-overlay" style={{ zIndex: 3000 }}>
+          <div className="modal-content animate-scale-up" style={{ maxWidth: '440px', textAlign: 'center', padding: '24px' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '12px' }}>⚠️</div>
+            <h3 style={{ fontSize: '1.3rem', marginBottom: '12px', color: '#ef4444' }}>
+              Подтверждение удаления
+            </h3>
+            <p style={{ color: 'hsl(var(--text-secondary))', marginBottom: '20px', lineHeight: '1.5' }}>
+              {deleteConfirmModal.type === 'single'
+                ? `Вы действительно хотите безвозвратно удалить сотрудника «${deleteConfirmModal.targetUser?.name}»? Все его задачи будут переведены в статус "Не назначен".`
+                : `Вы действительно хотите безвозвратно удалить выбранных сотрудников (${selectedUserIds.length} чел.)? Это действие невозможно отменить.`}
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setDeleteConfirmModal({ isOpen: false, type: 'single' })}
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                style={{ background: '#ef4444', border: 'none', fontWeight: 'bold' }}
+                onClick={() => {
+                  if (deleteConfirmModal.type === 'single' && deleteConfirmModal.targetUser) {
+                    deleteUser(deleteConfirmModal.targetUser.id, true);
+                  } else if (deleteConfirmModal.type === 'bulk') {
+                    selectedUserIds.forEach(id => {
+                      const target = users.find(u => u.id === id);
+                      if (target && !isProtectedAdmin(target)) {
+                        deleteUser(id, true);
+                      }
+                    });
+                    setSelectedUserIds([]);
+                  }
+                  setDeleteConfirmModal({ isOpen: false, type: 'single' });
+                }}
+              >
+                🗑️ Да, удалить безвозвратно
+              </button>
+            </div>
           </div>
         </div>
       )}
