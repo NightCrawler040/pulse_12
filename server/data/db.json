@@ -1,27 +1,6 @@
 {
   "tasks": [
     {
-      "title": "ваыввавы",
-      "description": "",
-      "status": "todo",
-      "priority": "medium",
-      "assigneeId": "usr-1783173872219",
-      "assigneeGroupId": null,
-      "storyPoints": 3,
-      "estimatedHours": 8,
-      "loggedHours": 0,
-      "sprintId": "sprint-1",
-      "tags": [
-        "Engineering"
-      ],
-      "subtasks": [],
-      "attachments": [],
-      "id": "NEX-428",
-      "createdAt": "2026-07-04T18:39:01.690Z",
-      "updatedAt": "2026-07-04T18:39:01.690Z",
-      "comments": []
-    },
-    {
       "title": "Dnjdnsfjdsjn",
       "description": "",
       "status": "todo",

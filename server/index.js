@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initialUsers, initialSprints, initialTasks, initialGroups } from './initialData.js';
+import { initDb, getCollection, saveCollection, getAllData, saveAllData, isPostgresMode } from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,10 +26,8 @@ const io = new Server(server, {
 });
 
 const DATA_DIR = path.join(__dirname, 'data');
-const DB_FILE = path.join(DATA_DIR, 'db.json');
 const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
 
-// Ensure data and uploads directories exist
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
@@ -36,10 +35,10 @@ if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
-// Serve uploaded avatars statically
+// Serve uploaded avatars and documents statically
 app.use('/uploads', express.static(UPLOADS_DIR));
 
-// Load database from file or initialize with defaults
+// Load database from PostgreSQL (or fallback file)
 let dbData = {
   tasks: [],
   sprints: [],
@@ -48,59 +47,22 @@ let dbData = {
   notifications: []
 };
 
-const saveDatabase = () => {
-  try {
-    fs.writeFileSync(DB_FILE, JSON.stringify(dbData, null, 2), 'utf-8');
-  } catch (err) {
-    console.error('❌ Error saving database to db.json:', err);
-  }
-};
-
-const loadDatabase = () => {
-  if (fs.existsSync(DB_FILE)) {
-    try {
-      const raw = fs.readFileSync(DB_FILE, 'utf-8');
-      const parsed = JSON.parse(raw);
-      if (parsed && Array.isArray(parsed.tasks)) {
-        dbData = {
-          tasks: parsed.tasks || [],
-          sprints: parsed.sprints || initialSprints,
-          users: parsed.users || initialUsers,
-          groups: parsed.groups || initialGroups,
-          notifications: parsed.notifications || []
-        };
-        console.log(`✅ Loaded database from disk: ${dbData.tasks.length} tasks, ${dbData.users.length} users, ${dbData.groups.length} groups, ${dbData.notifications.length} notifications.`);
-        return;
-      }
-    } catch (err) {
-      console.warn('⚠️ Error reading db.json, resetting to default seed...', err);
-    }
-  }
-  // Initialize default
-  dbData = {
-    tasks: initialTasks,
-    sprints: initialSprints,
-    users: initialUsers,
-    groups: initialGroups,
-    notifications: []
-  };
-  saveDatabase();
-  console.log('🌱 Initialized new db.json with default seed data.');
-};
-
-loadDatabase();
-
 // Broadcast updates to all connected corporate laptops
-const broadcastUpdate = () => {
-  saveDatabase();
+const broadcastUpdate = async () => {
   io.emit('data-updated', dbData);
 };
 
 // --- REST API ENDPOINTS ---
 
 // Get all data
-app.get('/api/data', (req, res) => {
-  res.json(dbData);
+app.get('/api/data', async (req, res) => {
+  try {
+    dbData = await getAllData();
+    res.json(dbData);
+  } catch (err) {
+    console.error('❌ Error fetching data:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Login check
@@ -148,7 +110,7 @@ app.post('/api/tasks', (req, res) => {
     comments: newTaskData.comments || []
   };
   dbData.tasks.unshift(newTask);
-  broadcastUpdate();
+  broadcastUpdate('tasks');
   res.status(201).json(newTask);
 });
 
@@ -165,7 +127,7 @@ app.put('/api/tasks/:id', (req, res) => {
     return t;
   });
   if (found) {
-    broadcastUpdate();
+    broadcastUpdate('tasks');
     res.json({ success: true });
   } else {
     res.status(404).json({ error: 'Task not found' });
@@ -176,7 +138,7 @@ app.put('/api/tasks/:id', (req, res) => {
 app.delete('/api/tasks/:id', (req, res) => {
   const { id } = req.params;
   dbData.tasks = dbData.tasks.filter(t => t.id !== id);
-  broadcastUpdate();
+  broadcastUpdate('tasks');
   res.json({ success: true });
 });
 
@@ -194,7 +156,7 @@ app.post('/api/users', (req, res) => {
     isActive: true
   };
   dbData.users.push(newUser);
-  broadcastUpdate();
+  broadcastUpdate('users');
   res.status(201).json(newUser);
 });
 
@@ -208,7 +170,7 @@ app.put('/api/users/:id', (req, res) => {
     }
     return u;
   });
-  broadcastUpdate();
+  broadcastUpdate('users');
   res.json({ success: true });
 });
 
@@ -264,7 +226,7 @@ app.post('/api/groups', (req, res) => {
   };
   if (!dbData.groups) dbData.groups = [];
   dbData.groups.push(newGroup);
-  broadcastUpdate();
+  broadcastUpdate('groups');
   res.status(201).json(newGroup);
 });
 
@@ -278,7 +240,7 @@ app.put('/api/groups/:id', (req, res) => {
     }
     return g;
   });
-  broadcastUpdate();
+  broadcastUpdate('groups');
   res.json({ success: true });
 });
 
@@ -286,7 +248,7 @@ app.delete('/api/groups/:id', (req, res) => {
   const { id } = req.params;
   if (!dbData.groups) dbData.groups = [];
   dbData.groups = dbData.groups.filter(g => g.id !== id);
-  broadcastUpdate();
+  broadcastUpdate('groups');
   res.json({ success: true });
 });
 
@@ -396,7 +358,7 @@ io.on('connection', (socket) => {
     if (notif && notif.id) {
       if (!Array.isArray(dbData.notifications)) dbData.notifications = [];
       dbData.notifications = [notif, ...dbData.notifications.filter(n => n.id !== notif.id)].slice(0, 200);
-      saveDatabase();
+      broadcastUpdate('notifications');
     }
     io.emit('notification-received', notif);
   });
@@ -424,11 +386,19 @@ if (fs.existsSync(DIST_DIR)) {
   });
 }
 
-const PORT = process.env.PORT || 3001;
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n======================================================`);
-  console.log(`🚀 Корпоративный сервер Pulse 12 запущен на порту ${PORT}!`);
-  console.log(`💻 Локальный адрес: http://localhost:${PORT}`);
-  console.log(`🌐 Для подключения с других ПК укажите IP вашей vSphere машины (например, http://192.168.x.x:${PORT})`);
-  console.log(`======================================================\n`);
-});
+const startServer = async () => {
+  await initDb();
+  dbData = await getAllData();
+  console.log(`✅ Инициализированы данные системы (${isPostgresMode() ? 'PostgreSQL' : 'Файловый режим'}): ${dbData.tasks.length} задач, ${dbData.users.length} сотрудников.`);
+
+  const PORT = process.env.PORT || 3001;
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`\n======================================================`);
+    console.log(`🚀 Корпоративный сервер Pulse 12 запущен на порту ${PORT}!`);
+    console.log(`💻 Локальный адрес: http://localhost:${PORT}`);
+    console.log(`🌐 Для подключения с других ПК укажите IP вашей vSphere машины (например, http://192.168.x.x:${PORT})`);
+    console.log(`======================================================\n`);
+  });
+};
+
+startServer();

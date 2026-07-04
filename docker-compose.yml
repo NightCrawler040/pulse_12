@@ -1,18 +1,42 @@
 version: '3.8'
 
 services:
+  postgres_db:
+    image: postgres:16-alpine
+    container_name: pulse12-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: pulse12
+      POSTGRES_USER: pulse12_admin
+      POSTGRES_PASSWORD: corporate_secret_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pulse12_admin -d pulse12"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   pulse12-server:
     build: .
     container_name: pulse12-corporate
     restart: always
+    depends_on:
+      postgres_db:
+        condition: service_healthy
     ports:
       - "80:80"
     environment:
       - PORT=80
       - NODE_ENV=production
+      - DATABASE_URL=postgresql://pulse12_admin:corporate_secret_password@postgres_db:5432/pulse12
     volumes:
       - pulse12_data:/app/server/data
 
 volumes:
   pulse12_data:
     name: pulse12_corporate_data
+  postgres_data:
+    name: pulse12_postgres_data
