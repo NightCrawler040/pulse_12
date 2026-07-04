@@ -1,32 +1,75 @@
-# React + TypeScript + Vite
+# 🚀 Pulse12 — Корпоративная система управления задачами и проектами (LAN / vSphere)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+**Pulse12 FlowSpace** — это современная, интерактивная и защищенная система управления проектами (Agile/Scrum Канбан-доски), разработанная специально для автономной работы внутри корпоративной локальной сети (LAN) и развертывания на выделенных виртуальных машинах **Ubuntu Linux** в облаке **vSphere**.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## ✨ Ключевые возможности
 
-## React Compiler
+1. **📊 Интерактивные Канбан-доски и Спринты**
+   - Управление задачами в режиме реального времени (Колонки: *К выполнению, В работе, На проверке, Готово*).
+   - Поддержка приоритетов, тегов отдела, чек-листов подзадач и трекинга затраченного времени.
+   - Фильтрация по активным спринтам и отображение цели спринта (Sprint Goal Banner).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+2. **👥 Ролевая модель доступа (RBAC)**
+   - **Администратор (Tech Lead)**: Полный доступ ко всем задачам компании, управление сотрудниками, отделами и рабочими группами в защищенной Админ-панели.
+   - **Руководитель (Team Lead / Manager)**: Контроль загрузки своей команды и распределение задач.
+   - **Сотрудник (Member)**: Удобный персональный фильтр *«👤 Мои задачи и участие»*, отображающий только релевантный рабочий поток.
 
-## Expanding the Oxlint configuration
+3. **⚡ Автоматическая LAN-синхронизация**
+   - Встроенный Node.js бэкенд с поддержкой Server-Sent Events / WebSockets и REST API.
+   - Мгновенные уведомления в шапке при назначении задач, изменении статуса или новых комментариях со звуковым сигналом.
+   - Индикация присутствия сотрудников онлайн в офисе.
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+4. **🦊 Полная CI/CD интеграция с GitLab и GitHub Actions**
+   - Готовые пайплайны `.gitlab-ci.yml` и `.github/workflows/vsphere-deploy.yml`.
+   - Автоматическая сборка React-приложения, проверка TypeScript типов и генерация Docker-образа.
+   - Автоматическое развертывание на виртуальную машину Ubuntu в vSphere по SSH.
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+---
+
+## 🛠 Технологический стек
+
+- **Frontend**: React 18, TypeScript, Vite, Vanilla CSS (Glassmorphism & Rich Aesthetics), Lucide Icons.
+- **Backend**: Node.js, Express, поддержка локального хранилища JSON-базы (`db.json`) и загрузки вложений/аватаров.
+- **Деплой**: Docker, Docker Compose, Systemd, автоматизированные скрипты для Ubuntu Linux.
+
+---
+
+## 🚀 Быстрый запуск (Локально для разработки)
+
+```bash
+# 1. Установка зависимостей
+npm install
+
+# 2. Запуск в режиме разработки (Клиент + Сервер одновременно на портах 5173 и 3001)
+npm run dev:all
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+После запуска откройте в браузере адрес: `http://localhost:5173`. По умолчанию доступен удобный выбор учетных записей сотрудников или авторизация по логину/паролю.
+
+---
+
+## 🐧 Развертывание на Ubuntu в vSphere (через Docker Compose)
+
+На вашей виртуальной машине Ubuntu (например, `192.168.10.50`) выполните:
+
+```bash
+# 1. Склонируйте репозиторий в /opt/pulse12
+git clone https://github.com/NightCrawler040/pulse_12.git /opt/pulse12
+cd /opt/pulse12
+
+# 2. Запустите контейнеры в фоновом режиме
+sudo docker compose up --build -d
+```
+
+Система станет доступна всем сотрудникам в офисной сети по адресу: **`http://IP_АДРЕС_ВАШЕГО_СЕРВЕРА/`**.
+Подробное руководство по настройке брандмауэра и системных служб смотрите в файле [deploy-vsphere.md](./deploy-vsphere.md).
+
+---
+
+## 🔐 Настройка CI/CD Авто-деплоя
+Для автоматического обновления сервера при пуше в ветку `main`/`master` добавьте в секреты репозитория (GitLab Variables / GitHub Secrets):
+- `VSPHERE_SERVER_IP` — IP вашей виртуальной машины (напр. `192.168.10.50`)
+- `VSPHERE_SSH_USER` — пользователь Linux (`ubuntu` или `root`)
+- `VSPHERE_SSH_PRIVATE_KEY` — приватный SSH-ключ для доступа к серверу.
