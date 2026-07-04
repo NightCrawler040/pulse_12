@@ -1,0 +1,96 @@
+# GitLab CI/CD Pipeline for Pulse12 Corporate Task Tracker (vSphere / LAN Deploy)
+image: node:20-alpine
+
+stages:
+  - build
+  - test
+  - docker-package
+  - deploy-vsphere
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+  IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
+
+# 1. Сборка клиентского приложения (Vite React + TypeScript)
+build_client:
+  stage: build
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}-npm
+    paths:
+      - node_modules/
+  script:
+    - echo "🚀 Запуск сборки фронтенда Pulse12 FlowSpace..."
+    - npm ci --prefer-offline
+    - npm run build
+  artifacts:
+    name: "pulse12-dist-$CI_COMMIT_SHORT_SHA"
+    paths:
+      - dist/
+    expire_in: 7 days
+  only:
+    - master
+    - main
+    - merge_requests
+
+# 2. Проверка статического кода и типов
+test_code:
+  stage: test
+  dependencies:
+    - build_client
+  script:
+    - echo "🔍 Проверка TypeScript типов и синтаксиса..."
+    - npx tsc --noEmit
+  only:
+    - master
+    - main
+    - merge_requests
+
+# 3. Сборка Docker-образа (для локального реестра GitLab или корпоративного Registry)
+docker_build:
+  stage: docker-package
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  before_script:
+    - echo "🔑 Авторизация в GitLab Container Registry..."
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY || true
+  script:
+    - echo "📦 Сборка Docker-образа с Node.js сервером и статикой..."
+    - docker build -t $IMAGE_TAG .
+    - docker push $IMAGE_TAG || echo "⚠️ Пакет собран локально, пуш в регистр пропущен (настройте CI_REGISTRY)"
+  only:
+    - master
+    - main
+
+# 4. Автоматический деплой на виртуальную машину Ubuntu в корпоративном vSphere
+deploy_to_ubuntu_vsphere:
+  stage: deploy-vsphere
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client rsync
+    - eval $(ssh-agent -s)
+    - echo "$VSPHERE_SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add - > /dev/null
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$VSPHERE_SERVER_IP ecdsa-sha2-nistp256 ..." > ~/.ssh/known_hosts || true
+    - ssh-keyscan -H $VSPHERE_SERVER_IP >> ~/.ssh/known_hosts 2>/dev/null || true
+  script:
+    - echo "🌐 Подключение к виртуальной машине в vSphere ($VSPHERE_SERVER_IP)..."
+    - ssh $VSPHERE_SSH_USER@$VSPHERE_SERVER_IP "mkdir -p /opt/pulse12"
+    # Копирование docker-compose.yml и конфигурации на сервер
+    - rsync -avz --exclude 'node_modules' --exclude '.git' ./ $VSPHERE_SSH_USER@$VSPHERE_SERVER_IP:/opt/pulse12/
+    # Перезапуск контейнеров через Docker Compose на сервере vSphere
+    - |
+      ssh $VSPHERE_SSH_USER@$VSPHERE_SERVER_IP "cd /opt/pulse12 && \
+      docker compose down && \
+      docker compose up -d --build && \
+      docker compose ps"
+    - echo "✅ Успешно развернуто на корпоративном сервере vSphere!"
+  environment:
+    name: production
+    url: http://$VSPHERE_SERVER_IP
+  when: manual
+  only:
+    - master
+    - main
