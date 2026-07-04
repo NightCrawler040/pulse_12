@@ -1,0 +1,234 @@
+.analytics-container {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding-bottom: 32px;
+}
+
+.analytics-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.analytics-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: hsl(var(--text-primary));
+}
+
+.analytics-subtitle {
+  font-size: 0.9rem;
+  color: hsl(var(--text-muted));
+  margin-top: 4px;
+}
+
+/* Metrics Grid */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.metric-card {
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid var(--border-color);
+  transition: transform var(--transition-fast);
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+}
+
+.metric-icon-wrap {
+  width: 54px;
+  height: 54px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bg-blue-glow { background: rgba(59, 130, 246, 0.15); }
+.bg-purple-glow { background: rgba(168, 85, 247, 0.15); }
+.bg-green-glow { background: rgba(16, 185, 129, 0.15); }
+.bg-amber-glow { background: rgba(245, 158, 11, 0.15); }
+
+.text-blue { color: #3b82f6; }
+.text-purple { color: #a855f7; }
+.text-green { color: #10b981; }
+.text-amber { color: #f59e0b; }
+.text-red { color: #ef4444; }
+.text-orange { color: #f97316; }
+.text-yellow { color: #eab308; }
+.text-slate { color: #64748b; }
+
+.metric-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: hsl(var(--text-secondary));
+  text-transform: uppercase;
+}
+
+.metric-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: hsl(var(--text-primary));
+  margin: 2px 0;
+}
+
+.metric-desc {
+  font-size: 0.75rem;
+  color: hsl(var(--text-muted));
+}
+
+/* Charts Grid */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chart-panel, .leaderboard-panel {
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.chart-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: hsl(var(--text-primary));
+}
+
+.status-bars, .priority-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.bar-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bar-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: hsl(var(--text-primary));
+}
+
+.bar-track {
+  width: 100%;
+  height: 8px;
+  background: hsl(var(--bg-main));
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bg-green { background: #10b981; }
+.bg-blue { background: #3b82f6; }
+.bg-purple { background: #a855f7; }
+.bg-red { background: #ef4444; }
+.bg-orange { background: #f97316; }
+.bg-yellow { background: #eab308; }
+.bg-slate { background: #64748b; }
+
+/* Leaderboard */
+.leaderboard-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.leaderboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 14px;
+}
+
+.leaderboard-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: hsl(var(--bg-main));
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.leaderboard-item:hover {
+  background: hsl(var(--bg-card-hover));
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.leaderboard-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.leaderboard-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.leader-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: hsl(var(--text-primary));
+}
+
+.leader-role {
+  font-size: 0.75rem;
+  color: hsl(var(--text-secondary));
+}
+
+.leaderboard-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.leader-sp {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: hsl(var(--secondary));
+}
+
+.leader-tasks {
+  font-size: 0.7rem;
+  color: hsl(var(--text-muted));
+}

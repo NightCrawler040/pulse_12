@@ -1,0 +1,339 @@
+import React, { useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { useTaskContext } from '../../context/TaskContext';
+import { apiService } from '../../services/api';
+import './Profile.css';
+
+export const Profile: React.FC = () => {
+  const { currentUser, updateCurrentUserProfile, logout } = useAuth();
+  const { tasks, groups, onlineUserIds, setActiveTaskModalId, columns } = useTaskContext();
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [name, setName] = useState(currentUser?.name || '');
+  const [email, setEmail] = useState(currentUser?.email || '');
+  const [department, setDepartment] = useState(currentUser?.department || '');
+  const [avatar, setAvatar] = useState(currentUser?.avatar || '');
+  const [pin, setPin] = useState(currentUser?.pin || '1234');
+  const [isUploading, setIsUploading] = useState(false);
+
+  if (!currentUser) {
+    return (
+      <div className="profile-container" style={{ textAlign: 'center', padding: '60px 20px' }}>
+        <h2>⚠️ Вы не вошли в систему</h2>
+        <p style={{ color: 'hsl(var(--text-secondary))', marginTop: '10px' }}>
+          Пожалуйста, войдите под своим профилем, чтобы открыть личный кабинет.
+        </p>
+      </div>
+    );
+  }
+
+  const isOnline = onlineUserIds.includes(currentUser.id);
+  const myTasks = tasks.filter(t => t.assigneeId === currentUser.id);
+  
+  // Group tasks
+  const myGroupIds = groups.filter(g => g.memberIds.includes(currentUser.id)).map(g => g.id);
+  const myGroupTasks = tasks.filter(t => t.assigneeGroupId && myGroupIds.includes(t.assigneeGroupId) && t.assigneeId !== currentUser.id);
+
+  const completedTasks = myTasks.filter(t => t.status === 'done');
+  const completionRate = myTasks.length > 0 ? Math.round((completedTasks.length / myTasks.length) * 100) : 0;
+  const totalLoggedHours = myTasks.reduce((sum, t) => sum + (t.loggedHours || 0), 0);
+  const totalStoryPoints = myTasks.reduce((sum, t) => sum + (t.storyPoints || 0), 0);
+
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateCurrentUserProfile({
+      name: name.trim(),
+      email: email.trim(),
+      department: department.trim(),
+      avatar: avatar.trim() || currentUser.avatar,
+      pin: pin.trim() || '1234'
+    });
+    setIsEditing(false);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploading(true);
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64 = reader.result as string;
+      try {
+        const res = await apiService.uploadAvatar(base64, file.name);
+        if (res.success) {
+          setAvatar(res.url);
+        }
+      } catch (err) {
+        console.error('Failed to upload avatar', err);
+        alert('Ошибка загрузки фотографии');
+      } finally {
+        setIsUploading(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const getStatusLabel = (status: string) => {
+    const col = columns.find(c => c.id === status);
+    return col ? col.title : status;
+  };
+
+  const getRoleBadge = (roleType?: string) => {
+    if (roleType === 'admin') return <span className="role-badge-mini role-admin">Администратор</span>;
+    if (roleType === 'manager') return <span className="role-badge-mini role-manager">Руководитель</span>;
+    return <span className="role-badge-mini role-member">Сотрудник</span>;
+  };
+
+  return (
+    <div className="profile-container animate-fade-in">
+      
+      {/* Hero card */}
+      <div className="profile-hero-card">
+        <div className="profile-user-main">
+          <div style={{ position: 'relative' }}>
+            <img src={currentUser.avatar} alt={currentUser.name} className="profile-avatar-large" />
+            <span
+              style={{
+                position: 'absolute',
+                bottom: '4px',
+                right: '4px',
+                width: '18px',
+                height: '18px',
+                borderRadius: '50%',
+                backgroundColor: isOnline ? '#10b981' : '#6b7280',
+                border: '3px solid hsl(var(--bg-secondary))',
+                boxShadow: '0 0 8px rgba(16, 185, 129, 0.4)'
+              }}
+              title={isOnline ? 'Сотрудник в сети (активное подключение)' : 'Не в сети'}
+            />
+          </div>
+          <div className="profile-info-col">
+            <div className="profile-name-row">
+              <h1 className="profile-name">{currentUser.name}</h1>
+              {getRoleBadge(currentUser.roleType)}
+              <span style={{ fontSize: '0.8rem', padding: '2px 10px', borderRadius: '12px', background: isOnline ? 'rgba(16,185,129,0.15)' : 'rgba(107,114,128,0.15)', color: isOnline ? '#34d399' : '#9ca3af', fontWeight: 600 }}>
+                {isOnline ? '🟢 В сети (Онлайн)' : '⚪ Оффлайн'}
+              </span>
+            </div>
+            <div className="profile-role-dept">{currentUser.role} • {currentUser.department}</div>
+            <div className="profile-email">📧 {currentUser.email}</div>
+          </div>
+        </div>
+
+        <div className="profile-actions-col">
+          <button
+            className="btn-secondary"
+            onClick={() => {
+              setName(currentUser.name);
+              setEmail(currentUser.email);
+              setDepartment(currentUser.department);
+              setAvatar(currentUser.avatar);
+              setPin(currentUser.pin || '1234');
+              setIsEditing(!isEditing);
+            }}
+          >
+            ✏️ {isEditing ? 'Отмена' : 'Редактировать профиль'}
+          </button>
+          <button
+            className="btn-secondary"
+            onClick={logout}
+            style={{ borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f87171' }}
+          >
+            🚪 Выйти
+          </button>
+        </div>
+      </div>
+
+      {/* Edit form */}
+      {isEditing && (
+        <form className="profile-edit-form" onSubmit={handleSaveProfile}>
+          <h3 style={{ fontSize: '1.1rem', color: 'hsl(var(--primary))' }}>⚙️ Настройка личного профиля</h3>
+          <div className="form-grid-2">
+            <div className="form-group">
+              <label className="form-label">ФИО сотрудника</label>
+              <input
+                type="text"
+                className="input-field"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Корпоративный Email</label>
+              <input
+                type="email"
+                className="input-field"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Отдел / Направление</label>
+              <input
+                type="text"
+                className="input-field"
+                value={department}
+                onChange={e => setDepartment(e.target.value)}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Новый PIN-код (пароль для входа)</label>
+              <input
+                type="text"
+                className="input-field"
+                value={pin}
+                onChange={e => setPin(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label">URL фотографии или Загрузка с ПК</label>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                type="text"
+                className="input-field"
+                style={{ flex: 1 }}
+                value={avatar}
+                onChange={e => setAvatar(e.target.value)}
+                placeholder="https://... или загрузите файл с компьютера"
+              />
+              <label className="file-upload-btn" style={{ padding: '10px 16px' }}>
+                {isUploading ? '⌛ Загрузка...' : '📁 Загрузить с ПК'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={handleFileUpload}
+                  disabled={isUploading}
+                />
+              </label>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '8px' }}>
+            <button type="button" className="btn-secondary" onClick={() => setIsEditing(false)}>
+              Отмена
+            </button>
+            <button type="submit" className="btn-primary" disabled={isUploading}>
+              💾 Сохранить изменения
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* KPI Stats Grid */}
+      <div className="profile-stats-grid">
+        <div className="profile-stat-box">
+          <span className="stat-box-label">🎯 Назначено задач</span>
+          <span className="stat-box-value">{myTasks.length}</span>
+          <span className="stat-box-sub">Всего в текущих спринтах</span>
+        </div>
+
+        <div className="profile-stat-box">
+          <span className="stat-box-label">✅ Выполнено задач</span>
+          <span className="stat-box-value" style={{ color: '#10b981' }}>{completedTasks.length}</span>
+          <span className="stat-box-sub">Успешность завершения: <strong>{completionRate}%</strong></span>
+        </div>
+
+        <div className="profile-stat-box">
+          <span className="stat-box-label">⏳ Затрачено времени</span>
+          <span className="stat-box-value" style={{ color: '#38bdf8' }}>{totalLoggedHours} ч</span>
+          <span className="stat-box-sub">Залогировано часов в задачах</span>
+        </div>
+
+        <div className="profile-stat-box">
+          <span className="stat-box-label">⚡ Story Points</span>
+          <span className="stat-box-value" style={{ color: '#c084fc' }}>{totalStoryPoints} SP</span>
+          <span className="stat-box-sub">Суммарный вес моих задач</span>
+        </div>
+      </div>
+
+      {/* My Tasks section */}
+      <div className="profile-tasks-section">
+        <div className="section-title-row">
+          <h2 className="section-title">
+            <span>📌</span> Мои назначенные задачи ({myTasks.length})
+          </h2>
+          <span style={{ fontSize: '0.8rem', color: 'hsl(var(--text-muted))' }}>
+            Нажмите на карточку, чтобы открыть детали или сдвинуть статус
+          </span>
+        </div>
+
+        {myTasks.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: 'hsl(var(--text-muted))' }}>
+            У вас пока нет назначенных задач в этом проекте 🎉
+          </div>
+        ) : (
+          <div className="my-tasks-grid">
+            {myTasks.map(t => (
+              <div
+                key={t.id}
+                className="my-task-card"
+                onClick={() => setActiveTaskModalId(t.id)}
+              >
+                <div className="my-task-header">
+                  <span className="my-task-id">{t.id}</span>
+                  <span className={`status-badge status-${t.status}`}>
+                    {getStatusLabel(t.status)}
+                  </span>
+                </div>
+                <div className="my-task-title">{t.title}</div>
+                <div className="my-task-footer">
+                  <span>Приоритет: <strong>{t.priority.toUpperCase()}</strong></span>
+                  <span>⚡ {t.storyPoints} SP • ⏳ {t.loggedHours}/{t.estimatedHours} ч</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* My Group Tasks section */}
+      {myGroupTasks.length > 0 && (
+        <div className="profile-tasks-section" style={{ marginTop: '24px' }}>
+          <div className="section-title-row">
+            <h2 className="section-title">
+              <span>🏢</span> Задачи моих команд / групп ({myGroupTasks.length})
+            </h2>
+            <span style={{ fontSize: '0.8rem', color: 'hsl(var(--text-muted))' }}>
+              Задачи, назначенные на ваши отделы и доступные для выполнения
+            </span>
+          </div>
+
+          <div className="my-tasks-grid">
+            {myGroupTasks.map(t => {
+              const grp = groups.find(g => g.id === t.assigneeGroupId);
+              return (
+                <div
+                  key={t.id}
+                  className="my-task-card"
+                  onClick={() => setActiveTaskModalId(t.id)}
+                  style={{ borderLeft: `4px solid ${grp?.color || '#3b82f6'}` }}
+                >
+                  <div className="my-task-header">
+                    <span className="my-task-id">{t.id}</span>
+                    <span className={`status-badge status-${t.status}`}>
+                      {getStatusLabel(t.status)}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: grp?.color || '#3b82f6', fontWeight: 700, marginBottom: '4px' }}>
+                    🏢 Команда: {grp?.name}
+                  </div>
+                  <div className="my-task-title">{t.title}</div>
+                  <div className="my-task-footer">
+                    <span>Приоритет: <strong>{t.priority.toUpperCase()}</strong></span>
+                    <span>⚡ {t.storyPoints} SP • ⏳ {t.loggedHours}/{t.estimatedHours} ч</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+};

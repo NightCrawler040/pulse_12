@@ -1,0 +1,204 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+
+:root {
+  /* Font Families */
+  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* HSL Color Tokens - Dark Mode by Default (Premium & Deep) */
+  --bg-main: 222 47% 7%;
+  --bg-secondary: 222 47% 11%;
+  --bg-tertiary: 222 40% 15%;
+  --bg-card: 222 45% 13%;
+  --bg-card-hover: 222 45% 17%;
+  --bg-glass: rgba(23, 30, 48, 0.92);
+  --bg-glass-hover: rgba(30, 41, 65, 0.96);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-color-focus: rgba(99, 102, 241, 0.5);
+
+  /* Typography */
+  --text-primary: 210 40% 98%;
+  --text-secondary: 215 20% 65%;
+  --text-muted: 215 15% 45%;
+
+  /* Brand Accents */
+  --primary: 239 84% 67%;
+  --primary-hover: 239 84% 73%;
+  --primary-glow: rgba(99, 102, 241, 0.25);
+  
+  --secondary: 280 80% 65%;
+  --accent: 190 90% 50%;
+  
+  /* Status & Priority Colors */
+  --status-todo: 215 20% 65%;
+  --status-progress: 210 100% 60%;
+  --status-review: 280 80% 65%;
+  --status-done: 150 80% 45%;
+
+  --priority-low: 215 20% 65%;
+  --priority-medium: 45 95% 55%;
+  --priority-high: 25 95% 55%;
+  --priority-urgent: 350 85% 60%;
+
+  /* Radii & Shadows */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 24px rgba(99, 102, 241, 0.3);
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-smooth: 0.25s ease;
+}
+
+[data-theme="light"] {
+  --bg-main: 220 25% 97%;
+  --bg-secondary: 220 20% 92%;
+  --bg-tertiary: 220 20% 88%;
+  --bg-card: 0 0% 100%;
+  --bg-card-hover: 220 30% 98%;
+  --bg-glass: rgba(255, 255, 255, 0.95);
+  --bg-glass-hover: rgba(255, 255, 255, 0.98);
+  --border-color: rgba(0, 0, 0, 0.08);
+  --border-color-focus: rgba(99, 102, 241, 0.5);
+
+  --text-primary: 222 47% 11%;
+  --text-secondary: 215 25% 40%;
+  --text-muted: 215 20% 60%;
+  
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.12);
+  --shadow-glow: 0 0 24px rgba(99, 102, 241, 0.15);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-main);
+  background-color: hsl(var(--bg-main));
+  color: hsl(var(--text-primary));
+  line-height: 1.5;
+  min-height: 100vh;
+  overflow-x: hidden;
+  transition: background-color var(--transition-smooth), color var(--transition-smooth);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Scrollbar customization */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Glassmorphism utility - Optimized for 60fps */
+.glass-panel {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-md);
+}
+
+/* Button Reset & Base */
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: var(--font-main);
+  transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px var(--primary-glow);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+}
+
+.btn-secondary {
+  background: hsl(var(--bg-tertiary));
+  color: hsl(var(--text-primary));
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  border: 1px solid var(--border-color);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-secondary:hover {
+  background: hsl(var(--bg-card-hover));
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+/* Badges & Tags */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.03); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out forwards;
+}

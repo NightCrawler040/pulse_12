@@ -1,0 +1,138 @@
+import { io, Socket } from 'socket.io-client';
+import type { Task, Sprint, User, Group } from '../types';
+
+const SERVER_URL_KEY = 'PULSE12_SERVER_URL';
+
+export const getServerUrl = (): string => {
+  const saved = localStorage.getItem(SERVER_URL_KEY);
+  if (saved) return saved;
+  
+  // If running on dedicated vSphere Ubuntu VM in production (not dev server on 5173)
+  if (window.location.port !== '5173' && window.location.port !== '3000' && window.location.port !== '3001') {
+    return window.location.origin;
+  }
+  
+  // Auto-detect hostname (e.g., localhost or 192.168.10.12) and use port 3001
+  const host = window.location.hostname || 'localhost';
+  return `http://${host}:3001`;
+};
+
+export const setServerUrl = (url: string): void => {
+  const cleaned = url.trim().replace(/\/$/, '');
+  localStorage.setItem(SERVER_URL_KEY, cleaned);
+  reconnectSocket();
+};
+
+let socketInstance: Socket | null = null;
+
+export const getSocket = (): Socket => {
+  if (!socketInstance) {
+    const url = getServerUrl();
+    console.log(`🔌 Connecting to Pulse 12 Socket.io server at: ${url}`);
+    socketInstance = io(url, {
+      reconnectionDelayMax: 5000,
+      transports: ['websocket', 'polling']
+    });
+  }
+  return socketInstance;
+};
+
+export const reconnectSocket = (): Socket => {
+  if (socketInstance) {
+    socketInstance.disconnect();
+    socketInstance = null;
+  }
+  return getSocket();
+};
+
+// --- REST API HELPER ---
+async function apiRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const baseUrl = getServerUrl();
+  const url = `${baseUrl}${endpoint}`;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      ...options,
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `HTTP Error ${res.status}`);
+    }
+    return await res.json();
+  } catch (err) {
+    console.error(`❌ API Request Failed [${endpoint}]:`, err);
+    throw err;
+  }
+}
+
+export interface DatabaseData {
+  tasks: Task[];
+  sprints: Sprint[];
+  users: User[];
+  groups?: Group[];
+}
+
+export const apiService = {
+  getServerUrl,
+  setServerUrl,
+  fetchData: () => apiRequest<DatabaseData>('/api/data'),
+  
+  createTask: (task: any) => 
+    apiRequest<Task>('/api/tasks', { method: 'POST', body: JSON.stringify(task) }),
+    
+  updateTask: (id: string, updates: Partial<Task>) => 
+    apiRequest<{ success: boolean }>(`/api/tasks/${id}`, { method: 'PUT', body: JSON.stringify(updates) }),
+    
+  deleteTask: (id: string) => 
+    apiRequest<{ success: boolean }>(`/api/tasks/${id}`, { method: 'DELETE' }),
+    
+  createUser: (user: Omit<User, 'id'>) => 
+    apiRequest<User>('/api/users', { method: 'POST', body: JSON.stringify(user) }),
+    
+  updateUser: (id: string, updates: Partial<User>) => 
+    apiRequest<{ success: boolean }>(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify(updates) }),
+    
+  deleteUser: (id: string, permanent: boolean = false) => 
+    apiRequest<{ success: boolean }>(`/api/users/${id}${permanent ? '?permanent=true' : ''}`, { method: 'DELETE' }),
+    
+  createGroup: (group: Omit<Group, 'id'>) => 
+    apiRequest<Group>('/api/groups', { method: 'POST', body: JSON.stringify(group) }),
+    
+  updateGroup: (id: string, updates: Partial<Group>) => 
+    apiRequest<{ success: boolean }>(`/api/groups/${id}`, { method: 'PUT', body: JSON.stringify(updates) }),
+    
+  deleteGroup: (id: string) => 
+    apiRequest<{ success: boolean }>(`/api/groups/${id}`, { method: 'DELETE' }),
+    
+  uploadAvatar: async (fileBase64: string, filename: string): Promise<{ success: boolean; url: string }> => {
+    const res = await apiRequest<{ success: boolean; url: string }>('/api/upload', {
+      method: 'POST',
+      body: JSON.stringify({ filename, base64: fileBase64 })
+    });
+    const baseUrl = getServerUrl();
+    return { success: res.success, url: `${baseUrl}${res.url}` };
+  },
+    
+  uploadFile: async (filename: string, fileBase64: string): Promise<{ success: boolean; url: string; size?: number }> => {
+    const res = await apiRequest<{ success: boolean; url: string; size?: number }>('/api/upload-file', {
+      method: 'POST',
+      body: JSON.stringify({ filename, base64: fileBase64 })
+    });
+    const baseUrl = getServerUrl();
+    return { success: res.success, url: `${baseUrl}${res.url}`, size: res.size };
+  },
+    
+  resetDatabase: () => 
+    apiRequest<{ success: boolean }>('/api/reset', { method: 'POST' }),
+    
+  importDatabase: (data: DatabaseData) => 
+    apiRequest<{ success: boolean }>('/api/import', { method: 'POST', body: JSON.stringify(data) }),
+    
+  loginUser: (login?: string, password?: string, pin?: string, userId?: string) => 
+    apiRequest<{ success: boolean; user: User }>('/api/login', { 
+      method: 'POST', 
+      body: JSON.stringify({ login, password, pin, userId }) 
+    })
+};
