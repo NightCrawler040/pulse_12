@@ -6,7 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initialUsers, initialSprints, initialTasks, initialGroups } from './initialData.js';
-import { initDb, getCollection, saveCollection, getAllData, saveAllData, isPostgresMode } from './db.js';
+import { initDb, getAllData, isPostgresMode } from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -283,7 +283,7 @@ app.delete('/api/groups/:id', (req, res) => {
 
 // --- FILE UPLOAD ENDPOINT (LOCAL AVATARS) ---
 app.post('/api/upload', (req, res) => {
-  const { filename, base64 } = req.body;
+  const { base64 } = req.body;
   if (!base64) {
     return res.status(400).json({ error: 'No base64 image data provided' });
   }
@@ -406,7 +406,7 @@ if (fs.existsSync(DIST_DIR)) {
   app.use(express.static(DIST_DIR));
   
   // SPA Fallback: support URL routing (/admin, /board, /team, /profile, etc.)
-  app.use((req, res, next) => {
+  app.use((req, res) => {
     if (!req.path.startsWith('/api/') && !req.path.startsWith('/uploads/') && !req.path.startsWith('/socket.io/')) {
       res.sendFile(path.join(DIST_DIR, 'index.html'));
     } else {

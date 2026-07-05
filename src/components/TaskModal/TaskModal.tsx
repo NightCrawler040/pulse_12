@@ -323,7 +323,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
   };
 
   const renderCommentText = (text: string) => {
-    const parts = text.split(/(@[\wА-Яа-яЁё.\-]+)/g);
+    const parts = text.split(/(@[\wА-Яа-яЁё.-]+)/g);
     return parts.map((part, idx) => {
       if (part.startsWith('@')) {
         return (
