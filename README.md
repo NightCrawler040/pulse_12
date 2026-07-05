@@ -50,26 +50,30 @@ npm run dev:all
 
 ---
 
-## 🐧 Развертывание на Ubuntu в vSphere (через Docker Compose)
+## 🐧 Развертывание в vSphere (Ubuntu VM с PostgreSQL 16)
 
-На вашей виртуальной машине Ubuntu (например, `192.168.10.50`) выполните:
+Для полноценного деплоя в корпоративном облаке (vSphere / ESXi / Proxmox) ознакомьтесь с официальным руководством по администрированию:
+👉 **[Полная инструкция по развертыванию (deploy-vsphere.md)](./deploy-vsphere.md)**
+
+В руководстве подробно описаны:
+- 🖥️ **Рекомендуемые характеристики ВМ** (2–4 vCPU, 4 ГБ RAM, 30 ГБ SSD, Bridged LAN IP).
+- 🌿 **Работа с ветками Git**: `test` (для тестирования) ➔ `main` (для боевого продакшна).
+- 🛠 **Пошаговые команды установки с нуля** (Docker, Docker Compose V2, UFW брандмауэр).
+- 🐘 **Администрирование PostgreSQL 16** (создание ручных и ночных cron-бэкапов `pg_dump`).
 
 ```bash
-# 1. Склонируйте репозиторий в /opt/pulse12
+# Быстрый старт на вашей виртуальной машине:
 git clone https://github.com/NightCrawler040/pulse_12.git /opt/pulse12
 cd /opt/pulse12
-
-# 2. Запустите контейнеры в фоновом режиме
-sudo docker compose up --build -d
+git checkout main # или test для тестового сервера
+docker compose up --build -d
 ```
-
-Система станет доступна всем сотрудникам в офисной сети по адресу: **`http://IP_АДРЕС_ВАШЕГО_СЕРВЕРА/`**.
-Подробное руководство по настройке брандмауэра и системных служб смотрите в файле [deploy-vsphere.md](./deploy-vsphere.md).
 
 ---
 
-## 🔐 Настройка CI/CD Авто-деплоя
-Для автоматического обновления сервера при пуше в ветку `main`/`master` добавьте в секреты репозитория (GitLab Variables / GitHub Secrets):
+## 🔐 Настройка CI/CD Авто-деплоя (GitLab / GitHub)
+В проекте настроены автоматические пайплайны развертывания для веток `main` (Production) и `test` (Staging).
+Добавьте в переменные окружения репозитория (GitLab CI/CD Variables / GitHub Secrets):
 - `VSPHERE_SERVER_IP` — IP вашей виртуальной машины (напр. `192.168.10.50`)
-- `VSPHERE_SSH_USER` — пользователь Linux (`ubuntu` или `root`)
-- `VSPHERE_SSH_PRIVATE_KEY` — приватный SSH-ключ для доступа к серверу.
+- `VSPHERE_SSH_USER` — пользователь Linux (`administrator` или `ubuntu`)
+- `VSPHERE_SSH_PRIVATE_KEY` — приватный SSH-ключ для беспарольного доступа.
