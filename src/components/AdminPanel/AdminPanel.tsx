@@ -24,6 +24,9 @@ export const AdminPanel: React.FC = () => {
   const [pin, setPin] = useState('1234');
   const [avatar, setAvatar] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [deptFilter, setDeptFilter] = useState('');
 
   // Group modal states
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
@@ -59,6 +62,7 @@ export const AdminPanel: React.FC = () => {
   // --- USER HANDLERS ---
   const handleOpenAddModal = () => {
     setEditingUser(null);
+    setErrorMessage(null);
     setName('');
     setEmail('');
     setLoginStr('');
@@ -73,6 +77,7 @@ export const AdminPanel: React.FC = () => {
 
   const handleOpenEditModal = (user: User) => {
     setEditingUser(user);
+    setErrorMessage(null);
     setName(user.name);
     setEmail(user.email);
     setLoginStr(user.login || user.email?.split('@')[0] || '');
@@ -87,8 +92,23 @@ export const AdminPanel: React.FC = () => {
 
   const handleSaveUser = (e: React.FormEvent) => {
     e.preventDefault();
-    const finalLogin = loginStr.trim() || email.split('@')[0] || `user_${Date.now()}`;
+    const trimmedEmail = email.trim().toLowerCase();
+    const finalLogin = (loginStr.trim() || email.split('@')[0] || `user_${Date.now()}`).toLowerCase();
     const finalPass = passwordStr.trim() || pin.trim() || '1234';
+
+    // Проверка на дублирование почты или логина (кроме редактируемого сотрудника)
+    const duplicateUser = users.find(u => {
+      if (editingUser && u.id === editingUser.id) return false;
+      const uEmail = (u.email || '').trim().toLowerCase();
+      const uLogin = (u.login || uEmail.split('@')[0] || '').trim().toLowerCase();
+      return (trimmedEmail && uEmail === trimmedEmail) || (finalLogin && uLogin === finalLogin);
+    });
+
+    if (duplicateUser) {
+      setErrorMessage(`⚠️ Ошибка: Сотрудник с почтой «${email}» или логином «${loginStr || finalLogin}» уже существует (${duplicateUser.name})! Укажите уникальные данные.`);
+      return;
+    }
+    setErrorMessage(null);
 
     if (editingUser) {
       updateUser(editingUser.id, {
@@ -117,6 +137,41 @@ export const AdminPanel: React.FC = () => {
       });
     }
     setIsModalOpen(false);
+  };
+
+  const filteredUsers = users.filter(u => {
+    const q = searchQuery.toLowerCase();
+    const matchesSearch = !q ||
+      u.name.toLowerCase().includes(q) ||
+      (u.email && u.email.toLowerCase().includes(q)) ||
+      (u.login && u.login.toLowerCase().includes(q)) ||
+      u.role.toLowerCase().includes(q) ||
+      u.department.toLowerCase().includes(q);
+    const matchesDept = !deptFilter || u.department === deptFilter;
+    return matchesSearch && matchesDept;
+  });
+
+  const handleExportCSV = () => {
+    const headers = ['ID', 'ФИО', 'Email', 'Логин', 'Отдел', 'Должность', 'Уровень прав', 'PIN / Пароль', 'Статус'];
+    const rows = users.map(u => [
+      u.id,
+      `"${u.name}"`,
+      `"${u.email}"`,
+      `"${u.login || ''}"`,
+      `"${u.department}"`,
+      `"${u.role}"`,
+      u.roleType || 'member',
+      `"${u.pin || u.password || ''}"`,
+      u.isActive === false ? 'Заблокирован' : 'Активен'
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `pulse12_users_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleToggleActive = (user: User) => {
@@ -238,7 +293,15 @@ export const AdminPanel: React.FC = () => {
         </div>
 
         {activeTab === 'users' ? (
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              className="btn-secondary"
+              style={{ background: 'hsl(var(--bg-secondary))', border: '1px solid hsl(var(--border-color))', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}
+              onClick={handleExportCSV}
+              title="Экспорт списка сотрудников в Excel / CSV"
+            >
+              📥 Экспорт в CSV
+            </button>
             {selectedUserIds.length > 0 && (
               <button
                 className="btn-secondary"
@@ -262,6 +325,39 @@ export const AdminPanel: React.FC = () => {
       {/* Table: USERS */}
       {activeTab === 'users' && (
         <div className="admin-table-card">
+          <div style={{ display: 'flex', gap: '12px', padding: '16px 20px', borderBottom: '1px solid hsl(var(--border-color))', flexWrap: 'wrap', alignItems: 'center', background: 'hsl(var(--bg-secondary))' }}>
+            <div style={{ flex: '1 1 250px', position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <span style={{ position: 'absolute', left: '12px', fontSize: '1.1rem', color: 'hsl(var(--text-secondary))' }}>🔍</span>
+              <input
+                type="text"
+                className="input-field"
+                style={{ paddingLeft: '38px', margin: 0, width: '100%', borderRadius: '8px', background: 'hsl(var(--bg-card))' }}
+                placeholder="Быстрый поиск по ФИО, логину, почте или должности..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <select
+              className="input-field"
+              style={{ width: 'auto', margin: 0, borderRadius: '8px', cursor: 'pointer', minWidth: '180px', background: 'hsl(var(--bg-card))' }}
+              value={deptFilter}
+              onChange={e => setDeptFilter(e.target.value)}
+            >
+              <option value="">🏢 Все отделы ({users.length})</option>
+              {Array.from(new Set(users.map(u => u.department))).filter(Boolean).map(d => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+            {(searchQuery || deptFilter) && (
+              <button
+                className="btn-secondary"
+                style={{ padding: '8px 12px', fontSize: '0.85rem' }}
+                onClick={() => { setSearchQuery(''); setDeptFilter(''); }}
+              >
+                ❌ Сбросить ({filteredUsers.length})
+              </button>
+            )}
+          </div>
           <div className="table-responsive-wrapper">
             <table className="users-admin-table">
               <thead>
@@ -269,13 +365,13 @@ export const AdminPanel: React.FC = () => {
                   <th style={{ width: '40px', textAlign: 'center' }}>
                     <input
                       type="checkbox"
-                      checked={users.filter(u => !isProtectedAdmin(u)).length > 0 && users.filter(u => !isProtectedAdmin(u)).every(u => selectedUserIds.includes(u.id))}
+                      checked={filteredUsers.filter(u => !isProtectedAdmin(u)).length > 0 && filteredUsers.filter(u => !isProtectedAdmin(u)).every(u => selectedUserIds.includes(u.id))}
                       onChange={() => {
-                        const selectable = users.filter(u => !isProtectedAdmin(u));
+                        const selectable = filteredUsers.filter(u => !isProtectedAdmin(u));
                         if (selectable.every(u => selectedUserIds.includes(u.id))) {
-                          setSelectedUserIds([]);
+                          setSelectedUserIds(prev => prev.filter(id => !selectable.some(s => s.id === id)));
                         } else {
-                          setSelectedUserIds(selectable.map(u => u.id));
+                          setSelectedUserIds(prev => Array.from(new Set([...prev, ...selectable.map(s => s.id)])));
                         }
                       }}
                       title="Выбрать всех (кроме главного администратора)"
@@ -293,7 +389,14 @@ export const AdminPanel: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {users.map(u => {
+                {filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} style={{ textAlign: 'center', padding: '40px', color: 'hsl(var(--text-secondary))' }}>
+                      🔍 Сотрудники не найдены. Попробуйте изменить параметры поиска или фильтрации.
+                    </td>
+                  </tr>
+                ) : (
+                filteredUsers.map(u => {
                   const isInactive = u.isActive === false;
                   const isRevealed = !!revealedUsers[u.id];
                   const secret = u.password || u.pin || '1234';
@@ -396,7 +499,7 @@ export const AdminPanel: React.FC = () => {
                       </td>
                     </tr>
                   );
-                })}
+                }))}
               </tbody>
             </table>
           </div>
@@ -471,6 +574,13 @@ export const AdminPanel: React.FC = () => {
             <h2 className="admin-modal-title">
               {editingUser ? '✏️ Редактирование сотрудника' : '➕ Добавление нового сотрудника'}
             </h2>
+
+            {errorMessage && (
+              <div style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', color: '#f87171', padding: '12px 16px', borderRadius: '8px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, marginBottom: '8px' }}>
+                <span>🚫</span>
+                <span>{errorMessage}</span>
+              </div>
+            )}
 
             <form onSubmit={handleSaveUser} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div className="form-grid-2">

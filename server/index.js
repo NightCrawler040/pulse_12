@@ -145,6 +145,20 @@ app.delete('/api/tasks/:id', (req, res) => {
 // Create user
 app.post('/api/users', (req, res) => {
   const userData = req.body;
+  const trimmedEmail = (userData.email || '').trim().toLowerCase();
+  const trimmedLogin = (userData.login || trimmedEmail.split('@')[0] || '').trim().toLowerCase();
+
+  // Check for duplicate email or login
+  const duplicate = dbData.users.find(u => {
+    const uEmail = (u.email || '').trim().toLowerCase();
+    const uLogin = (u.login || uEmail.split('@')[0] || '').trim().toLowerCase();
+    return (trimmedEmail && uEmail === trimmedEmail) || (trimmedLogin && uLogin === trimmedLogin);
+  });
+
+  if (duplicate) {
+    return res.status(400).json({ error: `Сотрудник с такой почтой или логином уже зарегистрирован (${duplicate.name})!` });
+  }
+
   const newId = `usr-${Date.now()}`;
   const newUser = {
     ...userData,
@@ -164,6 +178,21 @@ app.post('/api/users', (req, res) => {
 app.put('/api/users/:id', (req, res) => {
   const { id } = req.params;
   const updates = req.body;
+
+  if (updates.email || updates.login) {
+    const trimmedEmail = (updates.email || '').trim().toLowerCase();
+    const trimmedLogin = (updates.login || trimmedEmail.split('@')[0] || '').trim().toLowerCase();
+    const duplicate = dbData.users.find(u => {
+      if (u.id === id) return false;
+      const uEmail = (u.email || '').trim().toLowerCase();
+      const uLogin = (u.login || uEmail.split('@')[0] || '').trim().toLowerCase();
+      return (trimmedEmail && uEmail === trimmedEmail) || (trimmedLogin && uLogin === trimmedLogin);
+    });
+    if (duplicate) {
+      return res.status(400).json({ error: `Сотрудник с такой почтой или логином уже существует (${duplicate.name})!` });
+    }
+  }
+
   dbData.users = dbData.users.map(u => {
     if (u.id === id) {
       return { ...u, ...updates };
