@@ -503,14 +503,35 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       const authorName = users.find(u => u.id === userId)?.name || 'Сотрудник';
+      const mentionedIds = new Set<string>();
+      users.forEach(u => {
+        if (u.id === userId) return;
+        const mentionByName = `@${u.name.toLowerCase()}`;
+        const mentionByFirstName = `@${u.name.split(' ')[0].toLowerCase()}`;
+        const mentionByLogin = u.login ? `@${u.login.toLowerCase()}` : '';
+        const textLow = text.toLowerCase();
+        if (textLow.includes(mentionByName) || textLow.includes(mentionByFirstName) || (mentionByLogin && textLow.includes(mentionByLogin))) {
+          mentionedIds.add(u.id);
+          addNotification({
+            userId: u.id,
+            title: `🔔 VIP: Вас упомянул(а) ${authorName}!`,
+            message: `В задаче "${task.title}": «${text.slice(0, 60)}»`,
+            linkTaskId: taskId,
+            type: 'comment_added'
+          });
+        }
+      });
+
       involvedIds.forEach(targetId => {
-        addNotification({
-          userId: targetId,
-          title: `💬 Новый комментарий от ${authorName}`,
-          message: `В задаче "${task.title}": ${text.slice(0, 45)}...`,
-          linkTaskId: taskId,
-          type: 'comment_added'
-        });
+        if (!mentionedIds.has(targetId)) {
+          addNotification({
+            userId: targetId,
+            title: `💬 Новый комментарий от ${authorName}`,
+            message: `В задаче "${task.title}": ${text.slice(0, 45)}...`,
+            linkTaskId: taskId,
+            type: 'comment_added'
+          });
+        }
       });
     }
   };

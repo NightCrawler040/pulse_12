@@ -322,6 +322,20 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
     setCommentText('');
   };
 
+  const renderCommentText = (text: string) => {
+    const parts = text.split(/(@[\wА-Яа-яЁё.\-]+)/g);
+    return parts.map((part, idx) => {
+      if (part.startsWith('@')) {
+        return (
+          <span key={idx} style={{ background: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6', padding: '1px 6px', borderRadius: '6px', fontWeight: 600, border: '1px solid rgba(59, 130, 246, 0.3)', marginRight: '2px' }}>
+            {part}
+          </span>
+        );
+      }
+      return part;
+    });
+  };
+
   const assigneeUser = users.find(u => u.id === assigneeId);
   const assigneeGroup = groups?.find(g => g.id === assigneeGroupId);
   const completedCount = subtasksList.filter(s => s.completed).length;
@@ -554,7 +568,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
                                 })}
                               </span>
                             </div>
-                            <p className="comment-text" style={{ margin: 0, fontWeight: 500, color: 'var(--text-color)' }}>{com.text}</p>
+                            <p className="comment-text" style={{ margin: 0, fontWeight: 500, color: 'var(--text-color)' }}>{renderCommentText(com.text)}</p>
                           </div>
                         </div>
                       );
@@ -577,7 +591,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
                               })}
                             </span>
                           </div>
-                          <p className="comment-text">{com.text}</p>
+                          <p className="comment-text">{renderCommentText(com.text)}</p>
                         </div>
                       </div>
                     );
@@ -585,6 +599,19 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
                 </div>
 
                 <div className="add-comment-box">
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))' }}>💬 Упомянуть:</span>
+                    {users.slice(0, 6).map(u => (
+                      <button
+                        key={u.id}
+                        type="button"
+                        onClick={() => setCommentText(prev => `${prev ? prev + ' ' : ''}@${u.name.split(' ')[0]} `)}
+                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '2px 8px', fontSize: '0.75rem', color: 'hsl(var(--primary))', cursor: 'pointer', transition: 'all 0.2s' }}
+                      >
+                        @{u.name.split(' ')[0]}
+                      </button>
+                    ))}
+                  </div>
                   <div className="comment-user-select">
                     <span className="label-tiny">От лица:</span>
                     <select

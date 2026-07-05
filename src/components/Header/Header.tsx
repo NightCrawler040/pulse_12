@@ -316,7 +316,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewTaskModal, onOpenLoginM
               <span className="sprint-label">Спринт:</span>
               <select 
                 value={activeSprintId} 
-                onChange={(e) => setActiveSprintId(e.target.value)}
+                onChange={(e) => {
+                  setActiveSprintId(e.target.value);
+                  setFilters(prev => ({ ...prev, sprintId: e.target.value }));
+                }}
                 className="sprint-select"
               >
                 <option value="all">Все задачи (Общий поток)</option>

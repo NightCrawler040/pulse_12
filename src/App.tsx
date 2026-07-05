@@ -18,7 +18,7 @@ import './App.css';
 
 const AppContent: React.FC = () => {
   const { viewMode, activeTaskModalId, setActiveTaskModalId, setFilters } = useTaskContext();
-  const { isLoggedIn, isAdmin, currentUser } = useAuth();
+  const { isLoggedIn, isAdmin, currentUser, sessionExpired, clearSessionExpired } = useAuth();
   
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [modalStatus, setModalStatus] = useState<Status>('todo');
@@ -77,6 +77,29 @@ const AppContent: React.FC = () => {
           </>
         )}
       </main>
+
+      {/* Session Expired Modal */}
+      {sessionExpired && (
+        <div className="modal-overlay" style={{ zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}>
+          <div className="modal-card" style={{ maxWidth: '440px', textAlign: 'center', padding: '32px 28px', border: '1px solid #f59e0b', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '16px' }}>⏳</div>
+            <h3 style={{ fontSize: '1.4rem', color: '#f59e0b', marginBottom: '12px' }}>Сеанс завершен из-за неактивности</h3>
+            <p style={{ color: 'hsl(var(--text-secondary))', fontSize: '0.95rem', lineHeight: '1.6', marginBottom: '24px' }}>
+              В целях безопасности вашей корпоративной учетной записи сеанс был автоматически прекращен после 15 минут неактивности. Пожалуйста, войдите в систему повторно.
+            </p>
+            <button
+              className="btn-primary"
+              style={{ width: '100%', padding: '12px', fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              onClick={() => {
+                clearSessionExpired();
+                setIsLoginModalOpen(true);
+              }}
+            >
+              🔐 Войти снова
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Task Modal for creating or editing */}
       <TaskModal
