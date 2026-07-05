@@ -301,25 +301,158 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return newTask;
   };
 
+  const getActor = () => {
+    try {
+      const actorId = localStorage.getItem('korpjira-flowspace-auth-v1');
+      if (actorId) {
+        const u = users.find(user => user.id === actorId);
+        if (u) return u;
+      }
+    } catch {}
+    return users[0] || { id: 'sys', name: 'Сотрудник' };
+  };
+
   const updateTask = (id: string, updates: Partial<Task>) => {
     const oldTask = tasks.find(t => t.id === id);
+    const actor = getActor();
+    const auditComments: Comment[] = [];
+
+    if (oldTask) {
+      if (updates.status && updates.status !== oldTask.status) {
+        const oldCol = columns.find(c => c.id === oldTask.status)?.title || oldTask.status;
+        const newCol = columns.find(c => c.id === updates.status)?.title || updates.status;
+        auditComments.push({
+          id: `com-log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          userId: actor.id,
+          text: `⚡ [Аудит]: ${actor.name} перевел(а) статус задачи из «${oldCol}» в «${newCol}»`,
+          createdAt: new Date().toISOString(),
+          isSystemLog: true
+        });
+
+        const involvedIds = new Set<string>();
+        if (oldTask.assigneeId && oldTask.assigneeId !== 'unassigned') involvedIds.add(oldTask.assigneeId);
+        if (oldTask.assigneeGroupId) {
+          const grp = groups.find(g => g.id === oldTask.assigneeGroupId);
+          if (grp && grp.memberIds) grp.memberIds.forEach(mId => involvedIds.add(mId));
+        }
+        (oldTask.comments || []).forEach(c => { if (c.userId) involvedIds.add(c.userId); });
+
+        involvedIds.forEach(targetId => {
+          if (targetId !== actor.id) {
+            addNotification({
+              userId: targetId,
+              title: '🔄 Изменился статус задачи',
+              message: `${actor.name} перевел(а) задачу "${oldTask.title}" в статус "${newCol}"`,
+              linkTaskId: id,
+              type: 'status_changed'
+            });
+          }
+        });
+      }
+
+      if (updates.assigneeId !== undefined && updates.assigneeId !== oldTask.assigneeId) {
+        const newAssignee = users.find(u => u.id === updates.assigneeId);
+        const assigneeName = newAssignee ? newAssignee.name : 'Не назначен';
+        auditComments.push({
+          id: `com-log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          userId: actor.id,
+          text: `👤 [Аудит]: Исполнитель изменен на: ${assigneeName}`,
+          createdAt: new Date().toISOString(),
+          isSystemLog: true
+        });
+
+        if (updates.assigneeId && updates.assigneeId !== 'unassigned' && updates.assigneeId !== actor.id) {
+          addNotification({
+            userId: updates.assigneeId,
+            title: '🎯 Вам назначена задача',
+            message: `${actor.name} назначил(а) вас исполнителем в задаче "${oldTask.title}" (${id})`,
+            linkTaskId: id,
+            type: 'task_assigned'
+          });
+        }
+      }
+
+      if (updates.assigneeGroupId !== undefined && updates.assigneeGroupId !== oldTask.assigneeGroupId) {
+        const newGrp = groups.find(g => g.id === updates.assigneeGroupId);
+        const grpName = newGrp ? newGrp.name : 'Без команды';
+        auditComments.push({
+          id: `com-log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          userId: actor.id,
+          text: `🏢 [Аудит]: Команда задачи изменена на: ${grpName}`,
+          createdAt: new Date().toISOString(),
+          isSystemLog: true
+        });
+
+        if (newGrp && newGrp.memberIds) {
+          newGrp.memberIds.forEach(mId => {
+            if (mId !== actor.id) {
+              addNotification({
+                userId: mId,
+                title: `🎯 Новая задача для команды "${newGrp.name}"`,
+                message: `${actor.name} назначил(а) вашу команду на задачу "${oldTask.title}" (${id})`,
+                linkTaskId: id,
+                type: 'task_assigned'
+              });
+            }
+          });
+        }
+      }
+
+      if (updates.priority && updates.priority !== oldTask.priority) {
+        auditComments.push({
+          id: `com-log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          userId: actor.id,
+          text: `🔥 [Аудит]: Приоритет изменен на: ${updates.priority.toUpperCase()}`,
+          createdAt: new Date().toISOString(),
+          isSystemLog: true
+        });
+      }
+
+      if (updates.teamReadiness && JSON.stringify(updates.teamReadiness) !== JSON.stringify(oldTask.teamReadiness)) {
+        const oldReadiness = oldTask.teamReadiness || {};
+        const newReadiness = updates.teamReadiness;
+        Object.keys(newReadiness).forEach(mId => {
+          if (!oldReadiness[mId] && newReadiness[mId]) {
+            const memberUser = users.find(u => u.id === mId);
+            const memberName = memberUser ? memberUser.name : 'Сотрудник';
+            auditComments.push({
+              id: `com-log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+              userId: mId,
+              text: `🤝 [Командная готовность]: ${memberName} подтвердил(а) выполнение своей части работы!`,
+              createdAt: new Date().toISOString(),
+              isSystemLog: true
+            });
+          }
+        });
+
+        const grpId = updates.assigneeGroupId || oldTask.assigneeGroupId;
+        const grp = groups.find(g => g.id === grpId);
+        if (grp && grp.memberIds && grp.memberIds.length > 0) {
+          const allConfirmed = grp.memberIds.every(mId => newReadiness[mId] === true);
+          const oldAllConfirmed = grp.memberIds.every(mId => oldReadiness[mId] === true);
+          if (allConfirmed && !oldAllConfirmed) {
+            auditComments.push({
+              id: `com-log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+              userId: actor.id,
+              text: `🎉 [Командная готовность]: Все участники команды «${grp.name}» подтвердили готовность к сдаче задачи!`,
+              createdAt: new Date().toISOString(),
+              isSystemLog: true
+            });
+          }
+        }
+      }
+    }
+
+    const finalComments = oldTask ? [...(oldTask.comments || []), ...auditComments] : [];
+    const finalUpdates = auditComments.length > 0 ? { ...updates, comments: finalComments } : updates;
+
     setTasks(prev => prev.map(t => {
       if (t.id === id) {
-        return { ...t, ...updates, updatedAt: new Date().toISOString() };
+        return { ...t, ...finalUpdates, updatedAt: new Date().toISOString() };
       }
       return t;
     }));
-    apiService.updateTask(id, updates).catch(e => console.error(e));
-
-    if (oldTask && updates.assigneeId && updates.assigneeId !== oldTask.assigneeId && updates.assigneeId !== 'unassigned') {
-      addNotification({
-        userId: updates.assigneeId,
-        title: '🎯 Вам назначена задача',
-        message: `Вы назначены исполнителем в задаче "${oldTask.title}" (${id})`,
-        linkTaskId: id,
-        type: 'task_assigned'
-      });
-    }
+    apiService.updateTask(id, finalUpdates).catch(e => console.error(e));
   };
 
   const deleteTask = (id: string) => {
@@ -331,35 +464,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const moveTask = (taskId: string, newStatus: Status) => {
-    const oldTask = tasks.find(t => t.id === taskId);
-    setTasks(prev => prev.map(t => {
-      if (t.id === taskId) {
-        return { ...t, status: newStatus, updatedAt: new Date().toISOString() };
-      }
-      return t;
-    }));
-    apiService.updateTask(taskId, { status: newStatus }).catch(e => console.error(e));
-
-    if (oldTask && oldTask.status !== newStatus) {
-      const involvedIds = new Set<string>();
-      if (oldTask.assigneeId && oldTask.assigneeId !== 'unassigned') involvedIds.add(oldTask.assigneeId);
-      if (oldTask.assigneeGroupId) {
-        const grp = groups.find(g => g.id === oldTask.assigneeGroupId);
-        if (grp && grp.memberIds) grp.memberIds.forEach(mId => involvedIds.add(mId));
-      }
-      oldTask.comments.forEach(c => { if (c.userId) involvedIds.add(c.userId); });
-
-      const colTitle = columns.find(c => c.id === newStatus)?.title || newStatus;
-      involvedIds.forEach(targetId => {
-        addNotification({
-          userId: targetId,
-          title: '🔄 Изменился статус задачи',
-          message: `Задача "${oldTask.title}" переведена в статус "${colTitle}"`,
-          linkTaskId: taskId,
-          type: 'status_changed'
-        });
-      });
-    }
+    updateTask(taskId, { status: newStatus });
   };
 
   const addComment = (taskId: string, text: string, userId: string) => {

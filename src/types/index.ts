@@ -13,6 +13,7 @@ export interface Comment {
   userId: string;
   text: string;
   createdAt: string;
+  isSystemLog?: boolean;
 }
 
 export interface Attachment {
@@ -39,6 +40,7 @@ export interface Task {
   comments: Comment[];
   attachments?: Attachment[];
   tags: string[];
+  teamReadiness?: Record<string, boolean>;
   createdAt: string;
   updatedAt: string;
   sprintId: string | null;

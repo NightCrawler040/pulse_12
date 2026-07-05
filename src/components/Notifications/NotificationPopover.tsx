@@ -29,17 +29,22 @@ export const NotificationPopover: React.FC<Props> = ({ isOpen, onClose }) => {
       if (!latest.read) {
         const now = new Date().getTime();
         const notifTime = new Date(latest.createdAt).getTime();
-        // If arrived within last 5 seconds, show toast
-        if (now - notifTime < 5000 && !toastList.some(t => t.id === latest.id)) {
+        // If arrived within last 10 seconds, add to toast list
+        if (now - notifTime < 10000 && !toastList.some(t => t.id === latest.id)) {
           setToastList(prev => [...prev, latest]);
-          const timer = setTimeout(() => {
-            setToastList(prev => prev.filter(t => t.id !== latest.id));
-          }, 5000);
-          return () => clearTimeout(timer);
         }
       }
     }
-  }, [myNotifications, toastList]);
+  }, [myNotifications]);
+
+  // Auto dismiss toasts after 10 seconds; if a new toast arrived, timer resets ("обнуляется по таймеру")
+  useEffect(() => {
+    if (toastList.length === 0) return;
+    const timer = setTimeout(() => {
+      setToastList([]);
+    }, 10000);
+    return () => clearTimeout(timer);
+  }, [toastList]);
 
   const handleNotificationClick = (notif: any) => {
     markNotificationRead(notif.id);

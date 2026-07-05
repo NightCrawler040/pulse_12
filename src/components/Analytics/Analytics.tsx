@@ -71,8 +71,8 @@ export const Analytics: React.FC = () => {
           </div>
           <div className="metric-content">
             <span className="metric-label">Учет времени</span>
-            <span className="metric-value">{totalLoggedHours}ч</span>
-            <span className="metric-desc">Оценка: {totalEstimatedHours}ч ({Math.round((totalLoggedHours / (totalEstimatedHours || 1)) * 100)}%)</span>
+            <span className="metric-value">{Number(totalLoggedHours.toFixed(1))}ч</span>
+            <span className="metric-desc">Оценка: {Number(totalEstimatedHours.toFixed(1))}ч ({Math.round((totalLoggedHours / (totalEstimatedHours || 1)) * 100)}%)</span>
           </div>
         </div>
 
@@ -81,9 +81,9 @@ export const Analytics: React.FC = () => {
             <AlertCircle className="text-amber" size={24} />
           </div>
           <div className="metric-content">
-            <span className="metric-label">Срочные задачи</span>
-            <span className="metric-value">{urgentCount}</span>
-            <span className="metric-desc">Приоритет Urgent в потоке</span>
+            <span className="metric-label">Срочные и Важные</span>
+            <span className="metric-value">{urgentCount + highCount}</span>
+            <span className="metric-desc">🔥 {urgentCount} Urgent • ⚡ {highCount} High</span>
           </div>
         </div>
       </div>

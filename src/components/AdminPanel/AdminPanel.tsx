@@ -6,7 +6,7 @@ import { apiService } from '../../services/api';
 import './AdminPanel.css';
 
 export const AdminPanel: React.FC = () => {
-  const { users, groups, addUser, updateUser, deleteUser, addGroup, updateGroup, deleteGroup } = useTaskContext();
+  const { users, groups, onlineUserIds, addUser, updateUser, deleteUser, addGroup, updateGroup, deleteGroup } = useTaskContext();
   const { isAdmin } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'users' | 'groups'>('users');
@@ -349,11 +349,18 @@ export const AdminPanel: React.FC = () => {
                         </div>
                       </td>
                       <td>
-                        {isInactive ? (
-                          <span className="status-indicator-pill status-inactive">⛔ Заблокирован</span>
-                        ) : (
-                          <span className="status-indicator-pill status-active">🟢 Активен</span>
-                        )}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          {onlineUserIds?.includes(u.id) ? (
+                            <span className="status-indicator-pill status-active" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', width: 'fit-content', padding: '3px 8px', fontSize: '0.75rem', fontWeight: 600 }}>🟢 В сети (Онлайн)</span>
+                          ) : (
+                            <span className="status-indicator-pill" style={{ background: 'rgba(107, 114, 128, 0.15)', color: '#9ca3af', width: 'fit-content', padding: '3px 8px', fontSize: '0.75rem', fontWeight: 600 }}>⚪ Оффлайн</span>
+                          )}
+                          {isInactive ? (
+                            <span className="status-indicator-pill status-inactive" style={{ width: 'fit-content', padding: '2px 6px', fontSize: '0.7rem' }}>⛔ Заблокирован</span>
+                          ) : (
+                            <span className="status-indicator-pill status-active" style={{ width: 'fit-content', padding: '2px 6px', fontSize: '0.7rem', opacity: 0.8 }}>✔ Активная учетка</span>
+                          )}
+                        </div>
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <div className="action-buttons-row" style={{ justifyItems: 'end', justifyContent: 'flex-end' }}>

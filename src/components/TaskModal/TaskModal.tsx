@@ -540,6 +540,25 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
 
                 <div className="comments-list">
                   {existingTask.comments.map(com => {
+                    const isSys = com.isSystemLog || com.text.startsWith('⚡') || com.text.startsWith('👤') || com.text.startsWith('🏢') || com.text.startsWith('🔥') || com.text.startsWith('🤝') || com.text.startsWith('🎉');
+                    if (isSys) {
+                      return (
+                        <div key={com.id} className="comment-item system-log-item" style={{ background: 'rgba(59, 132, 246, 0.08)', borderLeft: '3px solid #3b82f6', padding: '10px 14px', borderRadius: '6px', margin: '6px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '1.3rem' }}>🤖</span>
+                          <div className="comment-body" style={{ flex: 1 }}>
+                            <div className="comment-meta" style={{ marginBottom: '2px' }}>
+                              <span className="comment-author" style={{ color: '#3b82f6', fontWeight: 600 }}>Системный аудит</span>
+                              <span className="comment-date">
+                                {new Date(com.createdAt).toLocaleString('ru-RU', { 
+                                  day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' 
+                                })}
+                              </span>
+                            </div>
+                            <p className="comment-text" style={{ margin: 0, fontWeight: 500, color: 'var(--text-color)' }}>{com.text}</p>
+                          </div>
+                        </div>
+                      );
+                    }
                     const comUser = users.find(u => u.id === com.userId);
                     return (
                       <div key={com.id} className="comment-item">
@@ -642,6 +661,55 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
                   </optgroup>
                 </select>
               </div>
+              {assigneeGroup && (
+                <div className="form-group glass-panel" style={{ padding: '12px', background: 'rgba(59,132,246,0.08)', border: '1px solid rgba(59,132,246,0.2)', borderRadius: '8px', marginTop: '10px' }}>
+                  <label className="form-label" style={{ color: 'var(--primary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+                    <span>🤝 Готовность команды ({assigneeGroup.memberIds.filter(mId => existingTask?.teamReadiness?.[mId]).length}/{assigneeGroup.memberIds.length})</span>
+                  </label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {assigneeGroup.memberIds.map(mId => {
+                      const mem = users.find(u => u.id === mId);
+                      const isReady = !!existingTask?.teamReadiness?.[mId];
+                      return (
+                        <div key={mId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 8px', background: 'var(--bg-secondary)', borderRadius: '6px', fontSize: '0.85rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <img src={mem?.avatar || 'https://via.placeholder.com/24'} alt={mem?.name} style={{ width: '20px', height: '20px', borderRadius: '50%' }} />
+                            <span>{mem?.name || 'Сотрудник'}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!existingTask) return;
+                              const current = existingTask.teamReadiness || {};
+                              const next = { ...current, [mId]: !current[mId] };
+                              updateTask(existingTask.id, { teamReadiness: next });
+                            }}
+                            style={{
+                              padding: '3px 8px',
+                              borderRadius: '4px',
+                              border: 'none',
+                              cursor: 'pointer',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              background: isReady ? 'rgba(16, 185, 129, 0.2)' : 'rgba(107, 114, 128, 0.2)',
+                              color: isReady ? '#10b981' : 'var(--text-muted)',
+                              transition: 'all 0.2s'
+                            }}
+                            title="Нажмите, чтобы подтвердить выполнение своей части работы"
+                          >
+                            {isReady ? '✅ Готов!' : '⏳ В процессе'}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {assigneeGroup.memberIds.length > 0 && assigneeGroup.memberIds.every(mId => existingTask?.teamReadiness?.[mId]) && (
+                    <div style={{ marginTop: '8px', padding: '6px', background: 'rgba(16,185,129,0.15)', color: '#10b981', borderRadius: '4px', textAlign: 'center', fontSize: '0.8rem', fontWeight: 600 }}>
+                      🎉 Все участники подтвердили готовность!
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Priority */}

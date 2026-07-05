@@ -4,7 +4,7 @@ import { Mail, Briefcase, Clock, AlertTriangle, ShieldCheck, Moon } from 'lucide
 import './TeamWorkload.css';
 
 export const TeamWorkload: React.FC = () => {
-  const { users, tasks, setFilters, setViewMode } = useTaskContext();
+  const { users, groups, tasks, setFilters, setViewMode } = useTaskContext();
 
   const handleSelectUser = (userId: string) => {
     setFilters(prev => ({ ...prev, assigneeId: userId }));
@@ -15,7 +15,7 @@ export const TeamWorkload: React.FC = () => {
     <div className="workload-container animate-fade-in">
       <div className="workload-header">
         <div>
-          <h2 className="workload-title">Команда корпорации (12 сотрудников)</h2>
+          <h2 className="workload-title">Команда корпорации ({users.length} сотрудников)</h2>
           <p className="workload-subtitle">
             Отслеживайте распределение задач и загруженность специалистов в реальном времени. Нажмите на карточку, чтобы перейти к задачам сотрудника.
           </p>
@@ -24,14 +24,15 @@ export const TeamWorkload: React.FC = () => {
 
       <div className="workload-grid">
         {users.map(user => {
-          const userTasks = tasks.filter(t => t.assigneeId === user.id);
+          const userTasks = tasks.filter(t => t.assigneeId === user.id || (t.assigneeGroupId && groups?.some(g => g.id === t.assigneeGroupId && g.memberIds?.includes(user.id))));
           const inProgressTasks = userTasks.filter(t => t.status === 'in-progress');
           const reviewTasks = userTasks.filter(t => t.status === 'review');
           const doneTasks = userTasks.filter(t => t.status === 'done');
           
           const totalSP = userTasks.reduce((sum, t) => sum + (t.storyPoints || 0), 0);
           const activeSP = inProgressTasks.reduce((sum, t) => sum + (t.storyPoints || 0), 0);
-          const loggedHours = userTasks.reduce((sum, t) => sum + (t.loggedHours || 0), 0);
+          const loggedHours = Number(userTasks.reduce((sum, t) => sum + (t.loggedHours || 0), 0).toFixed(1));
+          const estHours = Number(userTasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0).toFixed(1));
 
           let statusBadge = { label: 'Оптимально', class: 'status-optimal', icon: <ShieldCheck size={14} /> };
           if (activeSP > 8 || inProgressTasks.length >= 3) {
@@ -92,7 +93,7 @@ export const TeamWorkload: React.FC = () => {
                 </div>
                 <div className="hours-info">
                   <Clock size={13} />
-                  <span>{loggedHours}ч списано</span>
+                  <span>{loggedHours}ч / {estHours}ч</span>
                 </div>
               </div>
 

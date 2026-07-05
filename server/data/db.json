@@ -33,7 +33,7 @@
     {
       "title": "Dnjdnsfjdsjn",
       "description": "",
-      "status": "done",
+      "status": "todo",
       "priority": "urgent",
       "assigneeId": "usr-1783173872219",
       "assigneeGroupId": null,
@@ -48,14 +48,14 @@
       "attachments": [],
       "id": "NEX-904",
       "createdAt": "2026-07-04T17:53:01.233Z",
-      "updatedAt": "2026-07-04T20:08:46.962Z",
+      "updatedAt": "2026-07-04T20:22:10.280Z",
       "comments": []
     },
     {
       "id": "NEX-101",
       "title": "Настройка центрального сервера на ноутбуке для команды из 12 человек",
       "description": "Развернуть Node.js + Express + Socket.io сервер на центральном ноутбуке с доступом из локальной сети (LAN). Обеспечить хранение данных в db.json.",
-      "status": "review",
+      "status": "todo",
       "priority": "urgent",
       "assigneeId": "usr-1",
       "storyPoints": 8,
@@ -68,7 +68,7 @@
         "DevOps"
       ],
       "createdAt": "2026-07-01T09:00:00Z",
-      "updatedAt": "2026-07-04T17:17:17.276Z",
+      "updatedAt": "2026-07-04T20:21:51.892Z",
       "subtasks": [
         {
           "id": "sub-1",
@@ -99,7 +99,7 @@
       "id": "NEX-102",
       "title": "Реализация входа по Логину и Паролю для новых сотрудников",
       "description": "Обеспечить возможность Администратору создавать учетные записи с Логином и Паролем. Перевести модальное окно авторизации на форму ввода учетных данных.",
-      "status": "review",
+      "status": "todo",
       "priority": "high",
       "assigneeId": "unassigned",
       "storyPoints": 5,
@@ -112,7 +112,7 @@
         "UI/UX"
       ],
       "createdAt": "2026-07-02T10:00:00Z",
-      "updatedAt": "2026-07-04T17:17:15.065Z",
+      "updatedAt": "2026-07-04T20:22:35.242Z",
       "subtasks": [
         {
           "id": "sub-4",
@@ -136,7 +136,7 @@
       "id": "NEX-103",
       "title": "Мгновенная синхронизация через WebSockets (Socket.io) на всех ПК",
       "description": "Когда сотрудник перемещает задачу на своем ноутбуке, у всех остальных коллег в офисе доска должна обновляться автоматически без перезагрузки браузера.",
-      "status": "in-progress",
+      "status": "todo",
       "priority": "urgent",
       "assigneeId": "unassigned",
       "storyPoints": 8,
@@ -149,7 +149,7 @@
         "Frontend"
       ],
       "createdAt": "2026-07-02T11:30:00Z",
-      "updatedAt": "2026-07-04T20:15:42.174Z",
+      "updatedAt": "2026-07-04T20:21:54.393Z",
       "subtasks": [
         {
           "id": "sub-7",
@@ -183,7 +183,7 @@
       "id": "NEX-104",
       "title": "Переключатель IP-адреса сервера в шапке портала",
       "description": "Добавить кнопку в Header, позволяющую сотрудникам в один клик указать IP-адрес центрального ноутбука в Wi-Fi сети.",
-      "status": "review",
+      "status": "todo",
       "priority": "medium",
       "assigneeId": "unassigned",
       "storyPoints": 3,
@@ -195,7 +195,7 @@
         "UI/UX"
       ],
       "createdAt": "2026-07-03T14:00:00Z",
-      "updatedAt": "2026-07-04T20:14:33.204Z",
+      "updatedAt": "2026-07-04T20:22:36.884Z",
       "subtasks": [],
       "comments": []
     },
@@ -203,7 +203,7 @@
       "id": "NEX-105",
       "title": "Оптимизация рендеринга доски задач до 60 FPS",
       "description": "Удалить тяжелые backdrop-filter: blur и непрерывные transition: all для мгновенного отклика при перетаскивании карточек на любых ноутбуках.",
-      "status": "done",
+      "status": "todo",
       "priority": "high",
       "assigneeId": "unassigned",
       "storyPoints": 5,
@@ -215,7 +215,7 @@
         "Architecture"
       ],
       "createdAt": "2026-07-01T10:00:00Z",
-      "updatedAt": "2026-07-04T11:00:00Z",
+      "updatedAt": "2026-07-04T20:22:38.872Z",
       "subtasks": [
         {
           "id": "sub-9",
@@ -234,7 +234,7 @@
       "id": "NEX-106",
       "title": "Разработка личного кабинета сотрудника («Моя страница»)",
       "description": "Создать вкладку с персональной статистикой KPI, отработанными часами, Story Points и списком закрепленных задач.",
-      "status": "done",
+      "status": "todo",
       "priority": "medium",
       "assigneeId": "unassigned",
       "storyPoints": 5,
@@ -246,7 +246,7 @@
         "Frontend"
       ],
       "createdAt": "2026-07-02T15:00:00Z",
-      "updatedAt": "2026-07-04T13:00:00Z",
+      "updatedAt": "2026-07-04T20:22:40.526Z",
       "subtasks": [],
       "comments": []
     },
@@ -254,7 +254,7 @@
       "id": "NEX-107",
       "title": "Внедрение ролевой модели разграничения прав (RBAC)",
       "description": "Запретить обычным сотрудникам редактировать параметры чужих задач. Ограничить доступ к админской панели только для роли Admin.",
-      "status": "done",
+      "status": "todo",
       "priority": "urgent",
       "assigneeId": "usr-1",
       "storyPoints": 8,
@@ -267,7 +267,7 @@
         "Frontend"
       ],
       "createdAt": "2026-07-01T12:00:00Z",
-      "updatedAt": "2026-07-04T13:30:00Z",
+      "updatedAt": "2026-07-04T20:22:42.107Z",
       "subtasks": [],
       "comments": []
     },
@@ -336,6 +336,19 @@
       "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
       "isActive": true,
       "id": "usr-1783173872219"
+    },
+    {
+      "name": "бекс",
+      "email": "beks@gmail.com",
+      "login": "beks",
+      "password": "1234",
+      "department": "Engineering",
+      "role": "Specialist",
+      "roleType": "member",
+      "pin": "1234",
+      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "isActive": true,
+      "id": "usr-1783196729132"
     }
   ],
   "groups": [
