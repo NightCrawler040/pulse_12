@@ -55,12 +55,15 @@ export const reconnectSocket = (): Socket => {
 async function apiRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const baseUrl = getServerUrl();
   const url = `${baseUrl}${endpoint}`;
+  const authUserId = localStorage.getItem('korpjira-flowspace-auth-v1') || 'usr-1';
   try {
     const res = await fetch(url, {
+      ...options,
       headers: {
         'Content-Type': 'application/json',
+        'x-auth-user': authUserId,
+        ...(options?.headers || {}),
       },
-      ...options,
     });
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
