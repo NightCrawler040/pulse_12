@@ -37,13 +37,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     setPin(user.roleType === 'admin' ? 'admin' : '1234');
   };
 
-  const handleCredentialsSubmit = (e: React.FormEvent) => {
+  const handleCredentialsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginInput.trim() || !passwordInput.trim()) {
       setError('Пожалуйста, введите Логин и Пароль');
       return;
     }
-    const result = login(loginInput.trim(), passwordInput.trim());
+    const result = await login(loginInput.trim(), passwordInput.trim());
     if (result.success) {
       setError('');
       clearSessionExpired();
@@ -53,13 +53,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const handlePinSubmit = (e: React.FormEvent) => {
+  const handlePinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser) {
       setError('Пожалуйста, выберите сотрудника из списка');
       return;
     }
-    const result = login(selectedUser.id, pin);
+    const result = await login(selectedUser.id, pin);
     if (result.success) {
       setError('');
       clearSessionExpired();

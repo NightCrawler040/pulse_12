@@ -84,6 +84,8 @@ export const apiService = {
   getServerUrl,
   setServerUrl,
   fetchData: () => apiRequest<DatabaseData>('/api/data'),
+  login: (credentials: { login?: string; password?: string; pin?: string; userId?: string }) => 
+    apiRequest<{ success: boolean; user?: User; error?: string }>('/api/login', { method: 'POST', body: JSON.stringify(credentials) }),
   
   createTask: (task: any) => 
     apiRequest<Task>('/api/tasks', { method: 'POST', body: JSON.stringify(task) }),
