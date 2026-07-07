@@ -14,17 +14,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
 
       - name: Type check & Lint
-        run: npx tsc --noEmit
+        run: npx tsc -b && npm run lint
 
       - name: Build production bundle
         run: npm run build
@@ -62,7 +62,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Deploy to Ubuntu vSphere VM via SSH
-        if: env.VSPHERE_SERVER_IP != '' && env.VSPHERE_SSH_PRIVATE_KEY != ''
+        if: ${{ secrets.VSPHERE_SERVER_IP != '' && secrets.VSPHERE_SSH_PRIVATE_KEY != '' }}
         env:
           VSPHERE_SERVER_IP: ${{ secrets.VSPHERE_SERVER_IP }}
           VSPHERE_SSH_USER: ${{ secrets.VSPHERE_SSH_USER }}
@@ -83,5 +83,5 @@ jobs:
           ssh -i ~/.ssh/id_rsa $VSPHERE_SSH_USER@$VSPHERE_SERVER_IP "cd /opt/pulse12 && docker compose down && docker compose up -d --build && docker compose ps"
           echo "✅ Успешно развернуто на виртуальной машине Ubuntu vSphere!"
       - name: Skip Deploy notification
-        if: env.VSPHERE_SERVER_IP == ''
+        if: ${{ secrets.VSPHERE_SERVER_IP == '' }}
         run: echo "ℹ️ Для автоматического деплоя на vSphere добавьте секреты VSPHERE_SERVER_IP, VSPHERE_SSH_USER и VSPHERE_SSH_PRIVATE_KEY в настройки GitHub репозитория."
