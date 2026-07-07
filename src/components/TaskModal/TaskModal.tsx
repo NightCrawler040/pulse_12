@@ -23,6 +23,16 @@ import {
 } from 'lucide-react';
 import './TaskModal.css';
 
+// Sanitize attachment URLs against DOM XSS (javascript:, vbscript:, data:)
+const getSafeUrl = (url?: string): string => {
+  if (!url) return '#';
+  const trimmed = url.trim().toLowerCase();
+  if (trimmed.startsWith('javascript:') || trimmed.startsWith('vbscript:') || trimmed.startsWith('data:text/html')) {
+    return '#unsafe-url-blocked';
+  }
+  return url;
+};
+
 interface TaskModalProps {
   taskId: string | null;
   isOpenNew: boolean;
@@ -489,7 +499,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
                         <FileText size={20} />
                       </div>
                       <div className="att-info">
-                        <a href={att.url} target="_blank" rel="noopener noreferrer" className="att-name" title={att.filename}>
+                        <a href={getSafeUrl(att.url)} target="_blank" rel="noopener noreferrer" className="att-name" title={att.filename}>
                           {att.filename}
                         </a>
                         <span className="att-meta">
@@ -497,7 +507,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
                         </span>
                       </div>
                       <div className="att-actions">
-                        <a href={att.url} download={att.filename} target="_blank" rel="noopener noreferrer" className="icon-btn" title="Скачать">
+                        <a href={getSafeUrl(att.url)} download={att.filename} target="_blank" rel="noopener noreferrer" className="icon-btn" title="Скачать">
                           <Download size={15} />
                         </a>
                         {isEditable && (

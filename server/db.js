@@ -111,6 +111,20 @@ export const initDb = async () => {
     isPgConnected = false;
     loadLocalFile();
   }
+
+  // Запуск фонового мониторинга (каждые 15 сек) для автовосстановления связи с PostgreSQL
+  setInterval(async () => {
+    if (!isPgConnected) {
+      try {
+        const client = await pool.connect();
+        client.release();
+        isPgConnected = true;
+        console.log('🔄 [Auto-Healing] PostgreSQL снова доступен! Восстановление онлайн-режима...');
+      } catch (e) {
+        // Остаемся в локальном режиме db.json
+      }
+    }
+  }, 15000);
 };
 
 /**
@@ -126,6 +140,7 @@ export const getCollection = async (key) => {
       return [];
     } catch (err) {
       console.error(`❌ Ошибка PostgreSQL при получении коллекции "${key}":`, err.message);
+      isPgConnected = false;
       return localDbData[key] || [];
     }
   } else {
@@ -148,6 +163,9 @@ export const saveCollection = async (key, dataArray) => {
       await pool.query(query, [key, JSON.stringify(dataArray)]);
     } catch (err) {
       console.error(`❌ Ошибка PostgreSQL при сохранении коллекции "${key}":`, err.message);
+      isPgConnected = false;
+      localDbData[key] = dataArray;
+      saveLocalFile();
     }
   } else {
     localDbData[key] = dataArray;
@@ -177,6 +195,7 @@ export const getAllData = async () => {
       return result;
     } catch (err) {
       console.error('❌ Ошибка PostgreSQL при получении всех данных:', err.message);
+      isPgConnected = false;
       return { ...localDbData };
     }
   } else {
@@ -211,6 +230,15 @@ export const saveAllData = async (dataObj) => {
       }
     } catch (err) {
       console.error('❌ Ошибка PostgreSQL при сохранении всех данных в транзакции:', err.message);
+      isPgConnected = false;
+      localDbData = {
+        tasks: dataObj.tasks || [],
+        sprints: dataObj.sprints || [],
+        users: dataObj.users || [],
+        groups: dataObj.groups || [],
+        notifications: dataObj.notifications || []
+      };
+      saveLocalFile();
     }
   } else {
     localDbData = {

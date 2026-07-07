@@ -5,6 +5,7 @@ import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import bcrypt from 'bcryptjs';
 import { initialUsers, initialSprints, initialTasks, initialGroups } from './initialData.js';
 import { initDb, getAllData, saveCollection, saveAllData, isPostgresMode } from './db.js';
 
@@ -14,13 +15,14 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = http.createServer(app);
 
-// Allow CORS from any corporate network PC
-app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE'] }));
+// Strict or configurable CORS policy (1.F)
+const ALLOWED_ORIGIN = process.env.CORS_ORIGIN || '*';
+app.use(cors({ origin: ALLOWED_ORIGIN, methods: ['GET', 'POST', 'PUT', 'DELETE'], credentials: true }));
 app.use(express.json({ limit: '20mb' }));
 
 const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: ALLOWED_ORIGIN,
     methods: ['GET', 'POST', 'PUT', 'DELETE']
   }
 });
@@ -35,8 +37,12 @@ if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
-// Serve uploaded avatars and documents statically
-app.use('/uploads', express.static(UPLOADS_DIR));
+// Serve uploaded avatars and documents statically with security headers (1.D)
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('Content-Security-Policy', "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'");
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  next();
+}, express.static(UPLOADS_DIR));
 
 // Load database from PostgreSQL (or fallback file)
 let dbData = {
@@ -47,7 +53,83 @@ let dbData = {
   notifications: []
 };
 
-// Persist updates to PostgreSQL / local storage and broadcast to all connected corporate PC laptops
+// --- SECURITY & SANITIZATION HELPERS (1.A, 1.C) ---
+const sanitizeUsers = (usersArray) => {
+  if (!Array.isArray(usersArray)) return [];
+  return usersArray.map(u => {
+    const { password, pin, ...safeUser } = u;
+    return safeUser;
+  });
+};
+
+const getSanitizedDbData = () => ({
+  ...dbData,
+  users: sanitizeUsers(dbData.users)
+});
+
+const hashPasswordIfNeeded = (val) => {
+  if (!val) return val;
+  if (typeof val === 'string' && (val.startsWith('$2a$') || val.startsWith('$2b$') || val.startsWith('$2y$'))) return val;
+  return bcrypt.hashSync(val, 10);
+};
+
+const verifyPasswordOrPin = (input, storedHashOrText) => {
+  if (!input || !storedHashOrText) return false;
+  if (typeof storedHashOrText === 'string' && (storedHashOrText.startsWith('$2a$') || storedHashOrText.startsWith('$2b$') || storedHashOrText.startsWith('$2y$'))) {
+    try {
+      return bcrypt.compareSync(input, storedHashOrText);
+    } catch (e) {
+      return false;
+    }
+  }
+  return input === storedHashOrText;
+};
+
+const ensureUsersHashed = (usersArray) => {
+  if (!Array.isArray(usersArray)) return { hashed: [], modified: false };
+  let modified = false;
+  const hashed = usersArray.map(u => {
+    let uMod = { ...u };
+    if (u.password && (typeof u.password !== 'string' || !u.password.startsWith('$2'))) {
+      uMod.password = bcrypt.hashSync(String(u.password), 10);
+      modified = true;
+    }
+    if (u.pin && (typeof u.pin !== 'string' || !u.pin.startsWith('$2'))) {
+      uMod.pin = bcrypt.hashSync(String(u.pin), 10);
+      modified = true;
+    }
+    return uMod;
+  });
+  if (modified) {
+    console.log('🔒 [Security] Автоматически захешированы пароли и PIN-коды сотрудников через bcrypt.');
+  }
+  return { hashed, modified };
+};
+
+// Middleware проверки авторизации на API (1.B)
+const requireAuth = (req, res, next) => {
+  const userId = req.headers['x-auth-user'] || req.body.userId || req.query.userId || req.headers['authorization'];
+  if (!userId) {
+    return res.status(401).json({ error: 'Отказано в доступе: требуется авторизация' });
+  }
+  const user = dbData.users.find(u => u.id === userId && u.isActive !== false);
+  if (!user) {
+    return res.status(401).json({ error: 'Учетная запись не найдена или заблокирована' });
+  }
+  req.currentUser = user;
+  next();
+};
+
+const requireAdmin = (req, res, next) => {
+  requireAuth(req, res, () => {
+    if (req.currentUser?.roleType !== 'admin') {
+      return res.status(403).json({ error: 'Отказано в доступе: требуются права администратора' });
+    }
+    next();
+  });
+};
+
+// Persist updates to PostgreSQL / local storage and broadcast sanitized data to laptops
 const broadcastUpdate = async (key) => {
   try {
     if (key && dbData[key]) {
@@ -58,56 +140,58 @@ const broadcastUpdate = async (key) => {
   } catch (err) {
     console.error('❌ Error persisting data to database:', err);
   }
-  io.emit('data-updated', dbData);
+  io.emit('data-updated', getSanitizedDbData());
 };
 
 // --- REST API ENDPOINTS ---
 
-// Get all data
+// Get all data (sanitizing passwords & pins) (1.A)
 app.get('/api/data', async (req, res) => {
   try {
     dbData = await getAllData();
-    res.json(dbData);
+    res.json(getSanitizedDbData());
   } catch (err) {
     console.error('❌ Error fetching data:', err);
     res.status(500).json({ error: 'Database error' });
   }
 });
 
-// Login check
+// Login check securely on backend (1.A, 1.C)
 app.post('/api/login', (req, res) => {
-  const { login, password, pin } = req.body;
+  const { login, password, pin, userId } = req.body;
+  const passOrPin = password || pin;
   
-  if (!login && !pin) {
+  if (!login && !pin && !userId) {
     return res.status(400).json({ success: false, error: 'Введите Логин и Пароль' });
   }
 
-  // Find user by login & password OR pin
   const user = dbData.users.find(u => {
     if (u.isActive === false) return false;
-    if (login && password) {
-      // Check login (case insensitive) and password
+    if (login && passOrPin) {
       const matchLogin = (u.login && u.login.toLowerCase() === login.toLowerCase()) || 
                          (u.email && u.email.toLowerCase() === login.toLowerCase()) ||
-                         (u.name && u.name.toLowerCase() === login.toLowerCase());
-      const matchPassword = (u.password === password) || (u.pin === password);
+                         (u.name && u.name.toLowerCase() === login.toLowerCase()) ||
+                         (u.id === login);
+      const matchPassword = verifyPasswordOrPin(passOrPin, u.password) || verifyPasswordOrPin(passOrPin, u.pin);
       return matchLogin && matchPassword;
+    } else if (userId && passOrPin) {
+      return u.id === userId && (verifyPasswordOrPin(passOrPin, u.pin) || verifyPasswordOrPin(passOrPin, u.password));
     } else if (pin) {
-      // Legacy or quick pin check
-      return u.id === req.body.userId && (u.pin === pin || u.password === pin);
+      return u.id === req.body.userId && (verifyPasswordOrPin(pin, u.pin) || verifyPasswordOrPin(pin, u.password));
     }
     return false;
   });
 
   if (user) {
-    res.json({ success: true, user });
+    const { password: _, pin: __, ...safeUser } = user;
+    res.json({ success: true, user: safeUser });
   } else {
     res.status(401).json({ success: false, error: 'Неверный логин или пароль' });
   }
 });
 
 // Create task
-app.post('/api/tasks', (req, res) => {
+app.post('/api/tasks', requireAuth, (req, res) => {
   const newTaskData = req.body;
   const newId = newTaskData.id || `NEX-${Math.floor(100 + Math.random() * 900)}`;
   const now = new Date().toISOString();
@@ -124,7 +208,7 @@ app.post('/api/tasks', (req, res) => {
 });
 
 // Update task
-app.put('/api/tasks/:id', (req, res) => {
+app.put('/api/tasks/:id', requireAuth, (req, res) => {
   const { id } = req.params;
   const updates = req.body;
   let found = false;
@@ -144,15 +228,15 @@ app.put('/api/tasks/:id', (req, res) => {
 });
 
 // Delete task
-app.delete('/api/tasks/:id', (req, res) => {
+app.delete('/api/tasks/:id', requireAuth, (req, res) => {
   const { id } = req.params;
   dbData.tasks = dbData.tasks.filter(t => t.id !== id);
   broadcastUpdate('tasks');
   res.json({ success: true });
 });
 
-// Create user
-app.post('/api/users', (req, res) => {
+// Create user (with bcrypt hashing) (1.C)
+app.post('/api/users', requireAuth, (req, res) => {
   const userData = req.body;
   const trimmedEmail = (userData.email || '').trim().toLowerCase();
   const trimmedLogin = (userData.login || trimmedEmail.split('@')[0] || '').trim().toLowerCase();
@@ -169,24 +253,28 @@ app.post('/api/users', (req, res) => {
   }
 
   const newId = `usr-${Date.now()}`;
+  const rawPassword = userData.password || '1234';
+  const rawPin = userData.pin || rawPassword;
+
   const newUser = {
     ...userData,
     id: newId,
     login: userData.login || userData.email?.split('@')[0] || `user_${Date.now()}`,
-    password: userData.password || '1234',
+    password: hashPasswordIfNeeded(rawPassword),
     roleType: userData.roleType || 'member',
-    pin: userData.pin || userData.password || '1234',
+    pin: hashPasswordIfNeeded(rawPin),
     isActive: true
   };
   dbData.users.push(newUser);
   broadcastUpdate('users');
-  res.status(201).json(newUser);
+  const { password: _, pin: __, ...safeUser } = newUser;
+  res.status(201).json(safeUser);
 });
 
-// Update user
-app.put('/api/users/:id', (req, res) => {
+// Update user (with bcrypt hashing) (1.C)
+app.put('/api/users/:id', requireAuth, (req, res) => {
   const { id } = req.params;
-  const updates = req.body;
+  const updates = { ...req.body };
 
   if (updates.email || updates.login) {
     const trimmedEmail = (updates.email || '').trim().toLowerCase();
@@ -202,6 +290,9 @@ app.put('/api/users/:id', (req, res) => {
     }
   }
 
+  if (updates.password) updates.password = hashPasswordIfNeeded(updates.password);
+  if (updates.pin) updates.pin = hashPasswordIfNeeded(updates.pin);
+
   dbData.users = dbData.users.map(u => {
     if (u.id === id) {
       return { ...u, ...updates };
@@ -212,22 +303,19 @@ app.put('/api/users/:id', (req, res) => {
   res.json({ success: true });
 });
 
-// Delete (deactivate or permanent remove) user
-app.delete('/api/users/:id', (req, res) => {
+// Delete (deactivate or permanent remove) user (Admin Only) (1.B)
+app.delete('/api/users/:id', requireAdmin, (req, res) => {
   const { id } = req.params;
   const { permanent } = req.query;
 
   if (permanent === 'true') {
-    // Hard delete user from database
     dbData.users = dbData.users.filter(u => u.id !== id);
-    // Remove from groups
     if (dbData.groups) {
       dbData.groups = dbData.groups.map(g => ({
         ...g,
         memberIds: (g.memberIds || []).filter(mid => mid !== id)
       }));
     }
-    // Unassign tasks assigned to this user
     if (dbData.tasks) {
       dbData.tasks = dbData.tasks.map(t => {
         if (t.assigneeId === id) return { ...t, assigneeId: 'unassigned' };
@@ -236,7 +324,6 @@ app.delete('/api/users/:id', (req, res) => {
     }
     console.log(`🗑️ Permanently deleted user ${id} and cleaned up group/task references.`);
   } else {
-    // Soft delete (deactivate / block access)
     dbData.users = dbData.users.map(u => {
       if (u.id === id) {
         return { ...u, isActive: false };
@@ -250,11 +337,11 @@ app.delete('/api/users/:id', (req, res) => {
 });
 
 // --- GROUPS CRUD ENDPOINTS ---
-app.get('/api/groups', (req, res) => {
+app.get('/api/groups', requireAuth, (req, res) => {
   res.json(dbData.groups || []);
 });
 
-app.post('/api/groups', (req, res) => {
+app.post('/api/groups', requireAuth, (req, res) => {
   const groupData = req.body;
   const newId = `grp-${Date.now()}`;
   const newGroup = {
@@ -268,7 +355,7 @@ app.post('/api/groups', (req, res) => {
   res.status(201).json(newGroup);
 });
 
-app.put('/api/groups/:id', (req, res) => {
+app.put('/api/groups/:id', requireAuth, (req, res) => {
   const { id } = req.params;
   const updates = req.body;
   if (!dbData.groups) dbData.groups = [];
@@ -282,7 +369,7 @@ app.put('/api/groups/:id', (req, res) => {
   res.json({ success: true });
 });
 
-app.delete('/api/groups/:id', (req, res) => {
+app.delete('/api/groups/:id', requireAuth, (req, res) => {
   const { id } = req.params;
   if (!dbData.groups) dbData.groups = [];
   dbData.groups = dbData.groups.filter(g => g.id !== id);
@@ -291,7 +378,7 @@ app.delete('/api/groups/:id', (req, res) => {
 });
 
 // Sprints CRUD
-app.post('/api/sprints', (req, res) => {
+app.post('/api/sprints', requireAuth, (req, res) => {
   const sprintData = req.body;
   const newId = sprintData.id || `sprint-${Date.now()}`;
   const newSprint = {
@@ -305,7 +392,7 @@ app.post('/api/sprints', (req, res) => {
   res.status(201).json(newSprint);
 });
 
-app.put('/api/sprints/:id', (req, res) => {
+app.put('/api/sprints/:id', requireAuth, (req, res) => {
   const { id } = req.params;
   const updates = req.body;
   if (!dbData.sprints) dbData.sprints = [];
@@ -319,7 +406,7 @@ app.put('/api/sprints/:id', (req, res) => {
   res.json({ success: true });
 });
 
-app.delete('/api/sprints/:id', (req, res) => {
+app.delete('/api/sprints/:id', requireAuth, (req, res) => {
   const { id } = req.params;
   if (!dbData.sprints) dbData.sprints = [];
   dbData.sprints = dbData.sprints.filter(s => s.id !== id);
@@ -336,13 +423,12 @@ app.delete('/api/sprints/:id', (req, res) => {
 });
 
 // --- FILE UPLOAD ENDPOINT (LOCAL AVATARS) ---
-app.post('/api/upload', (req, res) => {
+app.post('/api/upload', requireAuth, (req, res) => {
   const { base64 } = req.body;
   if (!base64) {
     return res.status(400).json({ error: 'No base64 image data provided' });
   }
   try {
-    // Remove header e.g., "data:image/png;base64,"
     const base64Data = base64.replace(/^data:image\/\w+;base64,/, '');
     const extMatch = base64.match(/^data:image\/(\w+);base64,/);
     const ext = extMatch ? extMatch[1] : 'png';
@@ -359,15 +445,20 @@ app.post('/api/upload', (req, res) => {
   }
 });
 
-// --- GENERAL FILE UPLOAD ENDPOINT (TASK ATTACHMENTS up to 50MB) ---
-app.post('/api/upload-file', (req, res) => {
+// --- GENERAL FILE UPLOAD ENDPOINT (TASK ATTACHMENTS up to 50MB with whitelist) (1.D) ---
+app.post('/api/upload-file', requireAuth, (req, res) => {
   const { filename, base64 } = req.body;
   if (!base64 || !filename) {
     return res.status(400).json({ error: 'No base64 file data or filename provided' });
   }
   try {
+    const ext = (path.extname(filename) || '').toLowerCase();
+    const ALLOWED_EXTENSIONS = ['.pdf', '.docx', '.doc', '.xlsx', '.xls', '.csv', '.txt', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.zip', '.rar', '.7z', '.ppt', '.pptx'];
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      return res.status(400).json({ error: `Безопасность: загрузка файлов с расширением "${ext || 'без расширения'}" запрещена политикой безопасности!` });
+    }
+
     const base64Data = base64.replace(/^data:[^;]+;base64,/, '');
-    const ext = path.extname(filename) || '';
     const safeName = `doc_${Date.now()}_${Math.floor(Math.random() * 100000)}${ext}`;
     const filePath = path.join(UPLOADS_DIR, safeName);
     
@@ -382,8 +473,8 @@ app.post('/api/upload-file', (req, res) => {
   }
 });
 
-// Reset database
-app.post('/api/reset', (req, res) => {
+// Reset database (Admin Only) (1.B)
+app.post('/api/reset', requireAdmin, (req, res) => {
   dbData = {
     tasks: initialTasks,
     sprints: initialSprints,
@@ -394,8 +485,8 @@ app.post('/api/reset', (req, res) => {
   res.json({ success: true });
 });
 
-// Import database
-app.post('/api/import', (req, res) => {
+// Import database (Admin Only) (1.B)
+app.post('/api/import', requireAdmin, (req, res) => {
   const imported = req.body;
   if (imported && Array.isArray(imported.tasks)) {
     dbData.tasks = imported.tasks;
@@ -420,8 +511,8 @@ const broadcastOnlineUsers = () => {
 io.on('connection', (socket) => {
   console.log(`⚡ New corporate laptop connected via Socket.io: ${socket.id}`);
   
-  // Send current state immediately upon connection
-  socket.emit('init-data', dbData);
+  // Send sanitized current state immediately upon connection (1.A)
+  socket.emit('init-data', getSanitizedDbData());
   broadcastOnlineUsers();
 
   socket.on('user-online', (userId) => {
@@ -433,7 +524,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('request-sync', () => {
-    socket.emit('data-updated', dbData);
+    socket.emit('data-updated', getSanitizedDbData());
     broadcastOnlineUsers();
   });
 
@@ -472,6 +563,14 @@ if (fs.existsSync(DIST_DIR)) {
 const startServer = async () => {
   await initDb();
   dbData = await getAllData();
+
+  // Auto-migrate plaintext passwords to bcrypt hashes on startup (1.C)
+  const { hashed, modified } = ensureUsersHashed(dbData.users);
+  if (modified) {
+    dbData.users = hashed;
+    await saveCollection('users', dbData.users);
+  }
+
   console.log(`✅ Инициализированы данные системы (${isPostgresMode() ? 'PostgreSQL' : 'Файловый режим'}): ${dbData.tasks.length} задач, ${dbData.users.length} сотрудников.`);
 
   const PORT = process.env.PORT || 3001;
