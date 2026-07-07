@@ -10,13 +10,13 @@ export const AdminLoginPrompt: React.FC = () => {
   const [passwordInput, setPasswordInput] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginInput.trim() || !passwordInput.trim()) {
       setError('Пожалуйста, введите логин и пароль администратора');
       return;
     }
-    const res = login(loginInput.trim(), passwordInput.trim());
+    const res = await login(loginInput.trim(), passwordInput.trim());
     if (!res.success) {
       setError(res.error || 'Неверные учетные данные администратора');
       return;
