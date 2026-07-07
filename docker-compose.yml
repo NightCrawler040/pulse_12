@@ -12,7 +12,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U pulse12_admin -d pulse12"]
       interval: 5s
@@ -20,6 +20,7 @@ services:
       retries: 5
 
   pulse12-server:
+    image: ${IMAGE_TAG:-pulse12-corporate:latest}
     build: .
     container_name: pulse12-corporate
     restart: always
@@ -27,9 +28,9 @@ services:
       postgres_db:
         condition: service_healthy
     ports:
-      - "80:80"
+      - "${APP_PORT:-80}:3001"
     environment:
-      - PORT=80
+      - PORT=3001
       - NODE_ENV=production
       - DATABASE_URL=postgresql://pulse12_admin:corporate_secret_password@postgres_db:5432/pulse12
     volumes:

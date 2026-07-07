@@ -10,15 +10,17 @@ RUN npm run build
 FROM node:22-alpine AS production
 WORKDIR /app
 ENV NODE_ENV=production
-ENV PORT=80
+ENV PORT=3001
 
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/server ./server
 
-# Ensure data directories exist and are writable
-RUN mkdir -p server/data/uploads && chmod -R 777 server/data
+# Ensure data directories exist and assign ownership to non-root user 'node' (UID 1000)
+RUN mkdir -p server/data/uploads && chown -R node:node /app && chmod -R 775 /app/server/data
 
-EXPOSE 80
+USER node
+
+EXPOSE 3001
 CMD ["node", "server/index.js"]

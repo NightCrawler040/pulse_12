@@ -79,12 +79,14 @@ deploy_to_ubuntu_vsphere:
     - echo "🌐 Подключение к виртуальной машине в vSphere ($VSPHERE_SERVER_IP)..."
     - ssh $VSPHERE_SSH_USER@$VSPHERE_SERVER_IP "mkdir -p /opt/pulse12"
     # Копирование docker-compose.yml и конфигурации на сервер
-    - rsync -avz --exclude 'node_modules' --exclude '.git' ./ $VSPHERE_SSH_USER@$VSPHERE_SERVER_IP:/opt/pulse12/
-    # Перезапуск контейнеров через Docker Compose на сервере vSphere
+    - rsync -avz --exclude 'node_modules' --exclude '.git' --exclude 'dist' ./ $VSPHERE_SSH_USER@$VSPHERE_SERVER_IP:/opt/pulse12/
+    # Запуск готового образа из GitLab Container Registry без повторной компиляции
     - |
       ssh $VSPHERE_SSH_USER@$VSPHERE_SERVER_IP "cd /opt/pulse12 && \
-      docker compose down && \
-      docker compose up -d --build && \
+      export IMAGE_TAG=$IMAGE_TAG && \
+      (docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY 2>/dev/null || true) && \
+      (docker compose pull pulse12-server || echo '⚠️ Пул из Registry не удался, выполняем локальную сборку...') && \
+      docker compose up -d && \
       docker compose ps"
     - echo "✅ Успешно развернуто на корпоративном сервере vSphere!"
   environment:
