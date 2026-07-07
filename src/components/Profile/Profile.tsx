@@ -48,7 +48,8 @@ export const Profile: React.FC = () => {
       email: email.trim(),
       department: department.trim(),
       avatar: avatar.trim() || currentUser.avatar,
-      pin: pin.trim() || '1234'
+      pin: pin.trim() || '1234',
+      password: pin.trim() || '1234'
     });
     setIsEditing(false);
   };
@@ -182,7 +183,7 @@ export const Profile: React.FC = () => {
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Новый PIN-код (пароль для входа)</label>
+              <label className="form-label">Новый пароль / PIN-код для входа</label>
               <input
                 type="text"
                 className="input-field"
