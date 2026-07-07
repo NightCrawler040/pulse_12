@@ -193,7 +193,7 @@ export const Analytics: React.FC = () => {
         </div>
 
         <div className="leaderboard-grid">
-          {users.map(u => {
+          {users.filter(u => u.roleType !== 'admin').map(u => {
             const uTasks = currentTasks.filter(t => t.assigneeId === u.id || (t.assigneeGroupId && groups.some(g => g.id === t.assigneeGroupId && g.memberIds?.includes(u.id))));
             const uDone = uTasks.filter(t => t.status === 'done').length;
             const uSP = uTasks.reduce((sum, t) => sum + (t.storyPoints || 0), 0);

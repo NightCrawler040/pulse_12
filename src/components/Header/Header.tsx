@@ -367,7 +367,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewTaskModal, onOpenLoginM
               </div>
 
               <div className="avatar-row">
-                {users.map((user) => {
+                {users.filter(u => u.roleType !== 'admin').map((user) => {
                   const isSelected = filters.assigneeId === user.id;
                   return (
                     <div 

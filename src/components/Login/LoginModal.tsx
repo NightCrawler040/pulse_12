@@ -24,7 +24,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
-  const activeUsers = users.filter(u => u.isActive !== false);
+  const activeUsers = users.filter(u => u.isActive !== false && u.roleType !== 'admin');
   const filteredUsers = activeUsers.filter(u => 
     u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     u.role.toLowerCase().includes(searchQuery.toLowerCase()) ||

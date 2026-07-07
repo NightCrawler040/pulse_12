@@ -23,7 +23,7 @@ export const TeamWorkload: React.FC = () => {
       </div>
 
       <div className="workload-grid">
-        {users.map(user => {
+        {users.filter(u => u.roleType !== 'admin').map(user => {
           const userTasks = tasks.filter(t => t.assigneeId === user.id || (t.assigneeGroupId && groups?.some(g => g.id === t.assigneeGroupId && g.memberIds?.includes(user.id))));
           const inProgressTasks = userTasks.filter(t => t.status === 'in-progress');
           const reviewTasks = userTasks.filter(t => t.status === 'review');
