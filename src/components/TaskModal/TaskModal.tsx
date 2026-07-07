@@ -23,14 +23,15 @@ import {
 } from 'lucide-react';
 import './TaskModal.css';
 
-// Sanitize attachment URLs against DOM XSS (javascript:, vbscript:, data:)
+// Sanitize attachment URLs against DOM XSS (strict whitelist)
 const getSafeUrl = (url?: string): string => {
   if (!url) return '#';
-  const trimmed = url.trim().toLowerCase();
-  if (trimmed.startsWith('javascript:') || trimmed.startsWith('vbscript:') || trimmed.startsWith('data:text/html')) {
-    return '#unsafe-url-blocked';
+  const trimmed = url.trim();
+  const lower = trimmed.toLowerCase();
+  if (lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('/uploads/') || lower.startsWith('data:image/')) {
+    return trimmed;
   }
-  return url;
+  return '#unsafe-url-blocked';
 };
 
 interface TaskModalProps {
@@ -266,10 +267,15 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
           if (res.success && res.url) {
             fileUrl = res.url;
             fileSize = res.size || file.size;
+          } else {
+            throw new Error('Не удалось получить URL загруженного файла');
           }
-        } catch (err) {
-          console.warn('⚠️ Загрузка на сервер недоступна, сохраняем вложение локально (Base64)', err);
-          fileUrl = base64; // Fallback for offline or local mode
+        } catch (err: any) {
+          console.error('❌ Ошибка загрузки файла на сервер:', err);
+          alert(`Ошибка загрузки файла на сервер: ${err.message || 'Размер превышает лимит или сервер недоступен'}`);
+          setIsUploading(false);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+          return;
         }
 
         if (fileUrl) {

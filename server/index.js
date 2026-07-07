@@ -18,7 +18,7 @@ const server = http.createServer(app);
 // Strict or configurable CORS policy (1.F)
 const ALLOWED_ORIGIN = process.env.CORS_ORIGIN || '*';
 app.use(cors({ origin: ALLOWED_ORIGIN, methods: ['GET', 'POST', 'PUT', 'DELETE'], credentials: true }));
-app.use(express.json({ limit: '20mb' }));
+app.use(express.json({ limit: '55mb' }));
 
 const io = new Server(server, {
   cors: {
@@ -473,8 +473,11 @@ app.post('/api/upload-file', requireAuth, (req, res) => {
   }
 });
 
-// Reset database (Admin Only) (1.B)
+// Reset database (Admin Only & Blocked in Production) (1.B)
 app.post('/api/reset', requireAdmin, (req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ error: 'Внимание! В продакшен-режиме сброс базы заблокирован в целях безопасности.' });
+  }
   dbData = {
     tasks: initialTasks,
     sprints: initialSprints,

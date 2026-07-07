@@ -161,6 +161,9 @@ export const saveCollection = async (key, dataArray) => {
         SET data = $2, updated_at = CURRENT_TIMESTAMP;
       `;
       await pool.query(query, [key, JSON.stringify(dataArray)]);
+      // Фоновое обновление локальной копии для бесшовного Failover (3)
+      localDbData[key] = dataArray;
+      saveLocalFile();
     } catch (err) {
       console.error(`❌ Ошибка PostgreSQL при сохранении коллекции "${key}":`, err.message);
       isPgConnected = false;
@@ -222,6 +225,15 @@ export const saveAllData = async (dataObj) => {
           await client.query(query, [key, JSON.stringify(val)]);
         }
         await client.query('COMMIT');
+        // Фоновое обновление локальной копии для бесшовного Failover (3)
+        localDbData = {
+          tasks: dataObj.tasks || [],
+          sprints: dataObj.sprints || [],
+          users: dataObj.users || [],
+          groups: dataObj.groups || [],
+          notifications: dataObj.notifications || []
+        };
+        saveLocalFile();
       } catch (err) {
         await client.query('ROLLBACK');
         throw err;
