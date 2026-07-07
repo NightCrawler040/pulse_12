@@ -6,7 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initialUsers, initialSprints, initialTasks, initialGroups } from './initialData.js';
-import { initDb, getAllData, isPostgresMode } from './db.js';
+import { initDb, getAllData, saveCollection, saveAllData, isPostgresMode } from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,8 +47,17 @@ let dbData = {
   notifications: []
 };
 
-// Broadcast updates to all connected corporate laptops
-const broadcastUpdate = async () => {
+// Persist updates to PostgreSQL / local storage and broadcast to all connected corporate PC laptops
+const broadcastUpdate = async (key) => {
+  try {
+    if (key && dbData[key]) {
+      await saveCollection(key, dbData[key]);
+    } else {
+      await saveAllData(dbData);
+    }
+  } catch (err) {
+    console.error('❌ Error persisting data to database:', err);
+  }
   io.emit('data-updated', dbData);
 };
 

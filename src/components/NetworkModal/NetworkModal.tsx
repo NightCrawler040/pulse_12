@@ -27,7 +27,15 @@ export const NetworkModal: React.FC = () => {
   };
 
   const handleResetAuto = () => {
-    const defaultUrl = `${window.location.protocol}//${window.location.hostname || 'localhost'}:3001`;
+    const protocol = window.location.protocol || 'http:';
+    const hostname = window.location.hostname || 'localhost';
+    const port = window.location.port;
+    let defaultUrl = `${protocol}//${hostname}`;
+    if (port === '5173' || port === '3000' || (hostname === 'localhost' && !port)) {
+      defaultUrl += ':3001';
+    } else if (port && port !== '80' && port !== '443') {
+      defaultUrl += `:${port}`;
+    }
     setInputUrl(defaultUrl);
     setServerUrl(defaultUrl);
     setSavedSuccess(true);

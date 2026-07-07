@@ -7,18 +7,23 @@ export const getServerUrl = (): string => {
   const saved = localStorage.getItem(SERVER_URL_KEY);
   if (saved) return saved;
   
-  // If running on dedicated vSphere Ubuntu VM in production (not dev server on 5173)
-  if (window.location.port !== '5173' && window.location.port !== '3000' && window.location.port !== '3001') {
+  // If running in production (standard port 80, 443, or custom Docker port like 8080/etc., anything NOT dev 5173/3000)
+  if (window.location.port !== '5173' && window.location.port !== '3000') {
     return window.location.origin;
   }
   
-  // Auto-detect hostname (e.g., localhost or 192.168.10.12) and use port 3001
+  // Only in dev mode (Vite 5173 / 3000), fallback to backend port 3001
   const host = window.location.hostname || 'localhost';
   return `http://${host}:3001`;
 };
 
 export const setServerUrl = (url: string): void => {
-  const cleaned = url.trim().replace(/\/$/, '');
+  let cleaned = url.trim().replace(/\/$/, '');
+  // If user entered raw IP/domain without protocol (http:// or https://), automatically prepend protocol
+  if (cleaned && !cleaned.startsWith('http://') && !cleaned.startsWith('https://')) {
+    const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+    cleaned = `${protocol}//${cleaned}`;
+  }
   localStorage.setItem(SERVER_URL_KEY, cleaned);
   reconnectSocket();
 };
