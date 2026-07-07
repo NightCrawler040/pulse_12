@@ -1,158 +1,15 @@
 export const initialUsers = [
   {
     id: 'usr-1',
-    name: 'Алексей Смирнов',
+    name: 'Александр Громов',
     login: 'admin',
     password: 'admin',
     role: 'Tech Lead / Admin',
     roleType: 'admin',
     department: 'Engineering',
-    email: 'a.smirnov@corp.lan',
+    email: 'a.gromov@corp.lan',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     pin: 'admin',
-    isActive: true
-  },
-  {
-    id: 'usr-2',
-    name: 'Елена Васильева',
-    login: 'evasilieva',
-    password: '1234',
-    role: 'Product Manager',
-    roleType: 'manager',
-    department: 'Product',
-    email: 'e.vasilieva@corp.lan',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-    pin: '1234',
-    isActive: true
-  },
-  {
-    id: 'usr-3',
-    name: 'Дмитрий Волков',
-    login: 'dvolkov',
-    password: '1234',
-    role: 'Scrum Master',
-    roleType: 'manager',
-    department: 'Agile',
-    email: 'd.volkov@corp.lan',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    pin: '1234',
-    isActive: true
-  },
-  {
-    id: 'usr-4',
-    name: 'Сергей Петров',
-    login: 'spetrov',
-    password: '1234',
-    role: 'Senior Frontend Dev',
-    roleType: 'member',
-    department: 'Frontend',
-    email: 's.petrov@corp.lan',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    pin: '1234',
-    isActive: true
-  },
-  {
-    id: 'usr-5',
-    name: 'Анна Соколова',
-    login: 'asokolova',
-    password: '1234',
-    role: 'Senior Backend Dev',
-    roleType: 'member',
-    department: 'Backend',
-    email: 'a.sokolova@corp.lan',
-    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80',
-    pin: '1234',
-    isActive: true
-  },
-  {
-    id: 'usr-6',
-    name: 'Михаил Иванов',
-    login: 'mivanov',
-    password: '1234',
-    role: 'Fullstack Dev',
-    roleType: 'member',
-    department: 'Engineering',
-    email: 'm.ivanov@corp.lan',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
-    pin: '1234',
-    isActive: true
-  },
-  {
-    id: 'usr-7',
-    name: 'Полина Кузнецова',
-    login: 'pkuznetsova',
-    password: '1234',
-    role: 'UX/UI Designer',
-    roleType: 'member',
-    department: 'Design',
-    email: 'p.kuznetsova@corp.lan',
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-    pin: '1234',
-    isActive: true
-  },
-  {
-    id: 'usr-8',
-    name: 'Николай Попов',
-    login: 'npopov',
-    password: '1234',
-    role: 'DevOps Engineer',
-    roleType: 'member',
-    department: 'Infrastructure',
-    email: 'n.popov@corp.lan',
-    avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
-    pin: '1234',
-    isActive: true
-  },
-  {
-    id: 'usr-9',
-    name: 'Мария Лебедева',
-    login: 'mlebedeva',
-    password: '1234',
-    role: 'QA Lead',
-    roleType: 'member',
-    department: 'Quality Assurance',
-    email: 'm.lebedeva@corp.lan',
-    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
-    pin: '1234',
-    isActive: true
-  },
-  {
-    id: 'usr-10',
-    name: 'Артем Морозов',
-    login: 'amorozov',
-    password: '1234',
-    role: 'Backend Developer',
-    roleType: 'member',
-    department: 'Backend',
-    email: 'a.morozov@corp.lan',
-    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
-    pin: '1234',
-    isActive: true
-  },
-  {
-    id: 'usr-11',
-    name: 'Ольга Новикова',
-    login: 'onovikova',
-    password: '1234',
-    role: 'Frontend Developer',
-    roleType: 'member',
-    department: 'Frontend',
-    email: 'o.novikova@corp.lan',
-    avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=150&auto=format&fit=crop&q=80',
-    pin: '1234',
-    isActive: true
-  },
-  {
-    id: 'usr-12',
-    name: 'Иван Козлов',
-    login: 'ikozlov',
-    password: '1234',
-    role: 'QA Automation',
-    roleType: 'member',
-    department: 'Quality Assurance',
-    email: 'i.kozlov@corp.lan',
-    avatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150&auto=format&fit=crop&q=80',
-    pin: '1234',
     isActive: true
   }
 ];
@@ -211,7 +68,7 @@ export const initialTasks = [
     description: 'Обеспечить возможность Администратору создавать учетные записи с Логином и Паролем. Перевести модальное окно авторизации на форму ввода учетных данных.',
     status: 'in-progress',
     priority: 'high',
-    assigneeId: 'usr-2',
+    assigneeId: 'usr-1',
     storyPoints: 5,
     estimatedHours: 12,
     loggedHours: 6,
@@ -232,7 +89,7 @@ export const initialTasks = [
     description: 'Когда сотрудник перемещает задачу на своем ноутбуке, у всех остальных коллег в офисе доска должна обновляться автоматически без перезагрузки браузера.',
     status: 'in-progress',
     priority: 'urgent',
-    assigneeId: 'usr-5',
+    assigneeId: 'usr-1',
     storyPoints: 8,
     estimatedHours: 20,
     loggedHours: 10,
@@ -247,7 +104,7 @@ export const initialTasks = [
     comments: [
       {
         id: 'c-2',
-        userId: 'usr-3',
+        userId: 'usr-1',
         text: 'Это ключевая фича для совместных грумингов и планирования спринта!',
         createdAt: '2026-07-03T09:20:00Z'
       }
@@ -259,7 +116,7 @@ export const initialTasks = [
     description: 'Добавить кнопку в Header, позволяющую сотрудникам в один клик указать IP-адрес центрального ноутбука в Wi-Fi сети.',
     status: 'todo',
     priority: 'medium',
-    assigneeId: 'usr-4',
+    assigneeId: 'usr-1',
     storyPoints: 3,
     estimatedHours: 6,
     loggedHours: 0,
@@ -276,7 +133,7 @@ export const initialTasks = [
     description: 'Удалить тяжелые backdrop-filter: blur и непрерывные transition: all для мгновенного отклика при перетаскивании карточек на любых ноутбуках.',
     status: 'done',
     priority: 'high',
-    assigneeId: 'usr-4',
+    assigneeId: 'usr-1',
     storyPoints: 5,
     estimatedHours: 10,
     loggedHours: 10,
@@ -296,7 +153,7 @@ export const initialTasks = [
     description: 'Создать вкладку с персональной статистикой KPI, отработанными часами, Story Points и списком закрепленных задач.',
     status: 'done',
     priority: 'medium',
-    assigneeId: 'usr-7',
+    assigneeId: 'usr-1',
     storyPoints: 5,
     estimatedHours: 14,
     loggedHours: 14,
@@ -330,7 +187,7 @@ export const initialTasks = [
     description: 'Написать сценарии проверки жизненного цикла задачи: создание -> взятие в работу -> проверка -> завершение.',
     status: 'todo',
     priority: 'medium',
-    assigneeId: 'usr-12',
+    assigneeId: 'usr-1',
     storyPoints: 5,
     estimatedHours: 16,
     loggedHours: 0,
@@ -348,24 +205,24 @@ export const initialGroups = [
     id: 'grp-1',
     name: '🚀 Команда Разработки (Engineering)',
     color: '#3b82f6',
-    memberIds: ['usr-1', 'usr-4', 'usr-5', 'usr-6', 'usr-8', 'usr-10', 'usr-11']
+    memberIds: ['usr-1']
   },
   {
     id: 'grp-2',
     name: '🎯 Менеджмент и Продукт (Product & Agile)',
     color: '#8b5cf6',
-    memberIds: ['usr-2', 'usr-3']
+    memberIds: []
   },
   {
     id: 'grp-3',
     name: '🛡️ Отдел Тестирования (Quality Assurance)',
     color: '#10b981',
-    memberIds: ['usr-9', 'usr-12']
+    memberIds: []
   },
   {
     id: 'grp-4',
     name: '🎨 Дизайн и UX (Design Team)',
     color: '#ec4899',
-    memberIds: ['usr-7']
+    memberIds: []
   }
 ];

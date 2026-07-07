@@ -94,7 +94,7 @@ export const initDb = async () => {
     const count = parseInt(res.rows[0].count, 10);
 
     if (count === 0) {
-      console.log('🌱 База данных PostgreSQL пуста. Инициализация стартовыми корпоративными данными (12 сотрудников, спринты, группы)...');
+      console.log('🌱 База данных PostgreSQL пуста. Инициализация стартовыми корпоративными данными (Администратор, спринты, группы)...');
       await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['tasks', JSON.stringify(initialTasks)]);
       await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['sprints', JSON.stringify(initialSprints)]);
       await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['users', JSON.stringify(initialUsers)]);

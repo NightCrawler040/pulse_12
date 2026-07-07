@@ -37,6 +37,9 @@ interface TaskContextType {
   addGroup: (group: Omit<Group, 'id'>) => Group;
   updateGroup: (id: string, updates: Partial<Group>) => void;
   deleteGroup: (id: string) => void;
+  addSprint: (sprint: Omit<Sprint, 'id'>) => Sprint;
+  updateSprint: (id: string, updates: Partial<Sprint>) => void;
+  deleteSprint: (id: string) => void;
   addNotification: (notif: Omit<NotificationItem, 'id' | 'createdAt' | 'read'>) => void;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
@@ -669,6 +672,24 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     apiService.deleteGroup(id).catch(err => console.error('Delete group failed:', err));
   };
 
+  const addSprint = (sprintData: Omit<Sprint, 'id'>): Sprint => {
+    const newId = `sprint-${Date.now()}`;
+    const newSprint: Sprint = { ...sprintData, id: newId };
+    setSprints(prev => [...prev, newSprint]);
+    apiService.createSprint(sprintData).catch(err => console.error('Create sprint failed:', err));
+    return newSprint;
+  };
+
+  const updateSprint = (id: string, updates: Partial<Sprint>) => {
+    setSprints(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+    apiService.updateSprint(id, updates).catch(err => console.error('Update sprint failed:', err));
+  };
+
+  const deleteSprint = (id: string) => {
+    setSprints(prev => prev.filter(s => s.id !== id));
+    setTasks(prev => prev.map(t => t.sprintId === id ? { ...t, sprintId: 'unassigned' } : t));
+    apiService.deleteSprint(id).catch(err => console.error('Delete sprint failed:', err));
+  };
 
   const markNotificationRead = (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
@@ -713,6 +734,9 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       addGroup,
       updateGroup,
       deleteGroup,
+      addSprint,
+      updateSprint,
+      deleteSprint,
       addNotification,
       markNotificationRead,
       markAllNotificationsRead,

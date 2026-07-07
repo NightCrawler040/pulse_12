@@ -27,10 +27,11 @@ interface TaskModalProps {
   taskId: string | null;
   isOpenNew: boolean;
   defaultStatus?: Status;
+  defaultSprintId?: string | null | undefined;
   onClose: () => void;
 }
 
-export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, defaultStatus = 'todo', onClose }) => {
+export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, defaultStatus = 'todo', defaultSprintId, onClose }) => {
   const { 
     tasks, 
     users, 
@@ -58,7 +59,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
   const [storyPoints, setStoryPoints] = useState<number>(existingTask?.storyPoints || 3);
   const [estimatedHours, setEstimatedHours] = useState<number>(existingTask?.estimatedHours || 8);
   const [loggedHours, setLoggedHours] = useState<number>(existingTask?.loggedHours || 0);
-  const [sprintId, setSprintId] = useState<string | null>(existingTask?.sprintId || 'sprint-1');
+  const [sprintId, setSprintId] = useState<string | null>(existingTask?.sprintId || (defaultSprintId !== undefined ? defaultSprintId : 'sprint-1'));
   const [tags, setTags] = useState<string[]>(existingTask?.tags || ['Engineering']);
   const [newTagInput, setNewTagInput] = useState('');
   
@@ -85,7 +86,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
       setStoryPoints(3);
       setEstimatedHours(8);
       setLoggedHours(0);
-      setSprintId('sprint-1');
+      setSprintId(defaultSprintId !== undefined ? defaultSprintId : 'sprint-1');
       setTags(['Engineering']);
       setSubtasksList([]);
       setAttachmentsList([]);
@@ -104,7 +105,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
       setSubtasksList(existingTask.subtasks || []);
       setAttachmentsList(existingTask.attachments || []);
     }
-  }, [taskId, isOpenNew, defaultStatus]);
+  }, [taskId, isOpenNew, defaultStatus, defaultSprintId]);
 
   useEffect(() => {
     if (existingTask?.attachments) {

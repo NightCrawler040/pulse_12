@@ -111,6 +111,15 @@ export const apiService = {
   deleteGroup: (id: string) => 
     apiRequest<{ success: boolean }>(`/api/groups/${id}`, { method: 'DELETE' }),
     
+  createSprint: (sprint: any) => 
+    apiRequest<Sprint>('/api/sprints', { method: 'POST', body: JSON.stringify(sprint) }),
+    
+  updateSprint: (id: string, updates: Partial<Sprint>) => 
+    apiRequest<{ success: boolean }>(`/api/sprints/${id}`, { method: 'PUT', body: JSON.stringify(updates) }),
+    
+  deleteSprint: (id: string) => 
+    apiRequest<{ success: boolean }>(`/api/sprints/${id}`, { method: 'DELETE' }),
+    
   uploadAvatar: async (fileBase64: string, filename: string): Promise<{ success: boolean; url: string }> => {
     const res = await apiRequest<{ success: boolean; url: string }>('/api/upload', {
       method: 'POST',

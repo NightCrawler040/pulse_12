@@ -22,6 +22,7 @@ const AppContent: React.FC = () => {
   
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [modalStatus, setModalStatus] = useState<Status>('todo');
+  const [modalSprintId, setModalSprintId] = useState<string | null | undefined>(undefined);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   useEffect(() => {
@@ -33,8 +34,9 @@ const AppContent: React.FC = () => {
     }
   }, [currentUser, isAdmin, setFilters]);
 
-  const handleOpenNewModal = (defaultSt: Status = 'todo') => {
+  const handleOpenNewModal = (defaultSt: Status = 'todo', sprintId?: string | null) => {
     setModalStatus(defaultSt);
+    setModalSprintId(sprintId);
     setIsNewModalOpen(true);
     setActiveTaskModalId(null);
   };
@@ -60,7 +62,7 @@ const AppContent: React.FC = () => {
               <KanbanBoard onOpenNewTaskModalWithStatus={(st) => handleOpenNewModal(st)} />
             )}
             {viewMode === 'backlog' && (
-              <Backlog onOpenNewTaskModal={() => handleOpenNewModal('todo')} />
+              <Backlog onOpenNewTaskModal={(spId) => handleOpenNewModal('todo', spId)} />
             )}
             {viewMode === 'workload' && (
               <TeamWorkload />
@@ -106,6 +108,7 @@ const AppContent: React.FC = () => {
         taskId={activeTaskModalId}
         isOpenNew={isNewModalOpen}
         defaultStatus={modalStatus}
+        defaultSprintId={modalSprintId}
         onClose={handleCloseModal}
       />
 

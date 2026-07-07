@@ -290,6 +290,51 @@ app.delete('/api/groups/:id', (req, res) => {
   res.json({ success: true });
 });
 
+// Sprints CRUD
+app.post('/api/sprints', (req, res) => {
+  const sprintData = req.body;
+  const newId = sprintData.id || `sprint-${Date.now()}`;
+  const newSprint = {
+    ...sprintData,
+    id: newId,
+    isActive: sprintData.isActive || false
+  };
+  if (!dbData.sprints) dbData.sprints = [];
+  dbData.sprints.push(newSprint);
+  broadcastUpdate('sprints');
+  res.status(201).json(newSprint);
+});
+
+app.put('/api/sprints/:id', (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+  if (!dbData.sprints) dbData.sprints = [];
+  dbData.sprints = dbData.sprints.map(s => {
+    if (s.id === id) {
+      return { ...s, ...updates };
+    }
+    return s;
+  });
+  broadcastUpdate('sprints');
+  res.json({ success: true });
+});
+
+app.delete('/api/sprints/:id', (req, res) => {
+  const { id } = req.params;
+  if (!dbData.sprints) dbData.sprints = [];
+  dbData.sprints = dbData.sprints.filter(s => s.id !== id);
+  if (!dbData.tasks) dbData.tasks = [];
+  dbData.tasks = dbData.tasks.map(t => {
+    if (t.sprintId === id) {
+      return { ...t, sprintId: 'unassigned' };
+    }
+    return t;
+  });
+  broadcastUpdate('sprints');
+  broadcastUpdate('tasks');
+  res.json({ success: true });
+});
+
 // --- FILE UPLOAD ENDPOINT (LOCAL AVATARS) ---
 app.post('/api/upload', (req, res) => {
   const { base64 } = req.body;
