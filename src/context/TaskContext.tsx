@@ -135,6 +135,13 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [activeTaskModalId, setActiveTaskModalId] = useState<string | null>(null);
   const [isServerConnected, setIsServerConnected] = useState<boolean>(false);
+  const [socketVersion, setSocketVersion] = useState<number>(0);
+
+  useEffect(() => {
+    const handleUrlChange = () => setSocketVersion(v => v + 1);
+    window.addEventListener('socket-url-changed', handleUrlChange);
+    return () => window.removeEventListener('socket-url-changed', handleUrlChange);
+  }, []);
   
   const [theme, setThemeState] = useState<'dark' | 'light'>(() => {
     const savedTheme = localStorage.getItem(THEME_KEY) as 'dark' | 'light';
@@ -167,6 +174,9 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     const socket = getSocket();
+    if (socket.connected) {
+      setIsServerConnected(true);
+    }
     const onConnect = () => setIsServerConnected(true);
     const onDisconnect = () => setIsServerConnected(false);
     const onDataUpdated = (data: any) => {
@@ -205,7 +215,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       socket.off('online-users-updated', onOnlineUsersUpdated);
       socket.off('notification-received', onNotificationReceived);
     };
-  }, []);
+  }, [socketVersion]);
 
   // Save to LocalStorage as offline backup
   useEffect(() => {

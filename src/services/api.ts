@@ -26,6 +26,7 @@ export const setServerUrl = (url: string): void => {
   }
   localStorage.setItem(SERVER_URL_KEY, cleaned);
   reconnectSocket();
+  window.dispatchEvent(new Event('socket-url-changed'));
 };
 
 let socketInstance: Socket | null = null;
