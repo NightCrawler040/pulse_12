@@ -9,29 +9,25 @@ interface WelcomePageProps {
 
 export const WelcomePage: React.FC<WelcomePageProps> = ({ onOpenLogin }) => {
   const { isServerConnected, users, onlineUserIds } = useTaskContext();
+  const employeeCount = users.filter(u => u.roleType !== 'admin').length;
 
   return (
     <div className="welcome-container animate-fade-in">
       <div className="welcome-hero">
-        <div className="welcome-badge">
-          <Sparkles size={16} className="badge-icon" />
-          <span>Корпоративная сеть Pulse12 vSphere LAN</span>
-        </div>
+        <div className="welcome-badge">🏢 Корпоративная платформа Pulse 12</div>
 
         <h1 className="welcome-title">
-          Интеллектуальное управление <br />
-          <span className="gradient-text">проектами и задачами</span>
+          Управление задачами и командами <br />в изолированной LAN-сети
         </h1>
 
         <p className="welcome-subtitle">
-          Единое рабочее пространство для agile-команд. Синхронизация задач в реальном времени, 
-          ролевой доступ (RBAC) и прозрачный контроль спринтов без выхода в глобальный интернет.
+          Безопасное пространство для совместной работы 12 сотрудников корпорации. Полная автономность, мгновенная синхронизация по WebSocket и контроль доступа.
         </p>
 
-        <div className="welcome-cta-group">
-          <button className="btn-welcome-primary" onClick={onOpenLogin}>
-            <span>🔑 Войти в систему / Выбрать сотрудника</span>
-            <ArrowRight size={20} />
+        <div className="welcome-actions">
+          <button className="btn-primary welcome-btn" onClick={onOpenLogin}>
+            <LogIn size={20} />
+            <span>Войти в систему</span>
           </button>
         </div>
 
@@ -40,7 +36,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onOpenLogin }) => {
             <Server size={16} style={{ color: isServerConnected ? '#22c55e' : '#ef4444' }} />
             <span>Статус сервера:</span>
             <strong style={{ color: isServerConnected ? '#22c55e' : '#ef4444' }}>
-              {isServerConnected ? `🟢 Подключено (Онлайн: ${onlineUserIds.length || 1} из ${users.length})` : '⚠️ Локальный режим'}
+              {isServerConnected ? `🟢 Подключено (Онлайн: ${onlineUserIds.length || 1} из ${employeeCount})` : '⚠️ Локальный режим'}
             </strong>
           </div>
         </div>

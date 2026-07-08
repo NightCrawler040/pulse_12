@@ -55,6 +55,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewTaskModal, onOpenLoginM
   } = useTaskContext();
 
   const { currentUser, isAdmin } = useAuth();
+  const employeeUsersCount = users.filter(u => u.roleType !== 'admin').length;
 
   const [showFilters, setShowFilters] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -108,7 +109,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewTaskModal, onOpenLoginM
   const navItems: { mode: ViewMode; label: string; icon: React.ReactNode; badge?: string }[] = [
     { mode: 'board', label: 'Канбан-доска', icon: <LayoutDashboard size={18} /> },
     { mode: 'backlog', label: 'Бэклог & Спринты', icon: <ListTodo size={18} /> },
-    { mode: 'workload', label: 'Команда', icon: <Users size={18} />, badge: `${users.length} чел` },
+    { mode: 'workload', label: 'Команда', icon: <Users size={18} />, badge: `${employeeUsersCount} чел` },
     { mode: 'analytics', label: 'Аналитика', icon: <BarChart3 size={18} /> },
     { mode: 'profile', label: 'Моя страница', icon: <UserIcon size={18} /> },
     { mode: 'help', label: 'Справка ❓', icon: <HelpCircle size={18} /> },
@@ -171,7 +172,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewTaskModal, onOpenLoginM
             }}
           >
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: isServerConnected ? '#22c55e' : '#ef4444', display: 'inline-block' }} />
-            {isServerConnected ? `🟢 LAN (Онлайн: ${onlineUserIds.length || 1} из ${users.length})` : '⚠️ Офлайн'}
+            {isServerConnected ? `🟢 LAN (Онлайн: ${onlineUserIds.length || 1} из ${employeeUsersCount})` : '⚠️ Офлайн'}
           </button>
 
           {/* User profile button / Switch user */}
@@ -355,7 +356,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewTaskModal, onOpenLoginM
             <div className="avatar-filter-section">
               <div className="avatar-filter-header">
                 <Filter size={14} />
-                <span>Фильтр по команде ({users.length}):</span>
+                <span>Фильтр по команде ({employeeUsersCount}):</span>
                 {filters.assigneeId && (
                   <button 
                     className="reset-avatar-filter"

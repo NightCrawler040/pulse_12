@@ -8,6 +8,7 @@ import './AdminPanel.css';
 export const AdminPanel: React.FC = () => {
   const { users, groups, onlineUserIds, addUser, updateUser, deleteUser, addGroup, updateGroup, deleteGroup } = useTaskContext();
   const { isAdmin } = useAuth();
+  const employeeUsers = users.filter(u => u.roleType !== 'admin');
 
   const [activeTab, setActiveTab] = useState<'users' | 'groups'>('users');
 
@@ -141,7 +142,7 @@ export const AdminPanel: React.FC = () => {
     setIsModalOpen(false);
   };
 
-  const filteredUsers = users.filter(u => {
+  const filteredUsers = employeeUsers.filter(u => {
     const q = searchQuery.toLowerCase();
     const matchesSearch = !q ||
       u.name.toLowerCase().includes(q) ||
@@ -155,7 +156,7 @@ export const AdminPanel: React.FC = () => {
 
   const handleExportCSV = () => {
     const headers = ['ID', 'ФИО', 'Email', 'Логин', 'Отдел', 'Должность', 'Уровень прав', 'PIN / Пароль', 'Статус'];
-    const rows = users.map(u => [
+    const rows = employeeUsers.map(u => [
       u.id,
       `"${u.name}"`,
       `"${u.email}"`,
@@ -283,7 +284,7 @@ export const AdminPanel: React.FC = () => {
               className={`admin-tab-btn ${activeTab === 'users' ? 'active' : ''}`}
               onClick={() => setActiveTab('users')}
             >
-              👥 Сотрудники ({users.length} / 15)
+              👥 Сотрудники ({employeeUsers.length} / 15)
             </button>
             <button
               className={`admin-tab-btn ${activeTab === 'groups' ? 'active' : ''}`}
@@ -303,6 +304,13 @@ export const AdminPanel: React.FC = () => {
               title="Экспорт списка сотрудников в Excel / CSV"
             >
               📥 Экспорт в CSV
+            </button>
+            <button
+              className="btn-secondary"
+              style={{ background: 'rgba(59,132,246,0.15)', border: '1px solid rgba(59,132,246,0.4)', color: 'hsl(var(--primary))', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+              onClick={() => { setActiveTab('groups'); handleOpenAddGroupModal(); }}
+            >
+              🏢 + Создать команду / объединить людей
             </button>
             {selectedUserIds.length > 0 && (
               <button
@@ -345,8 +353,8 @@ export const AdminPanel: React.FC = () => {
               value={deptFilter}
               onChange={e => setDeptFilter(e.target.value)}
             >
-              <option value="">🏢 Все отделы ({users.length})</option>
-              {Array.from(new Set(users.map(u => u.department))).filter(Boolean).map(d => (
+              <option value="">🏢 Все отделы ({employeeUsers.length})</option>
+              {Array.from(new Set(employeeUsers.map(u => u.department))).filter(Boolean).map(d => (
                 <option key={d} value={d}>{d}</option>
               ))}
             </select>
@@ -755,7 +763,7 @@ export const AdminPanel: React.FC = () => {
               <div className="form-group">
                 <label className="form-label">Участники команды ({groupMembers.length} выбр.)</label>
                 <div className="group-checkbox-grid">
-                  {users.map(u => {
+                  {employeeUsers.map(u => {
                     const checked = groupMembers.includes(u.id);
                     return (
                       <label key={u.id} className="group-checkbox-item">

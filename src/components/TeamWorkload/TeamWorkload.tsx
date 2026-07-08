@@ -5,6 +5,7 @@ import './TeamWorkload.css';
 
 export const TeamWorkload: React.FC = () => {
   const { users, groups, tasks, setFilters, setViewMode } = useTaskContext();
+  const employees = users.filter(u => u.roleType !== 'admin');
 
   const handleSelectUser = (userId: string) => {
     setFilters(prev => ({ ...prev, assigneeId: userId }));
@@ -15,15 +16,48 @@ export const TeamWorkload: React.FC = () => {
     <div className="workload-container animate-fade-in">
       <div className="workload-header">
         <div>
-          <h2 className="workload-title">Команда корпорации ({users.length} сотрудников)</h2>
+          <h2 className="workload-title">Команда корпорации ({employees.length} сотрудников)</h2>
           <p className="workload-subtitle">
             Отслеживайте распределение задач и загруженность специалистов в реальном времени. Нажмите на карточку, чтобы перейти к задачам сотрудника.
           </p>
         </div>
       </div>
 
+      {groups && groups.length > 0 && (
+        <div style={{ marginBottom: '24px' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'hsl(var(--text-main))', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>🏢 Сформированные команды ({groups.length})</span>
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
+            {groups.map(grp => {
+              const members = employees.filter(e => grp.memberIds.includes(e.id));
+              return (
+                <div key={grp.id} style={{ background: 'hsl(var(--bg-card))', border: '1px solid hsl(var(--border-color))', borderRadius: '12px', padding: '14px', borderLeft: `4px solid ${grp.color || '#3b82f6'}` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'hsl(var(--text-main))' }}>{grp.name}</span>
+                    <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '12px', background: 'rgba(59,132,246,0.1)', color: grp.color || '#3b82f6', fontWeight: 600 }}>
+                      {members.length} чел.
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+                    {members.map(m => (
+                      <span key={m.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', background: 'hsl(var(--bg-secondary))', padding: '3px 8px', borderRadius: '6px' }}>
+                        {m.name}
+                      </span>
+                    ))}
+                    {members.length === 0 && (
+                      <span style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))' }}>Участники не добавлены</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="workload-grid">
-        {users.filter(u => u.roleType !== 'admin').map(user => {
+        {employees.map(user => {
           const userTasks = tasks.filter(t => t.assigneeId === user.id || (t.assigneeGroupId && groups?.some(g => g.id === t.assigneeGroupId && g.memberIds?.includes(user.id))));
           const inProgressTasks = userTasks.filter(t => t.status === 'in-progress');
           const reviewTasks = userTasks.filter(t => t.status === 'review');

@@ -5,6 +5,7 @@ import './Analytics.css';
 
 export const Analytics: React.FC = () => {
   const { tasks, users, groups, activeSprintId } = useTaskContext();
+  const employeeUsers = users.filter(u => u.roleType !== 'admin');
 
   const currentTasks = activeSprintId === 'all' 
     ? tasks 
@@ -36,7 +37,7 @@ export const Analytics: React.FC = () => {
         <div>
           <h2 className="analytics-title">Аналитика и Дашборд Эффективности</h2>
           <p className="analytics-subtitle">
-            Метрики производительности, распределение Story Points и анализ загрузки {users.length} сотрудников компании.
+            Метрики производительности, распределение Story Points и анализ загрузки {employeeUsers.length} сотрудников компании.
           </p>
         </div>
       </div>
@@ -189,7 +190,7 @@ export const Analytics: React.FC = () => {
       <div className="leaderboard-panel glass-panel">
         <div className="leaderboard-header">
           <Award className="text-amber" size={20} />
-          <h3 className="chart-title">Вклад сотрудников ({users.length} чел.)</h3>
+          <h3 className="chart-title">Вклад сотрудников ({employeeUsers.length} чел.)</h3>
         </div>
 
         <div className="leaderboard-grid">
