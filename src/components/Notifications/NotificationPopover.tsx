@@ -10,7 +10,7 @@ interface Props {
 }
 
 export const NotificationPopover: React.FC<Props> = ({ isOpen, onClose }) => {
-  const { notifications, markNotificationRead, markAllNotificationsRead, setActiveTaskModalId, setViewMode } = useTaskContext();
+  const { notifications, markNotificationRead, markAllNotificationsRead, deleteNotification, clearAllNotifications, setActiveTaskModalId, setViewMode } = useTaskContext();
   const { currentUser } = useAuth();
   const [toastList, setToastList] = useState<any[]>([]);
 
@@ -48,6 +48,8 @@ export const NotificationPopover: React.FC<Props> = ({ isOpen, onClose }) => {
 
   const handleNotificationClick = (notif: any) => {
     markNotificationRead(notif.id);
+    setToastList(prev => prev.filter(t => t.id !== notif.id));
+    deleteNotification(notif.id);
     const targetId = notif.linkTaskId || notif.taskId || notif.linkId || (notif.message?.match(/(NEX-\d+)/)?.[1]);
     if (targetId) {
       setViewMode('board');
@@ -68,10 +70,21 @@ export const NotificationPopover: React.FC<Props> = ({ isOpen, onClose }) => {
                 <span>🔔</span>
                 <h4>Уведомления</h4>
               </div>
-              {myNotifications.some(n => !n.read) && (
-                <button className="btn-mark-all" onClick={markAllNotificationsRead}>
-                  ✔ Прочитать все
-                </button>
+              {myNotifications.length > 0 && (
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {myNotifications.some(n => !n.read) && (
+                    <button className="btn-mark-all" onClick={() => { markAllNotificationsRead(); setToastList([]); }}>
+                      ✔ Прочитать все
+                    </button>
+                  )}
+                  <button
+                    className="btn-mark-all"
+                    style={{ color: '#f87171', borderColor: 'rgba(248,113,113,0.3)' }}
+                    onClick={() => { clearAllNotifications(); setToastList([]); }}
+                  >
+                    🗑 Очистить
+                  </button>
+                </div>
               )}
             </div>
 
@@ -84,8 +97,8 @@ export const NotificationPopover: React.FC<Props> = ({ isOpen, onClose }) => {
                       key={n.id}
                       className={`notif-item ${n.read ? 'read' : 'unread'}`}
                       onClick={() => handleNotificationClick(n)}
-                      style={{ cursor: hasLink ? 'pointer' : 'default' }}
-                      title={hasLink ? "Нажмите, чтобы открыть задачу на доске" : undefined}
+                      style={{ cursor: 'pointer', position: 'relative' }}
+                      title={hasLink ? "Нажмите, чтобы открыть задачу и удалить уведомление" : "Нажмите, чтобы подтвердить и удалить уведомление"}
                     >
                       <div className="notif-icon-badge">
                         {n.type === 'task_assigned' ? '👤' : n.type === 'status_changed' ? '🔄' : n.type === 'comment_added' ? '💬' : '📢'}
@@ -97,7 +110,27 @@ export const NotificationPopover: React.FC<Props> = ({ isOpen, onClose }) => {
                         <p className="notif-message">{n.message}</p>
                         <span className="notif-time">{new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
-                      {!n.read && <span className="unread-dot" />}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {!n.read && <span className="unread-dot" />}
+                        <button
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'hsl(var(--muted-foreground))',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem',
+                            padding: '4px'
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteNotification(n.id);
+                            setToastList(prev => prev.filter(t => t.id !== n.id));
+                          }}
+                          title="Удалить уведомление"
+                        >
+                          ✖
+                        </button>
+                      </div>
                     </div>
                   );
                 })
@@ -121,7 +154,7 @@ export const NotificationPopover: React.FC<Props> = ({ isOpen, onClose }) => {
               <strong>{toast.title}</strong>
               <p>{toast.message}</p>
             </div>
-            <button className="toast-close" onClick={(e) => { e.stopPropagation(); setToastList(prev => prev.filter(t => t.id !== toast.id)); }}>✖</button>
+            <button className="toast-close" onClick={(e) => { e.stopPropagation(); deleteNotification(toast.id); setToastList(prev => prev.filter(t => t.id !== toast.id)); }}>✖</button>
           </div>
         ))}
       </div>

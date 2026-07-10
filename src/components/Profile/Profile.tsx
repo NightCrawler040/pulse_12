@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTaskContext } from '../../context/TaskContext';
 import { apiService } from '../../services/api';
+import type { User } from '../../types';
 import './Profile.css';
 
 export const Profile: React.FC = () => {
@@ -9,6 +10,11 @@ export const Profile: React.FC = () => {
   const { tasks, groups, onlineUserIds, setActiveTaskModalId, columns } = useTaskContext();
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [quickPassword, setQuickPassword] = useState('');
+  const [quickPasswordConfirm, setQuickPasswordConfirm] = useState('');
+  const [pwdMsg, setPwdMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
   const [name, setName] = useState(currentUser?.name || '');
   const [email, setEmail] = useState(currentUser?.email || '');
   const [department, setDepartment] = useState(currentUser?.department || '');
@@ -27,6 +33,27 @@ export const Profile: React.FC = () => {
     );
   }
 
+  const handleQuickPasswordChange = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickPassword.trim()) {
+      setPwdMsg({ text: '⚠️ Введите новый пароль', type: 'error' });
+      return;
+    }
+    if (quickPassword !== quickPasswordConfirm) {
+      setPwdMsg({ text: '⚠️ Пароли не совпадают!', type: 'error' });
+      return;
+    }
+    updateCurrentUserProfile({
+      password: quickPassword.trim(),
+      pin: quickPassword.trim()
+    });
+    setQuickPassword('');
+    setQuickPasswordConfirm('');
+    setIsChangingPassword(false);
+    setPwdMsg({ text: '✅ Пароль успешно изменен и захеширован в базе!', type: 'success' });
+    setTimeout(() => setPwdMsg(null), 5000);
+  };
+
   const isOnline = onlineUserIds.includes(currentUser.id);
   const myDirectTasks = tasks.filter(t => t.assigneeId === currentUser.id);
   
@@ -43,14 +70,17 @@ export const Profile: React.FC = () => {
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    updateCurrentUserProfile({
+    const updates: Partial<User> = {
       name: name.trim(),
       email: email.trim(),
       department: department.trim(),
-      avatar: avatar.trim() || currentUser.avatar,
-      pin: pin.trim() || '1234',
-      password: pin.trim() || '1234'
-    });
+      avatar: avatar.trim() || currentUser.avatar
+    };
+    if (pin.trim()) {
+      updates.pin = pin.trim();
+      updates.password = pin.trim();
+    }
+    updateCurrentUserProfile(updates);
     setIsEditing(false);
   };
 
@@ -127,12 +157,24 @@ export const Profile: React.FC = () => {
           <button
             className="btn-secondary"
             onClick={() => {
+              setIsChangingPassword(!isChangingPassword);
+              setIsEditing(false);
+              setPwdMsg(null);
+            }}
+            style={{ borderColor: 'rgba(59, 130, 246, 0.4)', color: 'hsl(var(--primary))', fontWeight: 'bold' }}
+          >
+            🔐 Изменить пароль
+          </button>
+          <button
+            className="btn-secondary"
+            onClick={() => {
               setName(currentUser.name);
               setEmail(currentUser.email);
               setDepartment(currentUser.department);
               setAvatar(currentUser.avatar);
-              setPin(currentUser.pin || '1234');
+              setPin('');
               setIsEditing(!isEditing);
+              setIsChangingPassword(false);
             }}
           >
             ✏️ {isEditing ? 'Отмена' : 'Редактировать профиль'}
@@ -146,6 +188,79 @@ export const Profile: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {pwdMsg && (
+        <div style={{
+          padding: '12px 16px',
+          borderRadius: '10px',
+          marginBottom: '16px',
+          fontWeight: 600,
+          background: pwdMsg.type === 'success' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+          color: pwdMsg.type === 'success' ? '#22c55e' : '#ef4444',
+          border: `1px solid ${pwdMsg.type === 'success' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
+        }}>
+          {pwdMsg.text}
+        </div>
+      )}
+
+      {/* Quick Password Change Form */}
+      {isChangingPassword && (
+        <form className="profile-edit-form" onSubmit={handleQuickPasswordChange} style={{ marginBottom: '20px', borderLeft: '4px solid hsl(var(--primary))' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <span style={{ fontSize: '1.4rem' }}>🔐</span>
+            <div>
+              <h3 style={{ fontSize: '1.1rem', color: 'hsl(var(--primary))', margin: 0 }}>
+                {currentUser.roleType === 'admin' ? 'Смена главного пароля Администратора' : 'Смена пароля входа'}
+              </h3>
+              <p style={{ fontSize: '0.82rem', color: 'hsl(var(--text-secondary))', margin: 0 }}>
+                {currentUser.roleType === 'admin'
+                  ? 'Новый пароль будет сразу применен для учетной записи Администратора и сохранен в базе данных.'
+                  : 'Новый пароль будет использоваться при следующем входе в систему.'}
+              </p>
+            </div>
+          </div>
+          <div className="form-grid-2">
+            <div className="form-group">
+              <label className="form-label">Новый пароль</label>
+              <input
+                type="password"
+                className="input-field"
+                placeholder="Введите новый пароль..."
+                value={quickPassword}
+                onChange={e => setQuickPassword(e.target.value)}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Подтвердите пароль</label>
+              <input
+                type="password"
+                className="input-field"
+                placeholder="Повторите новый пароль..."
+                value={quickPasswordConfirm}
+                onChange={e => setQuickPasswordConfirm(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+            <button type="submit" className="btn-primary">
+              💾 Сохранить новый пароль
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => {
+                setIsChangingPassword(false);
+                setQuickPassword('');
+                setQuickPasswordConfirm('');
+              }}
+            >
+              Отмена
+            </button>
+          </div>
+        </form>
+      )}
 
       {/* Edit form */}
       {isEditing && (
@@ -183,13 +298,13 @@ export const Profile: React.FC = () => {
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Новый пароль / PIN-код для входа</label>
+              <label className="form-label">Новый пароль / PIN-код (оставьте пустым, чтобы не менять)</label>
               <input
                 type="text"
                 className="input-field"
                 value={pin}
                 onChange={e => setPin(e.target.value)}
-                required
+                placeholder="Оставьте пустым для сохранения текущего пароля"
               />
             </div>
           </div>

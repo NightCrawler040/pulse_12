@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, ShieldCheck, Users, Zap, ArrowRight, Server } from 'lucide-react';
+import { ShieldCheck, Users, Zap, Server, LogIn } from 'lucide-react';
 import { useTaskContext } from '../../context/TaskContext';
 import './WelcomePage.css';
 

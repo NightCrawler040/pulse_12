@@ -43,6 +43,8 @@ interface TaskContextType {
   addNotification: (notif: Omit<NotificationItem, 'id' | 'createdAt' | 'read'>) => void;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
+  deleteNotification: (id: string) => void;
+  clearAllNotifications: () => void;
   resetToDefault: () => void;
   exportData: () => void;
   importData: (jsonData: string) => boolean;
@@ -709,6 +711,14 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
+  const deleteNotification = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
+  const clearAllNotifications = () => {
+    setNotifications([]);
+  };
+
   return (
     <TaskContext.Provider value={{
       tasks,
@@ -750,6 +760,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       addNotification,
       markNotificationRead,
       markAllNotificationsRead,
+      deleteNotification,
+      clearAllNotifications,
       resetToDefault,
       exportData,
       importData

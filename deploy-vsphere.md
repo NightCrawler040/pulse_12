@@ -189,6 +189,71 @@ docker exec -it pulse12-postgres psql -U pulse12_admin -d pulse12
 # \q                              -- выход из консоли psql
 ```
 
+### 🔑 Как сбросить или изменить пароль Администратора напрямую через Базу Данных
+Если доступ к учетной записи администратора утерян, вы можете изменить пароль/PIN прямо в базе данных на сервере. При запуске сервер **автоматически распознает открытый текст и превратит его в надежный bcrypt-хеш**:
+
+#### Способ 1: Через SQL-запрос в PostgreSQL (Рекомендуется)
+Выполните одну команду в терминале сервера, чтобы установить новый пароль (например, `newadmin2026`) для администратора (`usr-1`):
+```bash
+docker exec -i pulse12-postgres psql -U pulse12_admin -d pulse12 -c "
+UPDATE pulse_store 
+SET data = jsonb_set(
+  jsonb_set(data, '{users,0,password}', '\"newadmin2026\"'),
+  '{users,0,pin}', '\"newadmin2026\"'
+) 
+WHERE key = 'pulse12_all';
+"
+
+# Перезапустите контейнер приложения, чтобы изменения вступили в силу и пароль захешировался:
+docker compose restart pulse12-corporate
+```
+
+#### Способ 2: Через файл локального хранилища (`server/data/db.json`)
+Если сервер работает без Docker-базы PostgreSQL (в файловом режиме):
+1. Откройте файл `server/data/db.json` в редакторе:
+   ```bash
+   sudo nano /opt/pulse12/server/data/db.json
+   ```
+2. Найдите объект пользователя с `"id": "usr-1"` и замените значения полей `"password"` и `"pin"` на новый пароль:
+   ```json
+   {
+     "id": "usr-1",
+     "login": "admin",
+     "password": "newadmin2026",
+     "pin": "newadmin2026"
+   }
+   ```
+3. Сохраните файл (`Ctrl+O`, `Enter`, `Ctrl+X`) и перезапустите службу/контейнер Node.js.
+
+---
+
+### ➕ Как добавлять новые таблицы и коллекции в базу данных
+Система поддерживает как гибридные JSONB-коллекции, так и классические реляционные SQL-таблицы:
+
+1. **Добавление новой коллекции в основное хранилище (`pulse_store`)**:
+   Приложение хранит структурированные данные (задачи, спринты, пользователей, группы) в JSONB. Чтобы добавить новую сущность (например, `projects` или `clients`):
+   - Добавьте массив `projects: []` в структуру данных в `server/db.js` или `server/initialData.js`.
+   - При сохранении через `saveCollection('projects', data)` база автоматически обновит соответствующий раздел документа.
+
+2. **Создание новой независимой SQL-таблицы в PostgreSQL**:
+   Если вам требуется создать отдельную реляционную таблицу (например, для логирования действий аудита или интеграции со сторонними системами):
+   ```bash
+   docker exec -it pulse12-postgres psql -U pulse12_admin -d pulse12
+   ```
+   Внутри консоли выполните SQL:
+   ```sql
+   CREATE TABLE IF NOT EXISTS custom_analytics_logs (
+     id SERIAL PRIMARY KEY,
+     event_name VARCHAR(100) NOT NULL,
+     employee_id VARCHAR(50),
+     event_payload JSONB,
+     created_at TIMESTAMPTZ DEFAULT NOW()
+   );
+
+   -- Создание индекса для быстрого поиска:
+   CREATE INDEX idx_custom_logs_emp ON custom_analytics_logs(employee_id);
+   ```
+
 ---
 
 ## 📊 7. Сводная таблица портов и путей

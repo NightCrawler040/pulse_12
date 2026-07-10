@@ -109,16 +109,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: true };
       }
     } catch (err: any) {
-      console.warn('Backend login failed, trying local fallback:', err);
+      const errMsg = String(err?.message || '');
+      if (errMsg.includes('Неверный') || errMsg.includes('пароль') || errMsg.includes('401') || errMsg.includes('Логин')) {
+        return { success: false, error: errMsg };
+      }
+      console.warn('Backend login unreachable, trying local offline fallback:', err);
     }
 
+    const cleanId = identifier.trim().toLowerCase();
     const user = users.find(u => {
       if (u.isActive === false) return false;
-      if (u.id === identifier && (u.pin === passOrPin || u.password === passOrPin || passOrPin === 'admin' || passOrPin === '1234')) return true;
-      if (u.login && u.login.toLowerCase() === identifier.toLowerCase() && (u.password === passOrPin || u.pin === passOrPin || passOrPin === 'admin' || passOrPin === '1234')) return true;
-      if (u.email && u.email.toLowerCase() === identifier.toLowerCase() && (u.password === passOrPin || u.pin === passOrPin || passOrPin === 'admin' || passOrPin === '1234')) return true;
-      if (u.name && u.name.toLowerCase() === identifier.toLowerCase() && (u.password === passOrPin || u.pin === passOrPin || passOrPin === 'admin' || passOrPin === '1234')) return true;
-      return false;
+      const matchLogin = u.id.toLowerCase() === cleanId ||
+                         (u.login && u.login.toLowerCase() === cleanId) ||
+                         (u.email && u.email.toLowerCase() === cleanId) ||
+                         (u.name && u.name.toLowerCase() === cleanId);
+      if (!matchLogin) return false;
+      return u.pin === passOrPin || u.password === passOrPin;
     });
 
     if (!user) {

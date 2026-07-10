@@ -88,7 +88,8 @@ export const AdminPanel: React.FC = () => {
     setDepartment(user.department);
     setRoleTitle(user.role);
     setRoleType(user.roleType || 'member');
-    setPin(user.pin || '1234');
+    setPin('');
+    setPasswordStr('');
     setAvatar(user.avatar);
     setIsModalOpen(true);
   };
@@ -97,7 +98,6 @@ export const AdminPanel: React.FC = () => {
     e.preventDefault();
     const trimmedEmail = email.trim().toLowerCase();
     const finalLogin = (loginStr.trim() || email.split('@')[0] || `user_${Date.now()}`).toLowerCase();
-    const finalPass = passwordStr.trim() || pin.trim() || '1234';
 
     // Проверка на дублирование почты или логина (кроме редактируемого сотрудника)
     const duplicateUser = users.find(u => {
@@ -113,28 +113,33 @@ export const AdminPanel: React.FC = () => {
     }
     setErrorMessage(null);
 
+    const typedPass = passwordStr.trim() || pin.trim();
+
     if (editingUser) {
-      updateUser(editingUser.id, {
+      const updates: Partial<User> = {
         name: name.trim(),
         email: email.trim(),
         login: finalLogin,
-        password: finalPass,
         department: department.trim(),
         role: roleTitle.trim(),
         roleType,
-        pin: finalPass,
         avatar: avatar.trim() || editingUser.avatar
-      });
+      };
+      if (typedPass) {
+        updates.password = typedPass;
+        updates.pin = typedPass;
+      }
+      updateUser(editingUser.id, updates);
     } else {
       addUser({
         name: name.trim(),
         email: email.trim() || `${name.toLowerCase().replace(/\s+/g, '.')}@corp.lan`,
         login: finalLogin,
-        password: finalPass,
+        password: typedPass || '1234',
         department: department.trim(),
         role: roleTitle.trim(),
         roleType,
-        pin: finalPass,
+        pin: typedPass || '1234',
         avatar: avatar.trim() || DEFAULT_AVATAR,
         isActive: true
       });
@@ -334,7 +339,33 @@ export const AdminPanel: React.FC = () => {
 
       {/* Table: USERS */}
       {activeTab === 'users' && (
-        <div className="admin-table-card">
+        <>
+          <div style={{
+            background: 'hsl(var(--bg-secondary))',
+            border: '1px solid hsl(var(--border-color))',
+            borderRadius: '12px',
+            padding: '14px 18px',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '1.6rem' }}>👑</span>
+              <div>
+                <strong style={{ display: 'block', color: 'hsl(var(--text-primary))', fontSize: '1.02rem' }}>
+                  Учетная запись Администратора скрыта из общего списка сотрудников
+                </strong>
+                <span style={{ fontSize: '0.85rem', color: 'hsl(var(--text-secondary))' }}>
+                  Смена пароля Администратора осуществляется в <b>Личном кабинете</b> (нажмите на свой профиль в правом верхнем углу → «🔐 Изменить пароль»).
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="admin-table-card">
           <div style={{ display: 'flex', gap: '12px', padding: '16px 20px', borderBottom: '1px solid hsl(var(--border-color))', flexWrap: 'wrap', alignItems: 'center', background: 'hsl(var(--bg-secondary))' }}>
             <div style={{ flex: '1 1 250px', position: 'relative', display: 'flex', alignItems: 'center' }}>
               <span style={{ position: 'absolute', left: '12px', fontSize: '1.1rem', color: 'hsl(var(--text-secondary))' }}>🔍</span>
@@ -514,6 +545,7 @@ export const AdminPanel: React.FC = () => {
             </table>
           </div>
         </div>
+        </>
       )}
 
       {/* Table: GROUPS */}
@@ -631,14 +663,16 @@ export const AdminPanel: React.FC = () => {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Пароль для входа</label>
+                  <label className="form-label">
+                    {editingUser ? 'Новый пароль (оставьте пустым для сохранения)' : 'Пароль для входа'}
+                  </label>
                   <input
                     type="text"
                     className="input-field"
                     value={passwordStr}
                     onChange={e => setPasswordStr(e.target.value)}
-                    placeholder="1234"
-                    required
+                    placeholder={editingUser ? 'Не менять текущий пароль' : '1234'}
+                    required={!editingUser}
                   />
                 </div>
               </div>

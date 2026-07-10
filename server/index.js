@@ -69,20 +69,25 @@ const getSanitizedDbData = () => ({
 
 const hashPasswordIfNeeded = (val) => {
   if (!val) return val;
-  if (typeof val === 'string' && (val.startsWith('$2a$') || val.startsWith('$2b$') || val.startsWith('$2y$'))) return val;
-  return bcrypt.hashSync(val, 10);
+  const strVal = String(val).trim();
+  if (!strVal) return strVal;
+  if (strVal.startsWith('$2a$') || strVal.startsWith('$2b$') || strVal.startsWith('$2y$')) return strVal;
+  return bcrypt.hashSync(strVal, 10);
 };
 
 const verifyPasswordOrPin = (input, storedHashOrText) => {
-  if (!input || !storedHashOrText) return false;
-  if (typeof storedHashOrText === 'string' && (storedHashOrText.startsWith('$2a$') || storedHashOrText.startsWith('$2b$') || storedHashOrText.startsWith('$2y$'))) {
+  if (input == null || storedHashOrText == null) return false;
+  const inputStr = String(input).trim();
+  const storedStr = String(storedHashOrText).trim();
+  if (!inputStr || !storedStr) return false;
+  if (storedStr.startsWith('$2a$') || storedStr.startsWith('$2b$') || storedStr.startsWith('$2y$')) {
     try {
-      return bcrypt.compareSync(input, storedHashOrText);
+      return bcrypt.compareSync(inputStr, storedStr);
     } catch (e) {
       return false;
     }
   }
-  return input === storedHashOrText;
+  return inputStr === storedStr;
 };
 
 const ensureUsersHashed = (usersArray) => {
@@ -159,27 +164,21 @@ app.get('/api/data', async (req, res) => {
 // Login check securely on backend (1.A, 1.C)
 app.post('/api/login', (req, res) => {
   const { login, password, pin, userId } = req.body;
-  const passOrPin = password || pin;
+  const cleanLogin = String(login || userId || '').trim();
+  const passOrPin = String(password || pin || '').trim();
   
-  if (!login && !pin && !userId) {
+  if (!cleanLogin || !passOrPin) {
     return res.status(400).json({ success: false, error: 'Введите Логин и Пароль' });
   }
 
   const user = dbData.users.find(u => {
     if (u.isActive === false) return false;
-    if (login && passOrPin) {
-      const matchLogin = (u.login && u.login.toLowerCase() === login.toLowerCase()) || 
-                         (u.email && u.email.toLowerCase() === login.toLowerCase()) ||
-                         (u.name && u.name.toLowerCase() === login.toLowerCase()) ||
-                         (u.id === login);
-      const matchPassword = verifyPasswordOrPin(passOrPin, u.password) || verifyPasswordOrPin(passOrPin, u.pin);
-      return matchLogin && matchPassword;
-    } else if (userId && passOrPin) {
-      return u.id === userId && (verifyPasswordOrPin(passOrPin, u.pin) || verifyPasswordOrPin(passOrPin, u.password));
-    } else if (pin) {
-      return u.id === req.body.userId && (verifyPasswordOrPin(pin, u.pin) || verifyPasswordOrPin(pin, u.password));
-    }
-    return false;
+    const matchLogin = (u.login && String(u.login).trim().toLowerCase() === cleanLogin.toLowerCase()) || 
+                       (u.email && String(u.email).trim().toLowerCase() === cleanLogin.toLowerCase()) ||
+                       (u.name && String(u.name).trim().toLowerCase() === cleanLogin.toLowerCase()) ||
+                       (u.id === cleanLogin);
+    if (!matchLogin) return false;
+    return verifyPasswordOrPin(passOrPin, u.password) || verifyPasswordOrPin(passOrPin, u.pin);
   });
 
   if (user) {
@@ -291,8 +290,15 @@ app.put('/api/users/:id', requireAuth, (req, res) => {
     }
   }
 
-  if (updates.password) updates.password = hashPasswordIfNeeded(updates.password);
-  if (updates.pin) updates.pin = hashPasswordIfNeeded(updates.pin);
+  const newPass = String(updates.password || updates.pin || '').trim();
+  if (newPass) {
+    const hashed = hashPasswordIfNeeded(newPass);
+    updates.password = hashed;
+    updates.pin = hashed;
+  } else {
+    delete updates.password;
+    delete updates.pin;
+  }
 
   dbData.users = dbData.users.map(u => {
     if (u.id === id) {

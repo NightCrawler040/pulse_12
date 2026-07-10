@@ -159,3 +159,48 @@ cat /opt/pulse12/backups/pulse12_backup_2026-07-05_10-00.sql | sudo docker exec 
 ```cron
 0 2 * * * /usr/bin/docker exec -t pulse12-postgres pg_dump -U pulse12_admin pulse12 > /opt/pulse12/backups/pulse12_$(date +\%F).sql 2>&1
 ```
+
+---
+
+## 🔑 7. Как изменить пароль Администратора напрямую в Базе Данных
+Если доступ в админку утерян или нужно сбросить пароль пользователя с ID `usr-1`:
+
+### В режиме PostgreSQL (через SQL-запрос):
+Выполните команду в терминале:
+```bash
+docker exec -i pulse12-postgres psql -U pulse12_admin -d pulse12 -c "
+UPDATE pulse_store 
+SET data = jsonb_set(
+  jsonb_set(data, '{users,0,password}', '\"newadmin2026\"'),
+  '{users,0,pin}', '\"newadmin2026\"'
+) 
+WHERE key = 'pulse12_all';
+"
+docker compose restart pulse12-corporate
+```
+*Примечание: Сервер при старте автоматически превратит открытый пароль `"newadmin2026"` в защищенный bcrypt-хеш.*
+
+### В режиме JSON-файла (`server/data/db.json`):
+1. Откройте файл: `sudo nano /opt/pulse12/server/data/db.json`
+2. Найдите пользователя с `"id": "usr-1"` и укажите новый пароль в полях `"password"` и `"pin"`.
+3. Перезапустите сервер.
+
+---
+
+## ➕ 8. Как добавлять новые таблицы и коллекции
+
+1. **Добавление новой JSON-коллекции в `pulse_store`**:
+   Добавьте новый массив в структуру данных (например, `data.projects = []`). Метод `saveCollection('projects', projectsArray)` автоматически сохранит его в PostgreSQL.
+
+2. **Создание классической реляционной SQL-таблицы в PostgreSQL**:
+   Войдите в консоль: `docker exec -it pulse12-postgres psql -U pulse12_admin -d pulse12`
+   Выполните SQL:
+   ```sql
+   CREATE TABLE IF NOT EXISTS custom_logs (
+     id SERIAL PRIMARY KEY,
+     event_name VARCHAR(100) NOT NULL,
+     user_id VARCHAR(50),
+     payload JSONB,
+     created_at TIMESTAMPTZ DEFAULT NOW()
+   );
+   ```
