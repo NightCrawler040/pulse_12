@@ -138,18 +138,19 @@ const requireAdmin = (req, res, next) => {
   });
 };
 
-// Persist updates to PostgreSQL / local storage and broadcast sanitized data to laptops
-const broadcastUpdate = async (key) => {
-  try {
-    if (key && dbData[key]) {
-      await saveCollection(key, dbData[key]);
-    } else {
-      await saveAllData(dbData);
-    }
-  } catch (err) {
-    console.error('❌ Error persisting data to database:', err);
-  }
+// Zero-Latency broadcast: immediately broadcast to all clients (< 1ms), persist to PostgreSQL asynchronously in background
+const broadcastUpdate = (key) => {
+  // 1. Мгновенно рассылаем свежие данные всем клиентам в памяти
   io.emit('data-updated', getSanitizedDbData());
+
+  // 2. Асинхронно сохраняем в базу данных без задержки HTTP-ответа
+  const savePromise = (key && dbData[key])
+    ? saveCollection(key, dbData[key])
+    : saveAllData(dbData);
+
+  savePromise.catch((err) => {
+    console.error('❌ Error persisting data to database in background:', err.message);
+  });
 };
 
 // --- REST API ENDPOINTS ---
