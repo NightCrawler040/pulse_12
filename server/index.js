@@ -16,13 +16,59 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.disable('x-powered-by'); // Скрыть информацию об использовании Express
 app.use(compression({ threshold: 1024 }));
 const server = http.createServer(app);
+
+// --- CYBERSECURITY LAYER (OWASP Top 10 Defense) ---
+// 1. Защитные HTTP-заголовки безопасности (Helmet-эквивалент без внешних зависимостей)
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  next();
+});
+
+// 2. In-Memory Rate Limiter для защиты от Brute Force и DoS-атак
+const ipLoginAttempts = new Map();
+const ipApiRequests = new Map();
+
+// Очистка счетчиков каждые 15 минут
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, data] of ipLoginAttempts.entries()) {
+    if (now - data.firstAttempt > 15 * 60 * 1000) ipLoginAttempts.delete(ip);
+  }
+  for (const [ip, data] of ipApiRequests.entries()) {
+    if (now - data.firstAttempt > 5 * 60 * 1000) ipApiRequests.delete(ip);
+  }
+}, 60 * 1000);
+
+// Middleware защиты авторизации от подбора паролей (Brute Force Protection)
+const loginRateLimiter = (req, res, next) => {
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+  const now = Date.now();
+  const record = ipLoginAttempts.get(ip) || { count: 0, firstAttempt: now };
+  if (now - record.firstAttempt > 15 * 60 * 1000) {
+    record.count = 1;
+    record.firstAttempt = now;
+  } else {
+    record.count++;
+  }
+  ipLoginAttempts.set(ip, record);
+  if (record.count > 15) {
+    console.warn(`🚨 [Security Alert] Блокировка Brute Force атаки с IP: ${ip} (Превышено 15 попыток входа за 15 минут)`);
+    return res.status(429).json({ error: 'Слишком много попыток входа. Пожалуйста, подождите 15 минут.' });
+  }
+  next();
+};
 
 // Strict or configurable CORS policy (1.F)
 const ALLOWED_ORIGIN = process.env.CORS_ORIGIN || '*';
 app.use(cors({ origin: ALLOWED_ORIGIN, methods: ['GET', 'POST', 'PUT', 'DELETE'], credentials: true }));
-app.use(express.json({ limit: '55mb' }));
+app.use(express.json({ limit: '2mb' })); // Ограничение размера JSON до безопасных 2 МБ (защита от Payload DoS)
 
 const io = new Server(server, {
   cors: {
@@ -165,8 +211,8 @@ app.get('/api/data', (req, res) => {
   }
 });
 
-// Login check securely on backend (1.A, 1.C)
-app.post('/api/login', (req, res) => {
+// Login check securely on backend with anti-bruteforce rate limiting (1.A, 1.C)
+app.post('/api/login', loginRateLimiter, (req, res) => {
   const { login, password, pin, userId } = req.body;
   const cleanLogin = String(login || userId || '').trim();
   const passOrPin = String(password || pin || '').trim();
