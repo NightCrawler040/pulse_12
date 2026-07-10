@@ -37,8 +37,10 @@ C:\...\jira-clone\
 │   └── 05-ROADMAP_AND_FUTURE.md      # Дорожная карта и планы развития
 │
 ├── 📂 server/                        # Backend REST API + WebSockets сервер
-│   ├── index.js                      # Главный файл сервера (Express API + Socket.io hub)
-│   ├── db.js                         # PostgreSQL адаптер с Dual-Mode (автопереключение на db.json)
+│   ├── index.js                      # Главный файл сервера (Express API + Socket.io hub + Compression)
+│   ├── db.js                         # PostgreSQL адаптер с асинхронным дебаунс-сохранением и Dual-Mode
+│   ├── telegramService.js            # Интеграция с Telegram Bot API (@pulse12_team_bot)
+│   ├── mailService.js                # Интеграция с корпоративной почтой по SMTP (Nodemailer)
 │   ├── initialData.js                # Стартовые корпоративные данные (12 сотрудников, спринты)
 │   └── db.json                       # Файловая NoSQL база данных (резервный fallback режим)
 │
@@ -48,9 +50,10 @@ C:\...\jira-clone\
 │   │   ├── 📂 Analytics/             # Аналитика: точный учет времени, статистика по статусам
 │   │   ├── 📂 Backlog/               # Бэклог спринтов, фильтрация по задачам
 │   │   ├── 📂 Header/                # Верхняя панель: выбор спринта, поиск, переключатель темы
-│   │   ├── 📂 KanbanBoard/           # Доска: Drag-Drop колонки, баннер Burn-down спринта
+│   │   ├── 📂 Help/                  # Интерактивная справка и плавающий виджет TelegramBotModal
+│   │   ├── 📂 KanbanBoard/           # Доска: Drag-Drop колонки, бейджи автора и дедлайна
 │   │   ├── 📂 Notifications/         # Центр уведомлений и всплывающие 10-секундные тосты
-│   │   ├── 📂 TaskModal/             # Модальное окно задачи: таймер, @упоминания, чек-лист команды
+│   │   ├── 📂 TaskModal/             # Модальное окно задачи: дедлайн, автор, таймер, @упоминания
 │   │   └── 📂 TeamWorkload/          # Загрузка команды: матрица задач по каждому сотруднику
 │   │
 │   ├── 📂 context/                   # Глобальный стейт приложения (React Context API)
