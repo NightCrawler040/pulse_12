@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
 import { initialUsers, initialSprints, initialTasks, initialGroups } from './initialData.js';
 import { initDb, getAllData, saveCollection, saveAllData, isPostgresMode } from './db.js';
+import { initMailService, sendTaskNotificationEmail } from './mailService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -545,6 +546,17 @@ io.on('connection', (socket) => {
       broadcastUpdate('notifications');
     }
     io.emit('notification-received', notif);
+
+    // Автоматическая отправка письма на корпоративную почту сотруднику (если SMTP доступен)
+    if (notif && notif.userId) {
+      const recipient = dbData.users?.find(u => u.id === notif.userId);
+      if (recipient && recipient.email) {
+        sendTaskNotificationEmail(recipient, {
+          title: notif.title || 'Новое уведомление',
+          description: notif.message || ''
+        }, 'Pulse 12');
+      }
+    }
   });
 
   socket.on('disconnect', () => {
@@ -572,6 +584,7 @@ if (fs.existsSync(DIST_DIR)) {
 
 const startServer = async () => {
   await initDb();
+  initMailService();
   dbData = await getAllData();
 
   // Auto-migrate plaintext passwords to bcrypt hashes on startup (1.C)
