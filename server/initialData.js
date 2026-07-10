@@ -2,14 +2,14 @@ export const initialUsers = [
   {
     id: 'usr-1',
     name: 'Александр Громов',
-    login: 'admin',
-    password: 'Pulse12_Secure_2026!',
+    login: process.env.ADMIN_LOGIN || 'admin',
+    password: process.env.ADMIN_PASSWORD || 'admin',
     role: 'Tech Lead / Admin',
     roleType: 'admin',
     department: 'Engineering',
     email: 'a.gromov@corp.lan',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    pin: '2026',
+    pin: process.env.ADMIN_PIN || '1234',
     isActive: true
   }
 ];
