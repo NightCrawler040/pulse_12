@@ -77,6 +77,27 @@ export async function sendTelegramNotification(recipient, notif) {
 }
 
 /**
+ * Отправка срочного предупреждения о горящем дедлайне (за 24 часа или за 2 часа)
+ */
+export async function sendTelegramDeadlineWarning(recipient, task, timeRemainingLabel) {
+  if (!TELEGRAM_BOT_TOKEN) return;
+
+  const text = `⚠️ <b>Внимание! Горящий дедлайн по задаче</b>\n\n` +
+               `📌 <b>Задача:</b> ${task.title || task.id}\n` +
+               `⏰ <b>Срок сдачи (dueDate):</b> ${task.dueDate}\n` +
+               `⏳ <b>Осталось времени:</b> ${timeRemainingLabel}\n` +
+               `👤 <b>Исполнитель:</b> ${recipient ? recipient.name : 'Не назначен'}\n` +
+               `✍️ <b>Назначил:</b> ${task.creatorName || task.creatorId || 'Руководитель'}\n\n` +
+               `👉 <i>Пожалуйста, обновите статус задачи в Pulse 12!</i>`;
+
+  if (recipient && recipient.telegramChatId) {
+    await sendTelegramMessage(recipient.telegramChatId, text);
+  } else if (TELEGRAM_CHAT_ID) {
+    await sendTelegramMessage(TELEGRAM_CHAT_ID, text);
+  }
+}
+
+/**
  * Фоновый опрос (Polling) сообщений от сотрудников для автоматической привязки аккаунта
  */
 function startPolling() {
