@@ -709,18 +709,31 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const markNotificationRead = (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    try {
+      getSocket().emit('mark-notification-read', id);
+    } catch (e) { console.error(e); }
   };
 
   const markAllNotificationsRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    try {
+      getSocket().emit('mark-all-notifications-read', 'all');
+    } catch (e) { console.error(e); }
   };
 
   const deleteNotification = (id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
+    try {
+      getSocket().emit('delete-notification', id);
+    } catch (e) { console.error(e); }
   };
 
   const clearAllNotifications = () => {
     setNotifications([]);
+    localStorage.removeItem('korpjira-notifications');
+    try {
+      getSocket().emit('clear-user-notifications', 'all');
+    } catch (e) { console.error(e); }
   };
 
   return (

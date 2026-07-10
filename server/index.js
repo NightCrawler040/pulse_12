@@ -480,6 +480,33 @@ app.delete('/api/sprints/:id', requireAuth, (req, res) => {
   res.json({ success: true });
 });
 
+// --- NOTIFICATION PERSISTENCE ENDPOINTS ---
+app.delete('/api/notifications', requireAuth, (req, res) => {
+  const { userId, id } = req.query;
+  if (!Array.isArray(dbData.notifications)) dbData.notifications = [];
+  if (id) {
+    dbData.notifications = dbData.notifications.filter(n => n.id !== id);
+  } else if (userId) {
+    dbData.notifications = dbData.notifications.filter(n => n.userId !== userId && n.userId !== 'all');
+  } else {
+    dbData.notifications = [];
+  }
+  broadcastUpdate('notifications');
+  res.json({ success: true });
+});
+
+app.put('/api/notifications/read', requireAuth, (req, res) => {
+  const { id, userId } = req.body || {};
+  if (!Array.isArray(dbData.notifications)) return res.json({ success: true });
+  dbData.notifications = dbData.notifications.map(n => {
+    if (id && n.id === id) return { ...n, read: true };
+    if (!id && (n.userId === userId || n.userId === 'all' || !userId)) return { ...n, read: true };
+    return n;
+  });
+  broadcastUpdate('notifications');
+  res.json({ success: true });
+});
+
 // --- FILE UPLOAD ENDPOINT (LOCAL AVATARS) ---
 app.post('/api/upload', requireAuth, (req, res) => {
   const { base64 } = req.body;
@@ -608,6 +635,39 @@ io.on('connection', (socket) => {
       }
       sendTelegramNotification(recipient, notif);
     }
+  });
+
+  socket.on('clear-user-notifications', (userId) => {
+    if (!Array.isArray(dbData.notifications)) dbData.notifications = [];
+    if (userId === 'all' || !userId) {
+      dbData.notifications = [];
+    } else {
+      dbData.notifications = dbData.notifications.filter(n => n.userId !== userId && n.userId !== 'all');
+    }
+    broadcastUpdate('notifications');
+  });
+
+  socket.on('mark-notification-read', (id) => {
+    if (!Array.isArray(dbData.notifications)) return;
+    dbData.notifications = dbData.notifications.map(n => n.id === id ? { ...n, read: true } : n);
+    broadcastUpdate('notifications');
+  });
+
+  socket.on('mark-all-notifications-read', (userId) => {
+    if (!Array.isArray(dbData.notifications)) return;
+    dbData.notifications = dbData.notifications.map(n => {
+      if (!userId || n.userId === userId || n.userId === 'all') {
+        return { ...n, read: true };
+      }
+      return n;
+    });
+    broadcastUpdate('notifications');
+  });
+
+  socket.on('delete-notification', (id) => {
+    if (!Array.isArray(dbData.notifications)) return;
+    dbData.notifications = dbData.notifications.filter(n => n.id !== id);
+    broadcastUpdate('notifications');
   });
 
   socket.on('disconnect', () => {
