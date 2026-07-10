@@ -55,7 +55,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
     addComment
   } = useTaskContext();
 
-  const { canEditTask, canDeleteTask } = useAuth();
+  const { currentUser, canEditTask, canDeleteTask } = useAuth();
 
   const existingTask = taskId ? tasks.find(t => t.id === taskId) : null;
   const isEditable = !existingTask || canEditTask(existingTask);
