@@ -10,11 +10,13 @@ import { initialUsers, initialSprints, initialTasks, initialGroups } from './ini
 import { initDb, getAllData, saveCollection, saveAllData, isPostgresMode } from './db.js';
 import { initMailService, sendTaskNotificationEmail } from './mailService.js';
 import { initTelegramService, sendTelegramNotification } from './telegramService.js';
+import compression from 'compression';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.use(compression());
 const server = http.createServer(app);
 
 // Strict or configurable CORS policy (1.F)
@@ -152,10 +154,9 @@ const broadcastUpdate = async (key) => {
 
 // --- REST API ENDPOINTS ---
 
-// Get all data (sanitizing passwords & pins) (1.A)
-app.get('/api/data', async (req, res) => {
+// Get all data instantly from in-memory cache (sanitizing passwords & pins) (1.A)
+app.get('/api/data', (req, res) => {
   try {
-    dbData = await getAllData();
     res.json(getSanitizedDbData());
   } catch (err) {
     console.error('❌ Error fetching data:', err);
@@ -572,7 +573,7 @@ io.on('connection', (socket) => {
 const DIST_DIR = path.join(__dirname, '../dist');
 if (fs.existsSync(DIST_DIR)) {
   console.log(`📦 Serving production build from: ${DIST_DIR}`);
-  app.use(express.static(DIST_DIR));
+  app.use(express.static(DIST_DIR, { maxAge: '7d', etag: true }));
   
   // SPA Fallback: support URL routing (/admin, /board, /team, /profile, etc.)
   app.use((req, res) => {

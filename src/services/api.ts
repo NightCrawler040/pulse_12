@@ -37,7 +37,7 @@ export const getSocket = (): Socket => {
     console.log(`🔌 Connecting to Pulse 12 Socket.io server at: ${url}`);
     socketInstance = io(url, {
       reconnectionDelayMax: 5000,
-      transports: ['websocket', 'polling']
+      transports: ['polling', 'websocket']
     });
   }
   return socketInstance;
