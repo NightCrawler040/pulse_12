@@ -587,8 +587,8 @@ if (fs.existsSync(DIST_DIR)) {
 const startServer = async () => {
   await initDb();
   initMailService();
-  initTelegramService();
   dbData = await getAllData();
+  initTelegramService(dbData, saveCollection);
 
   // Auto-migrate plaintext passwords to bcrypt hashes on startup (1.C)
   const { hashed, modified } = ensureUsersHashed(dbData.users);
