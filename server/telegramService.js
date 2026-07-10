@@ -61,11 +61,14 @@ export async function sendTelegramNotification(recipient, notif) {
 
   const title = notif.title || 'Новая задача';
   const message = notif.message || '';
+  const author = notif.creatorName || notif.author || 'Администратор';
+  const due = notif.dueDate ? `\n⏰ <b>Срок (Дедлайн):</b> ${notif.dueDate}` : '';
 
   const text = `🏢 <b>Pulse 12 — Личное уведомление</b>\n\n` +
-               `👤 <b>Сотрудник:</b> ${recipient ? recipient.name : ''}\n` +
-               `📌 <b>${title}</b>\n` +
-               `${message ? `💬 <i>${message}</i>` : ''}`;
+               `👤 <b>Исполнитель:</b> ${recipient ? recipient.name : ''}\n` +
+               `✍️ <b>Назначил:</b> ${author}\n` +
+               `📌 <b>${title}</b>${due}\n` +
+               `${message ? `\n💬 <i>${message}</i>` : ''}`;
 
   // Отправляем строго лично сотруднику
   if (recipient && recipient.telegramChatId) {

@@ -71,6 +71,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
   const [estimatedHours, setEstimatedHours] = useState<number>(existingTask?.estimatedHours || 8);
   const [loggedHours, setLoggedHours] = useState<number>(existingTask?.loggedHours || 0);
   const [sprintId, setSprintId] = useState<string | null>(existingTask?.sprintId || (defaultSprintId !== undefined ? defaultSprintId : 'sprint-1'));
+  const [dueDate, setDueDate] = useState<string>(existingTask?.dueDate || '');
   const [tags, setTags] = useState<string[]>(existingTask?.tags || ['Engineering']);
   const [newTagInput, setNewTagInput] = useState('');
   
@@ -99,6 +100,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
       setLoggedHours(0);
       setSprintId(defaultSprintId !== undefined ? defaultSprintId : 'sprint-1');
       setTags(['Engineering']);
+      setDueDate('');
       setSubtasksList([]);
       setAttachmentsList([]);
     } else if (existingTask) {
@@ -113,6 +115,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
       setLoggedHours(existingTask.loggedHours || 0);
       setSprintId(existingTask.sprintId || 'sprint-1');
       setTags(existingTask.tags || []);
+      setDueDate(existingTask.dueDate || '');
       setSubtasksList(existingTask.subtasks || []);
       setAttachmentsList(existingTask.attachments || []);
     }
@@ -160,6 +163,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
         priority,
         assigneeId,
         assigneeGroupId,
+        creatorId: currentUser?.id,
+        creatorName: currentUser?.name || 'Администратор',
+        dueDate: dueDate || '',
         storyPoints: Number(storyPoints) || 0,
         estimatedHours: Number(estimatedHours) || 0,
         loggedHours: Number(loggedHours) || 0,
@@ -176,6 +182,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
         priority,
         assigneeId,
         assigneeGroupId,
+        creatorId: existingTask.creatorId || currentUser?.id,
+        creatorName: existingTask.creatorName || currentUser?.name || 'Администратор',
+        dueDate: dueDate || '',
         storyPoints: Number(storyPoints) || 0,
         estimatedHours: Number(estimatedHours) || 0,
         loggedHours: Number(loggedHours) || 0,
@@ -754,6 +763,33 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
                   )}
                 </div>
               )}
+            </div>
+
+            {/* Created By / Assigned By */}
+            <div className="form-group">
+              <label className="form-label">
+                <UserIcon size={14} />
+                <span>Назначил (Автор задачи)</span>
+              </label>
+              <div style={{ padding: '8px 12px', background: 'var(--bg-secondary)', borderRadius: '8px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <span>👤</span>
+                <strong>{existingTask?.creatorName || currentUser?.name || 'Администратор'}</strong>
+              </div>
+            </div>
+
+            {/* Due Date */}
+            <div className="form-group">
+              <label className="form-label">
+                <Clock size={14} />
+                <span>Срок выполнения (Дедлайн)</span>
+              </label>
+              <input
+                type="date"
+                value={dueDate}
+                onChange={e => setDueDate(e.target.value)}
+                className="input-field"
+                style={{ cursor: 'pointer', fontWeight: 600, color: dueDate ? '#f59e0b' : 'inherit' }}
+              />
             </div>
 
             {/* Priority */}

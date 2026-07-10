@@ -295,9 +295,11 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         userId: newTaskData.assigneeId,
         title: '🆕 Новая задача назначена на вас',
         message: `Создана задача: "${newTaskData.title}" (${newId})`,
+        creatorName: newTaskData.creatorName || getActor()?.name || 'Администратор',
+        dueDate: newTaskData.dueDate || '',
         linkTaskId: newId,
         type: 'task_assigned'
-      });
+      } as any);
     } else if (newTaskData.assigneeGroupId) {
       const targetGroup = groups.find(g => g.id === newTaskData.assigneeGroupId);
       if (targetGroup && targetGroup.memberIds) {
@@ -306,9 +308,11 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             userId: mId,
             title: `🆕 Новая задача для группы "${targetGroup.name}"`,
             message: `Создана задача: "${newTaskData.title}" (${newId})`,
+            creatorName: newTaskData.creatorName || getActor()?.name || 'Администратор',
+            dueDate: newTaskData.dueDate || '',
             linkTaskId: newId,
             type: 'task_assigned'
-          });
+          } as any);
         });
       }
     }

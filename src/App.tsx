@@ -13,6 +13,7 @@ import { LoginModal } from './components/Login/LoginModal';
 import { TaskModal } from './components/TaskModal/TaskModal';
 import { NetworkModal } from './components/NetworkModal/NetworkModal';
 import { UserManualModal } from './components/Help/UserManualModal';
+import { TelegramWidget } from './components/TelegramWidget/TelegramWidget';
 import type { Status } from './types';
 import './App.css';
 
@@ -123,6 +124,9 @@ const AppContent: React.FC = () => {
 
       {/* Interactive User Manual Modal */}
       <UserManualModal />
+
+      {/* Floating Telegram Widget */}
+      <TelegramWidget />
     </div>
   );
 };

@@ -98,6 +98,20 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, users, onCardCl
             )}
           </div>
 
+          {/* Due Date & Creator Info */}
+          {(task.dueDate || task.creatorName) && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+              {task.creatorName && (
+                <span title={`Автор задачи: ${task.creatorName}`}>👤 От: {task.creatorName}</span>
+              )}
+              {task.dueDate && (
+                <span style={{ color: '#f59e0b', fontWeight: 600 }} title="Срок выполнения">
+                  ⏰ {task.dueDate}
+                </span>
+              )}
+            </div>
+          )}
+
           {/* Bottom Row: Assignee Avatar & Story Points */}
           <div className="card-footer">
             <div className="assignee-info">

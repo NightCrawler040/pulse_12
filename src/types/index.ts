@@ -33,6 +33,9 @@ export interface Task {
   priority: Priority;
   assigneeId: string | null;
   assigneeGroupId?: string | null;
+  creatorId?: string;
+  creatorName?: string;
+  dueDate?: string;
   storyPoints: number;
   estimatedHours: number;
   loggedHours: number;
