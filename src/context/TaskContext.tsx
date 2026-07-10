@@ -168,6 +168,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (Array.isArray(data.sprints)) setSprints(data.sprints);
         if (Array.isArray(data.users)) setUsers(data.users);
         if (Array.isArray(data.groups)) setGroups(data.groups);
+        if (Array.isArray(data.notifications)) setNotifications(data.notifications);
         setIsServerConnected(true);
       }
     }).catch(() => {
@@ -709,6 +710,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const markNotificationRead = (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    apiService.markNotificationsRead(id).catch(() => {});
     try {
       getSocket().emit('mark-notification-read', id);
     } catch (e) { console.error(e); }
@@ -716,6 +718,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const markAllNotificationsRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    apiService.markNotificationsRead().catch(() => {});
     try {
       getSocket().emit('mark-all-notifications-read', 'all');
     } catch (e) { console.error(e); }
@@ -723,6 +726,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const deleteNotification = (id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
+    apiService.clearNotifications(undefined, id).catch(() => {});
     try {
       getSocket().emit('delete-notification', id);
     } catch (e) { console.error(e); }
@@ -731,6 +735,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const clearAllNotifications = () => {
     setNotifications([]);
     localStorage.removeItem('korpjira-notifications');
+    apiService.clearNotifications('all').catch(() => {});
     try {
       getSocket().emit('clear-user-notifications', 'all');
     } catch (e) { console.error(e); }

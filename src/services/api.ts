@@ -1,5 +1,5 @@
 import { io, Socket } from 'socket.io-client';
-import type { Task, Sprint, User, Group } from '../types';
+import type { Task, Sprint, User, Group, NotificationItem } from '../types';
 
 const SERVER_URL_KEY = 'PULSE12_SERVER_URL';
 
@@ -80,12 +80,17 @@ export interface DatabaseData {
   sprints: Sprint[];
   users: User[];
   groups?: Group[];
+  notifications?: NotificationItem[];
 }
 
 export const apiService = {
   getServerUrl,
   setServerUrl,
   fetchData: () => apiRequest<DatabaseData>('/api/data'),
+  clearNotifications: (userId?: string, id?: string) =>
+    apiRequest<{ success: boolean }>('/api/notifications' + (id ? `?id=${id}` : (userId ? `?userId=${userId}` : '')), { method: 'DELETE' }),
+  markNotificationsRead: (id?: string, userId?: string) =>
+    apiRequest<{ success: boolean }>('/api/notifications/read', { method: 'PUT', body: JSON.stringify({ id, userId }) }),
   login: (credentials: { login?: string; password?: string; pin?: string; userId?: string }) => 
     apiRequest<{ success: boolean; user?: User; error?: string }>('/api/login', { method: 'POST', body: JSON.stringify(credentials) }),
   

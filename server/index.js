@@ -115,6 +115,7 @@ const sanitizeUsers = (usersArray) => {
 
 const getSanitizedDbData = () => ({
   ...dbData,
+  notifications: Array.isArray(dbData.notifications) ? dbData.notifications : [],
   users: sanitizeUsers(dbData.users)
 });
 
