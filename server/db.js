@@ -15,11 +15,17 @@ if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-// Настройка подключения к PostgreSQL
+// Настройка подключения к PostgreSQL с оптимизированным пулом и защитой от падений
 const connectionString = process.env.DATABASE_URL || 'postgresql://pulse12_admin:corporate_secret_password@localhost:5432/pulse12';
 const pool = new Pool({
   connectionString,
-  connectionTimeoutMillis: 3000,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 15000,
+});
+
+pool.on('error', (err) => {
+  console.error('⚠️ [PostgreSQL Pool Error] Временная ошибка соединения (не критично):', err.message);
 });
 
 let isPgConnected = false;
@@ -62,12 +68,14 @@ const loadLocalFile = () => {
   saveLocalFile();
 };
 
+let saveTimeout = null;
 const saveLocalFile = () => {
-  try {
-    fs.writeFileSync(DB_FILE, JSON.stringify(localDbData, null, 2), 'utf-8');
-  } catch (err) {
-    console.error('❌ Ошибка сохранения в db.json:', err);
-  }
+  if (saveTimeout) clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    fs.writeFile(DB_FILE, JSON.stringify(localDbData, null, 2), 'utf-8', (err) => {
+      if (err) console.error('❌ Ошибка асинхронного сохранения в db.json:', err.message);
+    });
+  }, 300);
 };
 
 /**
