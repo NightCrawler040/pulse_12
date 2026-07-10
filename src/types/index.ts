@@ -57,6 +57,7 @@ export interface User {
   password?: string;
   roleType?: 'admin' | 'manager' | 'member';
   pin?: string;
+  telegramChatId?: string;
   isActive?: boolean;
   isOnline?: boolean;
 }

@@ -9,6 +9,7 @@ import bcrypt from 'bcryptjs';
 import { initialUsers, initialSprints, initialTasks, initialGroups } from './initialData.js';
 import { initDb, getAllData, saveCollection, saveAllData, isPostgresMode } from './db.js';
 import { initMailService, sendTaskNotificationEmail } from './mailService.js';
+import { initTelegramService, sendTelegramNotification } from './telegramService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -547,8 +548,8 @@ io.on('connection', (socket) => {
     }
     io.emit('notification-received', notif);
 
-    // Автоматическая отправка письма на корпоративную почту сотруднику (если SMTP доступен)
-    if (notif && notif.userId) {
+    // Автоматическая отправка уведомления (на почту и/или в Telegram)
+    if (notif) {
       const recipient = dbData.users?.find(u => u.id === notif.userId);
       if (recipient && recipient.email) {
         sendTaskNotificationEmail(recipient, {
@@ -556,6 +557,7 @@ io.on('connection', (socket) => {
           description: notif.message || ''
         }, 'Pulse 12');
       }
+      sendTelegramNotification(recipient, notif);
     }
   });
 
@@ -585,6 +587,7 @@ if (fs.existsSync(DIST_DIR)) {
 const startServer = async () => {
   await initDb();
   initMailService();
+  initTelegramService();
   dbData = await getAllData();
 
   // Auto-migrate plaintext passwords to bcrypt hashes on startup (1.C)
