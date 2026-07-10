@@ -4,22 +4,21 @@ import type { Task, Sprint, User, Group } from '../types';
 const SERVER_URL_KEY = 'PULSE12_SERVER_URL';
 
 export const getServerUrl = (): string => {
-  const saved = localStorage.getItem(SERVER_URL_KEY);
-  if (saved) return saved;
-  
-  // If running in production (standard port 80, 443, or custom Docker port like 8080/etc., anything NOT dev 5173/3000)
+  // 1. В production-режиме (Любой порт кроме Vite dev 5173 / 3000) ВСЕГДА строго используем текущий origin
   if (window.location.port !== '5173' && window.location.port !== '3000') {
     return window.location.origin;
   }
+
+  // 2. В режиме разработки проверяем сохраненный URL в localStorage
+  const saved = localStorage.getItem(SERVER_URL_KEY);
+  if (saved) return saved;
   
-  // Only in dev mode (Vite 5173 / 3000), fallback to backend port 3001
   const host = window.location.hostname || 'localhost';
   return `http://${host}:3001`;
 };
 
 export const setServerUrl = (url: string): void => {
   let cleaned = url.trim().replace(/\/$/, '');
-  // If user entered raw IP/domain without protocol (http:// or https://), automatically prepend protocol
   if (cleaned && !cleaned.startsWith('http://') && !cleaned.startsWith('https://')) {
     const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
     cleaned = `${protocol}//${cleaned}`;
@@ -36,8 +35,8 @@ export const getSocket = (): Socket => {
     const url = getServerUrl();
     console.log(`🔌 Connecting to Pulse 12 Socket.io server at: ${url}`);
     socketInstance = io(url, {
-      reconnectionDelayMax: 5000,
-      transports: ['polling', 'websocket']
+      reconnectionDelayMax: 2000,
+      timeout: 5000
     });
   }
   return socketInstance;
