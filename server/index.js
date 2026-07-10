@@ -66,14 +66,14 @@ const loginRateLimiter = (req, res, next) => {
 };
 
 // Strict or configurable CORS policy (1.F)
-const ALLOWED_ORIGIN = process.env.CORS_ORIGIN || '*';
-app.use(cors({ origin: ALLOWED_ORIGIN, methods: ['GET', 'POST', 'PUT', 'DELETE'], credentials: true }));
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '2mb' })); // Ограничение размера JSON до безопасных 2 МБ (защита от Payload DoS)
 
 const io = new Server(server, {
   cors: {
-    origin: ALLOWED_ORIGIN,
-    methods: ['GET', 'POST', 'PUT', 'DELETE']
+    origin: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
   }
 });
 
@@ -620,15 +620,28 @@ io.on('connection', (socket) => {
 const DIST_DIR = path.join(__dirname, '../dist');
 if (fs.existsSync(DIST_DIR)) {
   console.log(`📦 Serving production build from: ${DIST_DIR}`);
-  app.use(express.static(DIST_DIR, { maxAge: '7d', etag: true }));
   
-  // SPA Fallback: support URL routing (/admin, /board, /team, /profile, etc.)
-  app.use((req, res) => {
-    if (!req.path.startsWith('/api/') && !req.path.startsWith('/uploads/') && !req.path.startsWith('/socket.io/')) {
-      res.sendFile(path.join(DIST_DIR, 'index.html'));
-    } else {
-      res.status(404).json({ error: 'Not found' });
+  // Статику (скрипты, стили, картинки) отдаем из папки dist
+  app.use(express.static(DIST_DIR, {
+    etag: true,
+    setHeaders: (res, filePath) => {
+      // index.html никогда не кэшируем, чтобы браузер всегда получал актуальные хэши скомпилированных JS/CSS файлов
+      if (filePath.endsWith('index.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      } else {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
     }
+  }));
+
+  // SPA Fallback: маршрутизация клиентского приложения (/admin, /board, /team, /profile и т.д.)
+  app.use((req, res) => {
+    // Если запрос был к файлу статики (.js, .css, .png, .map), но его нет на диске — возвращаем 404 вместо index.html
+    if (req.path.includes('.') || req.path.startsWith('/api/') || req.path.startsWith('/uploads/') || req.path.startsWith('/socket.io/')) {
+      return res.status(404).json({ error: 'Asset or API endpoint not found' });
+    }
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.sendFile(path.join(DIST_DIR, 'index.html'));
   });
 }
 
