@@ -3,13 +3,13 @@ export const initialUsers = [
     id: 'usr-1',
     name: 'Александр Громов',
     login: 'admin',
-    password: 'admin',
+    password: 'Pulse12_Secure_2026!',
     role: 'Tech Lead / Admin',
     roleType: 'admin',
     department: 'Engineering',
     email: 'a.gromov@corp.lan',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    pin: 'admin',
+    pin: '2026',
     isActive: true
   }
 ];
