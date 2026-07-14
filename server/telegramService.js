@@ -141,11 +141,6 @@ async function handleIncomingMessage(msg) {
   const query = text.replace(/^\/start\s*/i, '').trim().toLowerCase();
 
   if (!query || text === '/start') {
-    await sendTelegramMessage(chatId, 
-      `👋 <b>Добро пожаловать в корпоративный бот Pulse 12!</b>\n\n` +
-      `Здесь вы будете получать личные конфиденциальные уведомления о ваших задачах.\n\n` +
-      `👉 Чтобы привязать ваш аккаунт, просто <b>отправьте мне ваш корпоративный Email или логин</b> (например: <code>ivanov@enpf.kz</code>).`
-    );
     return;
   }
 
