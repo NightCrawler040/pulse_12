@@ -246,12 +246,15 @@ app.post('/api/tasks', requireAuth, (req, res) => {
   const newTaskData = req.body;
   const newId = newTaskData.id || `NEX-${Math.floor(100 + Math.random() * 900)}`;
   const now = new Date().toISOString();
+  const safeComments = Array.isArray(newTaskData.comments) 
+    ? newTaskData.comments.map(c => ({ ...c, userId: req.currentUser ? req.currentUser.id : c.userId }))
+    : [];
   const newTask = {
     ...newTaskData,
     id: newId,
     createdAt: now,
     updatedAt: now,
-    comments: newTaskData.comments || []
+    comments: safeComments
   };
   dbData.tasks.unshift(newTask);
   broadcastUpdate('tasks');
@@ -266,7 +269,17 @@ app.put('/api/tasks/:id', requireAuth, (req, res) => {
   dbData.tasks = dbData.tasks.map(t => {
     if (t.id === id) {
       found = true;
-      return { ...t, ...updates, updatedAt: new Date().toISOString() };
+      let safeUpdates = { ...updates };
+      if (safeUpdates.comments && Array.isArray(safeUpdates.comments)) {
+        const existingIds = new Set((t.comments || []).map(c => c.id));
+        safeUpdates.comments = safeUpdates.comments.map(c => {
+          if (!existingIds.has(c.id) && req.currentUser) {
+            return { ...c, userId: req.currentUser.id };
+          }
+          return c;
+        });
+      }
+      return { ...t, ...safeUpdates, updatedAt: new Date().toISOString() };
     }
     return t;
   });

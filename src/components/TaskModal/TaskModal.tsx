@@ -344,7 +344,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
 
   const handleSendComment = () => {
     if (!commentText.trim() || !existingTask) return;
-    addComment(existingTask.id, commentText, commentUserId);
+    const authorId = currentUser ? currentUser.id : commentUserId;
+    addComment(existingTask.id, commentText, authorId);
     setCommentText('');
   };
 
@@ -638,17 +639,18 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
                       </button>
                     ))}
                   </div>
-                  <div className="comment-user-select">
-                    <span className="label-tiny">От лица:</span>
-                    <select
-                      value={commentUserId}
-                      onChange={e => setCommentUserId(e.target.value)}
-                      className="user-small-select"
-                    >
-                      {users.map(u => (
-                        <option key={u.id} value={u.id}>{u.name} ({u.department})</option>
-                      ))}
-                    </select>
+                  <div className="comment-user-select" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255, 255, 255, 0.04)', padding: '4px 12px', borderRadius: '20px', border: '1px solid rgba(255, 255, 255, 0.08)', width: 'fit-content' }}>
+                    <img 
+                      src={currentUser?.avatar || 'https://via.placeholder.com/24'} 
+                      alt={currentUser?.name} 
+                      style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover' }} 
+                    />
+                    <span style={{ fontSize: '0.8rem', color: 'hsl(var(--text-main))', fontWeight: 600 }}>
+                      {currentUser?.name || 'Сотрудник'}
+                    </span>
+                    <span style={{ fontSize: '0.72rem', color: 'hsl(var(--text-muted))' }}>
+                      ({currentUser?.department || currentUser?.role || 'Исполнитель'})
+                    </span>
                   </div>
                   <div className="comment-input-row">
                     <input
