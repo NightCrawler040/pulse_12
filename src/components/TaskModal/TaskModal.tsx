@@ -85,7 +85,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
 
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [commentText, setCommentText] = useState('');
-  const [commentUserId, setCommentUserId] = useState<string>(users[0]?.id || 'usr-1');
 
   useEffect(() => {
     if (isOpenNew) {
@@ -294,7 +293,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
             url: fileUrl,
             size: fileSize,
             uploadedAt: new Date().toISOString(),
-            uploadedBy: commentUserId || 'usr-1'
+            uploadedBy: currentUser?.id || users[0]?.id || 'usr-1'
           };
           const nextAtts = [...attachmentsList, newAtt];
           setAttachmentsList(nextAtts);
@@ -344,7 +343,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
 
   const handleSendComment = () => {
     if (!commentText.trim() || !existingTask) return;
-    const authorId = currentUser ? currentUser.id : commentUserId;
+    const authorId = currentUser?.id || users[0]?.id || 'usr-1';
     addComment(existingTask.id, commentText, authorId);
     setCommentText('');
   };
