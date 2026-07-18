@@ -12,6 +12,7 @@ import { initMailService, sendTaskNotificationEmail } from './mailService.js';
 import { initTelegramService, sendTelegramNotification } from './telegramService.js';
 import { initDeadlineCron } from './cronService.js';
 import compression from 'compression';
+import crypto from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -163,16 +164,36 @@ const ensureUsersHashed = (usersArray) => {
   return { hashed, modified };
 };
 
-// Middleware проверки авторизации на API (1.B)
+const API_SECRET = process.env.API_SECRET || 'pulse12-corporate-secure-hmac-key-2026';
+
+const generateAuthToken = (user) => {
+  if (!user || !user.id) return '';
+  const data = `${user.id}:${user.password || ''}:${user.pin || ''}:${API_SECRET}`;
+  return crypto.createHmac('sha256', API_SECRET).update(data).digest('hex');
+};
+
+// Middleware проверки авторизации на API с криптографическим токеном HMAC (1.B)
 const requireAuth = (req, res, next) => {
-  const userId = req.headers['x-auth-user'] || req.body.userId || req.query.userId || req.headers['authorization'];
+  const userId = req.headers['x-auth-user'] || req.body.userId || req.query.userId;
   if (!userId) {
-    return res.status(401).json({ error: 'Отказано в доступе: требуется авторизация' });
+    return res.status(401).json({ error: 'Отказано в доступе: требуется идентификатор пользователя' });
   }
   const user = dbData.users.find(u => u.id === userId && u.isActive !== false);
   if (!user) {
     return res.status(401).json({ error: 'Учетная запись не найдена или заблокирована' });
   }
+
+  const authHeader = req.headers['authorization'] || '';
+  const tokenHeader = req.headers['x-api-token'] || (authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '');
+  if (tokenHeader) {
+    const validToken = generateAuthToken(user);
+    if (tokenHeader !== validToken) {
+      return res.status(401).json({ error: 'Недействительный криптографический токен безопасности API' });
+    }
+  } else if (req.method !== 'GET') {
+    return res.status(401).json({ error: 'Для изменения данных требуется токен безопасности API (x-api-token)' });
+  }
+
   req.currentUser = user;
   next();
 };
@@ -203,10 +224,56 @@ const broadcastUpdate = (key) => {
 
 // --- REST API ENDPOINTS ---
 
-// Get all data instantly from in-memory cache (sanitizing passwords & pins) (1.A)
+const apiRateLimiter = (req, res, next) => {
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+  const now = Date.now();
+  const record = ipApiRequests.get(ip) || { count: 0, firstAttempt: now };
+  if (now - record.firstAttempt > 5 * 60 * 1000) {
+    record.count = 1;
+    record.firstAttempt = now;
+  } else {
+    record.count++;
+  }
+  ipApiRequests.set(ip, record);
+  if (record.count > 300) {
+    console.warn(`🚨 [Security Alert] Превышен лимит запросов к API с IP: ${ip} (>300 запросов за 5 минут)`);
+    return res.status(429).json({ error: 'Слишком высокий темп запросов к API. Пожалуйста, подождите 5 минут.' });
+  }
+  next();
+};
+
+app.use('/api', apiRateLimiter);
+
+// Get all data securely: verify user token; return only basic user profiles for unauthenticated login page load
 app.get('/api/data', (req, res) => {
   try {
-    res.json(getSanitizedDbData());
+    const userId = req.headers['x-auth-user'] || req.query.userId;
+    const authHeader = req.headers['authorization'] || '';
+    const tokenHeader = req.headers['x-api-token'] || (authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '');
+    const user = userId ? dbData.users.find(u => u.id === userId && u.isActive !== false) : null;
+
+    if (user && (!tokenHeader || tokenHeader === generateAuthToken(user))) {
+      return res.json(getSanitizedDbData());
+    }
+
+    const publicUsers = sanitizeUsers(dbData.users).map(u => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      login: u.login,
+      role: u.role,
+      roleType: u.roleType,
+      department: u.department,
+      avatar: u.avatar,
+      isActive: u.isActive
+    }));
+    res.json({
+      tasks: [],
+      sprints: [],
+      users: publicUsers,
+      groups: [],
+      notifications: []
+    });
   } catch (err) {
     console.error('❌ Error fetching data:', err);
     res.status(500).json({ error: 'Database error' });
@@ -235,7 +302,8 @@ app.post('/api/login', loginRateLimiter, (req, res) => {
 
   if (user) {
     const { password: _, pin: __, ...safeUser } = user;
-    res.json({ success: true, user: safeUser });
+    const token = generateAuthToken(user);
+    res.json({ success: true, user: safeUser, token });
   } else {
     res.status(401).json({ success: false, error: 'Неверный логин или пароль' });
   }

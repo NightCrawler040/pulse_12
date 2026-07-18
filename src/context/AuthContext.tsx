@@ -44,6 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem(AUTH_STORAGE_KEY, currentUserId);
     } else {
       localStorage.removeItem(AUTH_STORAGE_KEY);
+      localStorage.removeItem('korpjira-auth-token');
     }
   }, [currentUserId]);
 
@@ -69,6 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const handleTimeout = () => {
       console.warn('🕒 Сеанс завершен из-за неактивности в течение 15 минут');
+      localStorage.removeItem('korpjira-auth-token');
       setCurrentUserId(null);
       setSessionExpired(true);
     };
@@ -105,6 +107,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await apiService.login({ login: identifier, password: passOrPin, pin: passOrPin, userId: identifier });
       if (res && res.success && res.user) {
+        if ((res as any).token) {
+          localStorage.setItem('korpjira-auth-token', (res as any).token);
+        }
         setCurrentUserId(res.user.id);
         return { success: true };
       }
@@ -138,6 +143,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    localStorage.removeItem('korpjira-auth-token');
     setCurrentUserId(null);
   };
 

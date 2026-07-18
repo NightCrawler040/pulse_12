@@ -54,15 +54,21 @@ export const reconnectSocket = (): Socket => {
 async function apiRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const baseUrl = getServerUrl();
   const url = `${baseUrl}${endpoint}`;
-  const authUserId = localStorage.getItem('korpjira-flowspace-auth-v1') || 'usr-1';
+  const authUserId = localStorage.getItem('korpjira-flowspace-auth-v1') || '';
+  const authToken = localStorage.getItem('korpjira-auth-token') || '';
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options?.headers as Record<string, string> || {}),
+  };
+  if (authUserId) headers['x-auth-user'] = authUserId;
+  if (authToken) {
+    headers['x-api-token'] = authToken;
+    headers['Authorization'] = `Bearer ${authToken}`;
+  }
   try {
     const res = await fetch(url, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        'x-auth-user': authUserId,
-        ...(options?.headers || {}),
-      },
+      headers,
     });
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
