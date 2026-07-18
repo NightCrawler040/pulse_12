@@ -218,7 +218,7 @@ export const Backlog: React.FC<BacklogProps> = ({ onOpenNewTaskModal }) => {
                         <td className="cell-title">
                           <span className="task-title-text">{task.title}</span>
                           <div className="cell-tags">
-                            {task.tags.slice(0, 3).map((t, i) => (
+                            {(task.tags || []).slice(0, 3).map((t, i) => (
                               <span key={i} className="mini-tag">#{t}</span>
                             ))}
                           </div>
@@ -249,8 +249,8 @@ export const Backlog: React.FC<BacklogProps> = ({ onOpenNewTaskModal }) => {
                         <td className="cell-assignee">
                           {assignee ? (
                             <div className="assignee-cell">
-                              <img src={assignee.avatar} alt={assignee.name} className="mini-avatar" />
-                              <span className="assignee-name-sm">{assignee.name}</span>
+                              <img src={assignee.avatar} alt={assignee.name || assignee.login} className="mini-avatar" />
+                              <span className="assignee-name-sm">{assignee.name || assignee.login || assignee.id}</span>
                             </div>
                           ) : (
                             <span className="unassigned-sm">Не назначен</span>
@@ -264,7 +264,7 @@ export const Backlog: React.FC<BacklogProps> = ({ onOpenNewTaskModal }) => {
                           >
                             <option value="">-- Бэклог --</option>
                             {sprints.map(s => (
-                              <option key={s.id} value={s.id}>{s.name.slice(0, 18)}...</option>
+                              <option key={s.id} value={s.id}>{(s.name || 'Спринт').slice(0, 18)}...</option>
                             ))}
                           </select>
                         </td>

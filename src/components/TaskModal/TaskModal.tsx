@@ -626,17 +626,19 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
 
                 <div className="add-comment-box">
                   <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))' }}>💬 Упомянуть:</span>
-                    {users.slice(0, 6).map(u => (
-                      <button
-                        key={u.id}
-                        type="button"
-                        onClick={() => setCommentText(prev => `${prev ? prev + ' ' : ''}@${u.name.split(' ')[0]} `)}
-                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '2px 8px', fontSize: '0.75rem', color: 'hsl(var(--primary))', cursor: 'pointer', transition: 'all 0.2s' }}
-                      >
-                        @{u.name.split(' ')[0]}
-                      </button>
-                    ))}
+                    {users.slice(0, 6).map(u => {
+                      const safeName = u.name || u.login || u.id || 'Пользователь';
+                      return (
+                        <button
+                          key={u.id}
+                          type="button"
+                          onClick={() => setCommentText(prev => `${prev ? prev + ' ' : ''}@${safeName.split(' ')[0]} `)}
+                          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '2px 8px', fontSize: '0.75rem', color: 'hsl(var(--primary))', cursor: 'pointer', transition: 'all 0.2s' }}
+                        >
+                          @{safeName.split(' ')[0]}
+                        </button>
+                      );
+                    })}
                   </div>
                   <div className="comment-user-select" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255, 255, 255, 0.04)', padding: '4px 12px', borderRadius: '20px', border: '1px solid rgba(255, 255, 255, 0.08)', width: 'fit-content' }}>
                     <img 
@@ -710,7 +712,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
                   </optgroup>
                   <optgroup label="👤 Одиночные сотрудники">
                     {users.filter(u => u.roleType !== 'admin').map(u => (
-                      <option key={u.id} value={`user:${u.id}`}>👤 {u.name} — {u.role}</option>
+                      <option key={u.id} value={`user:${u.id}`}>👤 {u.name || u.login || u.id} — {u.role || 'Сотрудник'}</option>
                     ))}
                   </optgroup>
                 </select>

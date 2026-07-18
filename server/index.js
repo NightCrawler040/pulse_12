@@ -110,12 +110,39 @@ const sanitizeUsers = (usersArray) => {
   if (!Array.isArray(usersArray)) return [];
   return usersArray.map(u => {
     const { password, pin, ...safeUser } = u;
-    return safeUser;
+    const fallbackName = safeUser.name || safeUser.login || safeUser.id || 'Пользователь';
+    return {
+      ...safeUser,
+      name: fallbackName,
+      role: safeUser.role || 'Сотрудник',
+      roleType: safeUser.roleType || 'member'
+    };
   });
+};
+
+const sanitizeSprints = (sprintsArray) => {
+  if (!Array.isArray(sprintsArray)) return [];
+  return sprintsArray.map(s => ({
+    ...s,
+    name: s.name ? String(s.name) : 'Новый спринт'
+  }));
+};
+
+const sanitizeTasks = (tasksArray) => {
+  if (!Array.isArray(tasksArray)) return [];
+  return tasksArray.map(t => ({
+    ...t,
+    title: t.title ? String(t.title) : 'Задача без названия',
+    tags: Array.isArray(t.tags) ? t.tags : [],
+    subtasks: Array.isArray(t.subtasks) ? t.subtasks : [],
+    comments: Array.isArray(t.comments) ? t.comments : []
+  }));
 };
 
 const getSanitizedDbData = () => ({
   ...dbData,
+  tasks: sanitizeTasks(dbData.tasks),
+  sprints: sanitizeSprints(dbData.sprints),
   notifications: Array.isArray(dbData.notifications) ? dbData.notifications : [],
   users: sanitizeUsers(dbData.users)
 });
