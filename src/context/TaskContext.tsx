@@ -585,9 +585,9 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...userData,
       id: newId,
       login: userData.login || userData.email?.split('@')[0] || `user_${Date.now()}`,
-      password: userData.password || '1234',
+      password: userData.password || '',
       roleType: userData.roleType || 'member',
-      pin: userData.pin || userData.password || '1234',
+      pin: userData.pin || userData.password || '',
       isActive: true
     };
     setUsers(prev => [...prev, newUser]);

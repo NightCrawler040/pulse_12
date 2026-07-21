@@ -11,6 +11,7 @@ import { initDb, getAllData, saveCollection, saveAllData, isPostgresMode } from 
 import { initMailService, sendTaskNotificationEmail } from './mailService.js';
 import { initTelegramService, sendTelegramNotification } from './telegramService.js';
 import { initDeadlineCron } from './cronService.js';
+import { generateSprintPdf } from './services/pdfService.js';
 import compression from 'compression';
 import crypto from 'crypto';
 
@@ -70,6 +71,28 @@ const loginRateLimiter = (req, res, next) => {
 // Strict or configurable CORS policy (1.F)
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '2mb' })); // Ограничение размера JSON до безопасных 2 МБ (защита от Payload DoS)
+
+// Global Security Headers & CWE-319 Cleartext Transmission Protection Middleware
+app.use((req, res, next) => {
+  // 1. Strict Transport Security (HSTS): принудительно используем HTTPS в течение 1 года
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  // 2. Предотвращение подмены MIME-типов (CWE-430 / CWE-319)
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  // 3. Защита от Clickjacking / Frame-атак (CWE-1021)
+  res.setHeader('X-Frame-Options', 'DENY');
+  // 4. Защита от XSS и отражённых атак браузера
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  // 5. Ограничение передачи Referrer с чувствительной информацией в URL
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  // 6. Базовая политика Content Security Policy (CSP)
+  res.setHeader('Content-Security-Policy', "default-src 'self' http: https: data: blob: 'unsafe-inline' 'unsafe-eval'; frame-ancestors 'none';");
+
+  // Перенаправление с HTTP на HTTPS при включённом FORCE_HTTPS в production
+  if (process.env.NODE_ENV === 'production' && process.env.FORCE_HTTPS === 'true' && !req.secure && req.headers['x-forwarded-proto'] !== 'https') {
+    return res.redirect(301, `https://${req.headers.host}${req.url}`);
+  }
+  next();
+});
 
 const io = new Server(server, {
   cors: {
@@ -167,7 +190,8 @@ const verifyPasswordOrPin = (input, storedHashOrText) => {
       return false;
     }
   }
-  return inputStr === storedStr;
+  // Отклоняем любые нехешированные пароли для предотвращения уязвимостей CWE-259
+  return false;
 };
 
 const ensureUsersHashed = (usersArray) => {
@@ -191,12 +215,21 @@ const ensureUsersHashed = (usersArray) => {
   return { hashed, modified };
 };
 
-const API_SECRET = process.env.API_SECRET || 'pulse12-corporate-secure-hmac-key-2026';
+// Защита от CWE-321: динамическая генерация криптографического ключа при отсутствии в окружении
+const getApiSecret = () => {
+  if (process.env.API_SECRET) return process.env.API_SECRET;
+  if (!global._autoApiSecret) {
+    global._autoApiSecret = crypto.randomBytes(32).toString('hex');
+    console.warn('⚠️ [Security] API_SECRET не задан в .env. Автоматически сгенерирован 256-битный динамический ключ HMAC.');
+  }
+  return global._autoApiSecret;
+};
 
 const generateAuthToken = (user) => {
   if (!user || !user.id) return '';
-  const data = `${user.id}:${user.password || ''}:${user.pin || ''}:${API_SECRET}`;
-  return crypto.createHmac('sha256', API_SECRET).update(data).digest('hex');
+  const secret = getApiSecret();
+  const data = `${user.id}:${user.password || ''}:${user.pin || ''}:${secret}`;
+  return crypto.createHmac('sha256', secret).update(data).digest('hex');
 };
 
 // Middleware проверки авторизации на API с криптографическим токеном HMAC (1.B)
@@ -214,7 +247,16 @@ const requireAuth = (req, res, next) => {
   const tokenHeader = req.headers['x-api-token'] || (authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '');
   if (tokenHeader) {
     const validToken = generateAuthToken(user);
-    if (tokenHeader !== validToken) {
+    // Защита от Timing Attack (CWE-208) через постоянное время сравнения
+    let isMatch = false;
+    if (validToken && tokenHeader.length === validToken.length) {
+      try {
+        isMatch = crypto.timingSafeEqual(Buffer.from(tokenHeader, 'utf8'), Buffer.from(validToken, 'utf8'));
+      } catch (e) {
+        isMatch = false;
+      }
+    }
+    if (!isMatch) {
       return res.status(401).json({ error: 'Недействительный криптографический токен безопасности API' });
     }
   } else if (req.method !== 'GET') {
@@ -304,6 +346,22 @@ app.get('/api/data', (req, res) => {
   } catch (err) {
     console.error('❌ Error fetching data:', err);
     res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Генерация и отдача корпоративного PDF-отчёта по спринту / аналитике (с поддержкой кириллицы)
+app.get('/api/reports/pdf', requireAuth, (req, res) => {
+  try {
+    const sprintId = req.query.sprintId || 'all';
+    const filename = sprintId === 'all' ? 'Pulse12_Corporate_Report_All.pdf' : `Pulse12_Sprint_${sprintId}_Report.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    generateSprintPdf({ dbData, sprintId, stream: res });
+  } catch (err) {
+    console.error('❌ Error generating PDF report:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Ошибка при формировании PDF-отчёта' });
+    }
   }
 });
 
@@ -412,8 +470,8 @@ app.post('/api/users', requireAuth, (req, res) => {
   }
 
   const newId = `usr-${Date.now()}`;
-  const rawPassword = userData.password || '1234';
-  const rawPin = userData.pin || rawPassword;
+  const rawPassword = userData.password || process.env.DEFAULT_NEW_USER_PASSWORD || '';
+  const rawPin = userData.pin || rawPassword || '';
 
   const newUser = {
     ...userData,

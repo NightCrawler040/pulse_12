@@ -135,11 +135,11 @@ export const AdminPanel: React.FC = () => {
         name: name.trim(),
         email: email.trim() || `${name.toLowerCase().replace(/\s+/g, '.')}@corp.lan`,
         login: finalLogin,
-        password: typedPass || '1234',
+        password: typedPass || '',
         department: department.trim(),
         role: roleTitle.trim(),
         roleType,
-        pin: typedPass || '1234',
+        pin: typedPass || '',
         avatar: avatar.trim() || DEFAULT_AVATAR,
         isActive: true
       });

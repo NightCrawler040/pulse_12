@@ -3,13 +3,13 @@ export const initialUsers = [
     id: 'usr-1',
     name: 'Александр Громов',
     login: process.env.ADMIN_LOGIN || 'admin',
-    password: process.env.ADMIN_PASSWORD || 'admin',
+    password: process.env.ADMIN_PASSWORD_HASH || '$2a$10$aGkS8h96LI6qn1Ca.aLUa.XvpxE0tMbfiY.uOPtYkbCfyZpDBFOJu',
     role: 'Tech Lead / Admin',
     roleType: 'admin',
     department: 'Engineering',
     email: 'a.gromov@corp.lan',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    pin: process.env.ADMIN_PIN || '1234',
+    pin: process.env.ADMIN_PIN_HASH || '$2a$10$Q/IUsVYACtPrHRHIMdXRqeg9heShRh8AtJMU/dcOXhfkSSVbyf83m',
     isActive: true
   }
 ];

@@ -4,9 +4,9 @@ services:
     container_name: pulse12-postgres
     restart: always
     environment:
-      POSTGRES_DB: pulse12
-      POSTGRES_USER: pulse12_admin
-      POSTGRES_PASSWORD: corporate_secret_password
+      POSTGRES_DB: ${POSTGRES_DB:-pulse12}
+      POSTGRES_USER: ${POSTGRES_USER:-pulse12_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-Pulse2026SecureDBPass}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -30,7 +30,7 @@ services:
     environment:
       - PORT=3001
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://pulse12_admin:corporate_secret_password@postgres_db:5432/pulse12
+      - DATABASE_URL=${DATABASE_URL:-postgresql://pulse12_admin:${POSTGRES_PASSWORD:-Pulse2026SecureDBPass}@postgres_db:5432/pulse12}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
     volumes:

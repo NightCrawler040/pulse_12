@@ -1,11 +1,52 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTaskContext } from '../../context/TaskContext';
-import { BarChart3, TrendingUp, Clock, AlertCircle, Award } from 'lucide-react';
+import { BarChart3, TrendingUp, Clock, AlertCircle, Award, Download, Loader2 } from 'lucide-react';
 import './Analytics.css';
 
 export const Analytics: React.FC = () => {
   const { tasks, users, groups, activeSprintId } = useTaskContext();
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const employeeUsers = users.filter(u => u.id !== 'usr-1' && u.login?.toLowerCase() !== 'admin');
+
+  const handleDownloadPdf = async () => {
+    try {
+      setIsDownloadingPdf(true);
+      const token = localStorage.getItem('pulse_api_token') || '';
+      const currentUserStr = localStorage.getItem('pulse_current_user');
+      const currentUser = currentUserStr ? JSON.parse(currentUserStr) : null;
+
+      const headers: Record<string, string> = {
+        'x-api-token': token
+      };
+      if (currentUser?.id) {
+        headers['x-auth-user'] = currentUser.id;
+      }
+
+      const response = await fetch(`/api/reports/pdf?sprintId=${activeSprintId}`, {
+        method: 'GET',
+        headers
+      });
+
+      if (!response.ok) {
+        throw new Error('Ошибка при формировании PDF-отчёта на сервере');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = activeSprintId === 'all' ? 'Pulse12_Corporate_Report_All.pdf' : `Pulse12_Sprint_${activeSprintId}_Report.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Download error:', err);
+      alert('Не удалось скачать отчёт. Проверьте соединение с сервером.');
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
 
   const currentTasks = activeSprintId === 'all' 
     ? tasks 
@@ -40,6 +81,23 @@ export const Analytics: React.FC = () => {
             Метрики производительности, распределение Story Points и анализ загрузки {employeeUsers.length} сотрудников компании.
           </p>
         </div>
+        <button
+          className="btn-download-pdf"
+          onClick={handleDownloadPdf}
+          disabled={isDownloadingPdf}
+        >
+          {isDownloadingPdf ? (
+            <>
+              <Loader2 className="animate-spin" size={18} />
+              <span>Генерация PDF...</span>
+            </>
+          ) : (
+            <>
+              <Download size={18} />
+              <span>Скачать PDF-отчёт</span>
+            </>
+          )}
+        </button>
       </div>
 
       {/* Top Cards */}
