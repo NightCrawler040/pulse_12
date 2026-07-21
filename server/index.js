@@ -1029,14 +1029,21 @@ const getJiraUsersList = (req) => {
   }));
 };
 
-const getEnrichedJiraFields = (req) => {
+const getEnrichedJiraFields = (req, targetIssueTypeId = "10003") => {
   const usersList = getJiraUsersList(req);
   const defaultUser = usersList.find(u => u.key === 'admin' || u.name === 'admin') || usersList[0] || { self: `${req.protocol}://${req.get('host')}/rest/api/2/user?username=admin`, name: "admin", key: "admin", accountId: "usr-1", accountType: "atlassian", displayName: "admin (Security Lead)" };
   
+  const typeMap = {
+    "10001": { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", name: "Bug", subtask: false },
+    "10002": { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", name: "Task", subtask: false },
+    "10003": { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", subtask: false }
+  };
+  const defaultIssueTypeObj = typeMap[String(targetIssueTypeId)] || typeMap["10003"];
+
   return {
     summary: { id: "summary", key: "summary", fieldId: "summary", name: "Summary", required: true, hasDefaultValue: true, defaultValue: "DerScanner Security Finding", schema: { type: "string", system: "summary" }, operations: ["set"] },
     description: { id: "description", key: "description", fieldId: "description", name: "Description", required: false, hasDefaultValue: true, defaultValue: "Уязвимость, обнаруженная сканером DerScanner", schema: { type: "string", system: "description" }, operations: ["set"] },
-    issuetype: { id: "issuetype", key: "issuetype", fieldId: "issuetype", name: "Issue Type", required: true, hasDefaultValue: true, defaultValue: { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", subtask: false }, schema: { type: "issuetype", system: "issuetype" }, operations: [], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", name: "Bug", subtask: false }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", name: "Task", subtask: false }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", subtask: false } ] },
+    issuetype: { id: "issuetype", key: "issuetype", fieldId: "issuetype", name: "Issue Type", required: true, hasDefaultValue: true, defaultValue: defaultIssueTypeObj, schema: { type: "issuetype", system: "issuetype" }, operations: [], allowedValues: [ typeMap["10001"], typeMap["10002"], typeMap["10003"] ] },
     project: { id: "project", key: "project", fieldId: "project", name: "Project", required: true, hasDefaultValue: true, defaultValue: { self: `${req.protocol}://${req.get('host')}/rest/api/2/project/10001`, id: "10001", key: "PULSE", name: "Pulse 12 Corporate Security & Dev Project" }, schema: { type: "project", system: "project" }, operations: [], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/project/10001`, id: "10001", key: "PULSE", name: "Pulse 12 Corporate Security & Dev Project" } ] },
     priority: { id: "priority", key: "priority", fieldId: "priority", name: "Priority", required: false, hasDefaultValue: true, defaultValue: { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/2`, iconUrl: "", name: "High", id: "2" }, schema: { type: "priority", system: "priority" }, operations: ["set"], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/1`, iconUrl: "", name: "Highest", id: "1" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/2`, iconUrl: "", name: "High", id: "2" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/3`, iconUrl: "", name: "Medium", id: "3" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/4`, iconUrl: "", name: "Low", id: "4" } ] },
     assignee: { id: "assignee", key: "assignee", fieldId: "assignee", name: "Assignee", required: false, hasDefaultValue: true, defaultValue: defaultUser, schema: { type: "user", system: "assignee" }, operations: ["set"], allowedValues: usersList },
@@ -1046,16 +1053,15 @@ const getEnrichedJiraFields = (req) => {
 };
 
 const getEnrichedIssueTypes = (req) => {
-  const fieldsObject = getEnrichedJiraFields(req);
   const statusList = [
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/1`, description: "Новый инцидент", iconUrl: "", name: "New", id: "1", statusCategory: { id: 2, key: "new", colorName: "blue-gray", name: "To Do" } },
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/2`, description: "В работе", iconUrl: "", name: "In Progress", id: "2", statusCategory: { id: 4, key: "indeterminate", colorName: "yellow", name: "In Progress" } },
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/3`, description: "Решено", iconUrl: "", name: "Done", id: "3", statusCategory: { id: 3, key: "done", colorName: "green", name: "Done" } }
   ];
   return [
-    { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", name: "Bug", description: "Уязвимость безопасности или баг", iconUrl: "", subtask: false, avatarId: 1, statuses: statusList, fields: fieldsObject },
-    { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", name: "Task", description: "Задача разработки", iconUrl: "", subtask: false, avatarId: 2, statuses: statusList, fields: fieldsObject },
-    { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", description: "Уязвимость SAST/DAST", iconUrl: "", subtask: false, avatarId: 3, statuses: statusList, fields: fieldsObject }
+    { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", name: "Bug", description: "Уязвимость безопасности или баг", iconUrl: "", subtask: false, avatarId: 1, statuses: statusList, fields: getEnrichedJiraFields(req, "10001") },
+    { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", name: "Task", description: "Задача разработки", iconUrl: "", subtask: false, avatarId: 2, statuses: statusList, fields: getEnrichedJiraFields(req, "10002") },
+    { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", description: "Уязвимость SAST/DAST", iconUrl: "", subtask: false, avatarId: 3, statuses: statusList, fields: getEnrichedJiraFields(req, "10003") }
   ];
 };
 
@@ -1257,11 +1263,20 @@ const handleJiraVersions = (req, res) => {
 
 const handleJiraCreateMeta = (req, res) => {
   const path = req.path || req.originalUrl || '';
-  const fieldsObject = getEnrichedJiraFields(req);
-  const fieldsList = Object.values(fieldsObject);
-  const issueTypesList = getEnrichedIssueTypes(req);
+  let issueTypesList = getEnrichedIssueTypes(req);
 
-  if (path.includes('/issuetypes/') && path.match(/\/issuetypes\/[^\/]+$/)) {
+  if (req.query && (req.query.issuetypeIds || req.query.issuetypeNames)) {
+    const ids = req.query.issuetypeIds ? String(req.query.issuetypeIds).split(',') : [];
+    const names = req.query.issuetypeNames ? String(req.query.issuetypeNames).split(',') : [];
+    issueTypesList = issueTypesList.filter(t => ids.includes(String(t.id)) || names.includes(String(t.name)));
+    if (issueTypesList.length === 0) issueTypesList = getEnrichedIssueTypes(req);
+  }
+
+  if (path.includes('/issuetypes/') && path.match(/\/issuetypes\/([a-zA-Z0-9_-]+)$/)) {
+    const matchedTypeId = path.match(/\/issuetypes\/([a-zA-Z0-9_-]+)$/)[1];
+    const targetType = issueTypesList.find(t => String(t.id) === matchedTypeId || String(t.name).toLowerCase() === matchedTypeId.toLowerCase()) || issueTypesList[0];
+    const fieldsObject = targetType ? targetType.fields : getEnrichedJiraFields(req, matchedTypeId);
+    const fieldsList = Object.values(fieldsObject);
     return res.status(200).json({
       maxResults: 50,
       startAt: 0,
@@ -1272,6 +1287,7 @@ const handleJiraCreateMeta = (req, res) => {
       items: fieldsList
     });
   }
+
   if (path.includes('/issuetypes')) {
     return res.status(200).json({
       maxResults: 50,
@@ -1283,15 +1299,33 @@ const handleJiraCreateMeta = (req, res) => {
     });
   }
 
+  let projectsList = [
+    {
+      id: "10001",
+      key: "PULSE",
+      name: "Pulse 12 Corporate Security & Dev Project",
+      issuetypes: issueTypesList
+    }
+  ];
+
+  if (req.query && (req.query.projectIds || req.query.projectKeys)) {
+    const pIds = req.query.projectIds ? String(req.query.projectIds).split(',') : [];
+    const pKeys = req.query.projectKeys ? String(req.query.projectKeys).split(',').map(k => k.toUpperCase()) : [];
+    projectsList = projectsList.filter(p => pIds.includes(String(p.id)) || pKeys.includes(String(p.key)));
+    if (projectsList.length === 0) {
+      projectsList = [
+        {
+          id: req.query.projectIds ? String(req.query.projectIds).split(',')[0] : "10001",
+          key: req.query.projectKeys ? String(req.query.projectKeys).split(',')[0].toUpperCase() : "PULSE",
+          name: "Pulse 12 Corporate Security & Dev Project",
+          issuetypes: issueTypesList
+        }
+      ];
+    }
+  }
+
   res.status(200).json({
-    projects: [
-      {
-        id: "10001",
-        key: "PULSE",
-        name: "Pulse 12 Corporate Security & Dev Project",
-        issuetypes: issueTypesList
-      }
-    ]
+    projects: projectsList
   });
 };
 
@@ -1344,6 +1378,10 @@ app.get(['/api/v1/webhooks/derscanner', '/api/webhooks/derscanner', '/api/v1/int
 app.post(['/api/v1/webhooks/derscanner', '/api/webhooks/derscanner', '/api/v1/integrations/findings'], handleExternalWebhook);
 
 // Регистрация Jira REST API путей
+app.use(['/rest', '/api/v1/webhooks/derscanner/rest'], (req, res, next) => {
+  console.log(`📡 [DerScanner -> Jira API] ${req.method} ${req.originalUrl || req.url}`);
+  next();
+});
 app.get(['/rest/api/2/serverInfo', '/rest/api/latest/serverInfo', '/api/v1/webhooks/derscanner/rest/api/2/serverInfo', '/api/v1/webhooks/derscanner/rest/api/latest/serverInfo'], handleJiraServerInfo);
 app.get(['/rest/api/2/myself', '/rest/api/3/myself', '/rest/auth/1/session', '/api/v1/webhooks/derscanner/rest/api/2/myself', '/api/v1/webhooks/derscanner/rest/api/3/myself', '/api/v1/webhooks/derscanner/rest/auth/1/session'], handleJiraMyself);
 app.get(['/rest/api/2/project', '/api/v1/webhooks/derscanner/rest/api/2/project'], handleJiraProjects);
