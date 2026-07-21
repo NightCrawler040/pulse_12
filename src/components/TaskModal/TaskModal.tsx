@@ -711,7 +711,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
                     ))}
                   </optgroup>
                   <optgroup label="👤 Одиночные сотрудники">
-                    {users.filter(u => u.roleType !== 'admin').map(u => (
+                    {users.filter(u => u.id !== 'usr-1' && u.login?.toLowerCase() !== 'admin').map(u => (
                       <option key={u.id} value={`user:${u.id}`}>👤 {u.name || u.login || u.id} — {u.role || 'Сотрудник'}</option>
                     ))}
                   </optgroup>

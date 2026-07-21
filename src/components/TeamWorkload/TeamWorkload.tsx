@@ -5,7 +5,7 @@ import './TeamWorkload.css';
 
 export const TeamWorkload: React.FC = () => {
   const { users, groups, tasks, setFilters, setViewMode } = useTaskContext();
-  const employees = users.filter(u => u.roleType !== 'admin');
+  const employees = users.filter(u => u.id !== 'usr-1' && u.login?.toLowerCase() !== 'admin');
 
   const handleSelectUser = (userId: string) => {
     setFilters(prev => ({ ...prev, assigneeId: userId }));

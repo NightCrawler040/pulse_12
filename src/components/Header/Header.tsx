@@ -53,9 +53,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewTaskModal, onOpenLoginM
     setIsNetworkModalOpen,
     notifications
   } = useTaskContext();
-
   const { currentUser, isAdmin } = useAuth();
-  const employeeUsersCount = users.filter(u => u.roleType !== 'admin').length;
+  const employeeUsersCount = users.filter(u => u.id !== 'usr-1' && u.login?.toLowerCase() !== 'admin').length;
 
   const [showFilters, setShowFilters] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -368,7 +367,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewTaskModal, onOpenLoginM
               </div>
 
               <div className="avatar-row">
-                {users.filter(u => u.roleType !== 'admin').map((user) => {
+                {users.filter(u => u.id !== 'usr-1' && u.login?.toLowerCase() !== 'admin').map((user) => {
                   const isSelected = filters.assigneeId === user.id;
                   return (
                     <div 

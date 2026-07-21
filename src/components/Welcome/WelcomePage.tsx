@@ -9,7 +9,7 @@ interface WelcomePageProps {
 
 export const WelcomePage: React.FC<WelcomePageProps> = ({ onOpenLogin }) => {
   const { isServerConnected, users, onlineUserIds } = useTaskContext();
-  const employeeCount = users.filter(u => u.roleType !== 'admin').length;
+  const employeeCount = users.filter(u => u.id !== 'usr-1' && u.login?.toLowerCase() !== 'admin').length;
 
   return (
     <div className="welcome-container animate-fade-in">

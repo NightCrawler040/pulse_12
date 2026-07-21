@@ -8,7 +8,8 @@ import './AdminPanel.css';
 export const AdminPanel: React.FC = () => {
   const { users, groups, onlineUserIds, addUser, updateUser, deleteUser, addGroup, updateGroup, deleteGroup } = useTaskContext();
   const { isAdmin } = useAuth();
-  const employeeUsers = users.filter(u => u.roleType !== 'admin');
+  const isProtectedAdmin = (u: User) => u.id === 'usr-1' || u.login?.toLowerCase() === 'admin';
+  const employeeUsers = users.filter(u => !isProtectedAdmin(u));
 
   const [activeTab, setActiveTab] = useState<'users' | 'groups'>('users');
 
@@ -47,7 +48,6 @@ export const AdminPanel: React.FC = () => {
     targetUser?: User;
   }>({ isOpen: false, type: 'single' });
 
-  const isProtectedAdmin = (u: User) => u.id === 'usr-1' || u.login?.toLowerCase() === 'admin';
 
   if (!isAdmin) {
     return (

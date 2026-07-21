@@ -5,7 +5,7 @@ import './Analytics.css';
 
 export const Analytics: React.FC = () => {
   const { tasks, users, groups, activeSprintId } = useTaskContext();
-  const employeeUsers = users.filter(u => u.roleType !== 'admin');
+  const employeeUsers = users.filter(u => u.id !== 'usr-1' && u.login?.toLowerCase() !== 'admin');
 
   const currentTasks = activeSprintId === 'all' 
     ? tasks 
@@ -194,7 +194,7 @@ export const Analytics: React.FC = () => {
         </div>
 
         <div className="leaderboard-grid">
-          {users.filter(u => u.roleType !== 'admin').map(u => {
+          {employeeUsers.map(u => {
             const uTasks = currentTasks.filter(t => t.assigneeId === u.id || (t.assigneeGroupId && groups.some(g => g.id === t.assigneeGroupId && g.memberIds?.includes(u.id))));
             const uDone = uTasks.filter(t => t.status === 'done').length;
             const uSP = uTasks.reduce((sum, t) => sum + (t.storyPoints || 0), 0);
