@@ -114,6 +114,19 @@ export const initDb = async () => {
     }
 
     client.release();
+
+    // Мгновенно синхронизируем локальный fallback (localDbData и db.json) с актуальными данными из PostgreSQL
+    const allPgData = await getAllData();
+    if (allPgData && allPgData.users && allPgData.users.length > 0) {
+      localDbData = {
+        tasks: allPgData.tasks || [],
+        sprints: allPgData.sprints || [],
+        users: allPgData.users || [],
+        groups: allPgData.groups || [],
+        notifications: allPgData.notifications || []
+      };
+      saveLocalFile();
+    }
   } catch (err) {
     console.warn(`⚠️ PostgreSQL недоступен (${err.message}). Переключение на локальный файловый режим (db.json)...`);
     isPgConnected = false;
@@ -128,6 +141,17 @@ export const initDb = async () => {
         client.release();
         isPgConnected = true;
         console.log('🔄 [Auto-Healing] PostgreSQL снова доступен! Восстановление онлайн-режима...');
+        const allPgData = await getAllData();
+        if (allPgData && allPgData.users && allPgData.users.length > 0) {
+          localDbData = {
+            tasks: allPgData.tasks || [],
+            sprints: allPgData.sprints || [],
+            users: allPgData.users || [],
+            groups: allPgData.groups || [],
+            notifications: allPgData.notifications || []
+          };
+          saveLocalFile();
+        }
       } catch (e) {
         // Остаемся в локальном режиме db.json
       }

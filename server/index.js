@@ -233,12 +233,13 @@ const generateAuthToken = (user) => {
 };
 
 // Middleware проверки авторизации на API с криптографическим токеном HMAC (1.B)
-const requireAuth = (req, res, next) => {
+const requireAuth = async (req, res, next) => {
   const userId = req.headers['x-auth-user'] || req.body.userId || req.query.userId;
   if (!userId) {
     return res.status(401).json({ error: 'Отказано в доступе: требуется идентификатор пользователя' });
   }
-  const user = dbData.users.find(u => u.id === userId && u.isActive !== false);
+  const dbData = await getAllData();
+  const user = (dbData.users || []).find(u => u.id === userId && u.isActive !== false);
   if (!user) {
     return res.status(401).json({ error: 'Учетная запись не найдена или заблокирована' });
   }
@@ -350,10 +351,11 @@ app.get('/api/data', (req, res) => {
 });
 
 // Генерация и отдача корпоративного PDF-отчёта по спринту / аналитике (с поддержкой кириллицы)
-app.get('/api/reports/pdf', requireAuth, (req, res) => {
+app.get('/api/reports/pdf', requireAuth, async (req, res) => {
   try {
     const sprintId = req.query.sprintId || 'all';
     const filename = sprintId === 'all' ? 'Pulse12_Corporate_Report_All.pdf' : `Pulse12_Sprint_${sprintId}_Report.pdf`;
+    const dbData = await getAllData();
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     generateSprintPdf({ dbData, sprintId, stream: res });
