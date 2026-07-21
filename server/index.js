@@ -1019,24 +1019,21 @@ const getProjectObject = (req, keyOrId = 'PULSE') => {
   const pName = p ? p.name : 'Pulse 12 Corporate Security & Dev Project';
 
   return {
+    expand: "description,lead,url,projectKeys,permissions,issueTypes",
     self: `${req.protocol}://${req.get('host')}/rest/api/2/project/${pId}`,
     id: pId,
     key: pKey,
     name: pName,
-    description: "Corporate Jira Project for Security Findings",
+    description: "Единый контур управления разработкой и информационной безопасностью Pulse 12",
     projectTypeKey: "software",
-    lead: { self: `${req.protocol}://${req.get('host')}/rest/api/2/user?username=admin`, key: "admin", name: "admin", displayName: "Security Admin", active: true },
+    lead: { self: `${req.protocol}://${req.get('host')}/rest/api/2/user?username=admin`, key: "admin", accountId: "usr-1", accountType: "atlassian", name: "admin", displayName: "admin (Security Lead)", active: true },
     components: [
       { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10001`, id: "10001", name: "Backend SAST", description: "Backend services" },
       { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10002`, id: "10002", name: "Frontend SAST", description: "UI components" },
       { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10003`, id: "10003", name: "DevOps Infrastructure", description: "CI/CD & Docker" },
       { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10004`, id: "10004", name: "General Security", description: "Overall audit" }
     ],
-    issueTypes: [
-      { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", description: "Уязвимость безопасности или баг", iconUrl: "", name: "Bug", subtask: false, avatarId: 1 },
-      { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", description: "Задача разработки", iconUrl: "", name: "Task", subtask: false, avatarId: 2 },
-      { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", description: "Уязвимость SAST/DAST", iconUrl: "", name: "Vulnerability", subtask: false, avatarId: 3 }
-    ],
+    issueTypes: getEnrichedIssueTypes(req),
     assigneeType: "PROJECT_LEAD",
     versions: [],
     roles: { "Administrators": `${req.protocol}://${req.get('host')}/rest/api/2/project/${pKey}/role/10002` }
@@ -1044,10 +1041,14 @@ const getProjectObject = (req, keyOrId = 'PULSE') => {
 };
 
 const handleJiraProjects = (req, res) => {
+  const url = req.originalUrl || req.url || req.path || '';
   const list = (dbData.projects && dbData.projects.length > 0)
     ? dbData.projects.map(p => getProjectObject(req, p.key || p.id))
     : [getProjectObject(req, 'PULSE')];
-  res.status(200).json(list);
+  if (url.includes('/project/search') || url.includes('/project?')) {
+    return res.status(200).json({ maxResults: 50, startAt: 0, total: list.length, isLast: true, values: list, projects: list });
+  }
+  return res.status(200).json(list);
 };
 
 const handleJiraProjectDetail = (req, res) => {
@@ -1076,23 +1077,6 @@ const handleJiraComponents = (req, res) => {
     values: components,
     components: components
   });
-};
-
-const getJiraUsersList = (req) => {
-  const list = (dbData.users && dbData.users.length > 0) ? dbData.users : (dbData.employees && dbData.employees.length > 0 ? dbData.employees : []);
-  return list.map(u => ({
-    self: `${req.protocol}://${req.get('host')}/rest/api/2/user?username=${encodeURIComponent(u.login || u.name || u.id)}`,
-    key: u.login || u.name || u.id,
-    name: u.login || u.name || u.id,
-    emailAddress: u.email || `${u.login || 'user'}@pulse12.local`,
-    avatarUrls: { "48x48": u.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop" },
-    displayName: `${u.name || u.login || u.id} (${u.role || u.department || 'Employee'})`,
-    active: u.isActive !== false,
-    timeZone: "Asia/Almaty",
-    locale: "ru_RU",
-    accountId: String(u.id || u.login || 'usr-1'),
-    accountType: "atlassian"
-  }));
 };
 
 const handleJiraUsersSearch = (req, res) => {
@@ -1133,16 +1117,7 @@ const handleJiraSearch = (req, res) => {
 
 const handleJiraIssueTypes = (req, res) => {
   const url = req.originalUrl || req.url || req.path || '';
-  const statusList = [
-    { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/1`, description: "Новый инцидент", iconUrl: "", name: "New", id: "1", statusCategory: { id: 2, key: "new", colorName: "blue-gray", name: "To Do" } },
-    { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/2`, description: "В работе", iconUrl: "", name: "In Progress", id: "2", statusCategory: { id: 4, key: "indeterminate", colorName: "yellow", name: "In Progress" } },
-    { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/3`, description: "Решено", iconUrl: "", name: "Done", id: "3", statusCategory: { id: 3, key: "done", colorName: "green", name: "Done" } }
-  ];
-  const issueTypes = [
-    { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", description: "Уязвимость безопасности или баг", iconUrl: "", name: "Bug", subtask: false, avatarId: 1, statuses: statusList },
-    { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", description: "Задача разработки", iconUrl: "", name: "Task", subtask: false, avatarId: 2, statuses: statusList },
-    { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", description: "Уязвимость SAST/DAST", iconUrl: "", name: "Vulnerability", subtask: false, avatarId: 3, statuses: statusList }
-  ];
+  const issueTypes = getEnrichedIssueTypes(req);
   if (url.match(/\/issuetype\/(1000[1-3])$/)) {
     const matchedId = url.match(/\/issuetype\/(1000[1-3])$/)[1];
     const found = issueTypes.find(t => t.id === matchedId) || issueTypes[2];
@@ -1164,7 +1139,7 @@ const handleJiraPriorities = (req, res) => {
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/1`, statusColor: "#ef4444", description: "Critical / Highest", iconUrl: "", name: "Highest", id: "1" },
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/2`, statusColor: "#f97316", description: "High", iconUrl: "", name: "High", id: "2" },
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/3`, statusColor: "#eab308", description: "Medium", iconUrl: "", name: "Medium", id: "3" },
-    { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/4`, statusColor: "#3b82f6", description: "Low", iconUrl: "", name: "Low", id: "4" }
+    { self: `${req.protocol}://${req.get('host')}/rest/api/4/priority/4`, statusColor: "#3b82f6", description: "Low", iconUrl: "", name: "Low", id: "4" }
   ];
   if (url.match(/\/priority\/([1-4])$/)) {
     const matchedId = url.match(/\/priority\/([1-4])$/)[1];
@@ -1183,16 +1158,9 @@ const handleJiraPriorities = (req, res) => {
 
 const handleJiraFields = (req, res) => {
   const url = req.originalUrl || req.url || req.path || '';
-  const fields = [
-    { id: "summary", key: "summary", name: "Summary", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "string", system: "summary" } },
-    { id: "description", key: "description", name: "Description", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "string", system: "description" } },
-    { id: "issuetype", key: "issuetype", name: "Issue Type", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "issuetype", system: "issuetype" } },
-    { id: "project", key: "project", name: "Project", custom: false, orderable: false, navigable: true, searchable: true, schema: { type: "project", system: "project" } },
-    { id: "priority", key: "priority", name: "Priority", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "priority", system: "priority" } },
-    { id: "assignee", key: "assignee", name: "Assignee", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "user", system: "assignee" } },
-    { id: "components", key: "components", name: "Components", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "array", items: "component", system: "components" } },
-    { id: "parent", key: "parent", name: "Parent", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "issuelink", system: "parent" } }
-  ];
+  const fieldsObject = getEnrichedJiraFields(req);
+  const fields = Object.values(fieldsObject);
+
   if (url.match(/\/field\/([a-zA-Z0-9_-]+)$/) && !url.includes('/field/project')) {
     const matchedId = url.match(/\/field\/([a-zA-Z0-9_-]+)$/)[1];
     const found = fields.find(f => f.id === matchedId) || fields[0];
@@ -1217,11 +1185,7 @@ const handleJiraStatuses = (req, res) => {
   ];
 
   if (url.includes('/project/') && url.includes('/statuses')) {
-    return res.status(200).json([
-      { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", name: "Bug", subtask: false, statuses: statusList },
-      { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", name: "Task", subtask: false, statuses: statusList },
-      { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", subtask: false, statuses: statusList }
-    ]);
+    return res.status(200).json(getEnrichedIssueTypes(req));
   }
   if (url.match(/\/status\/([1-3])$/)) {
     const matchedId = url.match(/\/status\/([1-3])$/)[1];
@@ -1246,29 +1210,9 @@ const handleJiraVersions = (req, res) => {
 
 const handleJiraCreateMeta = (req, res) => {
   const path = req.path || req.originalUrl || '';
-  const statusList = [
-    { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/1`, description: "Новый инцидент", iconUrl: "", name: "New", id: "1", statusCategory: { id: 2, key: "new", colorName: "blue-gray", name: "To Do" } },
-    { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/2`, description: "В работе", iconUrl: "", name: "In Progress", id: "2", statusCategory: { id: 4, key: "indeterminate", colorName: "yellow", name: "In Progress" } },
-    { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/3`, description: "Решено", iconUrl: "", name: "Done", id: "3", statusCategory: { id: 3, key: "done", colorName: "green", name: "Done" } }
-  ];
-
-  const fieldsObject = {
-    summary: { id: "summary", key: "summary", fieldId: "summary", name: "Summary", required: true, hasDefaultValue: false, schema: { type: "string", system: "summary" }, operations: ["set"] },
-    description: { id: "description", key: "description", fieldId: "description", name: "Description", required: false, hasDefaultValue: false, schema: { type: "string", system: "description" }, operations: ["set"] },
-    issuetype: { id: "issuetype", key: "issuetype", fieldId: "issuetype", name: "Issue Type", required: true, hasDefaultValue: false, schema: { type: "issuetype", system: "issuetype" }, operations: [], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", name: "Bug", subtask: false }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", name: "Task", subtask: false }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", subtask: false } ] },
-    project: { id: "project", key: "project", fieldId: "project", name: "Project", required: true, hasDefaultValue: false, schema: { type: "project", system: "project" }, operations: [], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/project/10001`, id: "10001", key: "PULSE", name: "Pulse 12 Corporate Security & Dev Project" } ] },
-    priority: { id: "priority", key: "priority", fieldId: "priority", name: "Priority", required: false, hasDefaultValue: false, schema: { type: "priority", system: "priority" }, operations: ["set"], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/1`, iconUrl: "", name: "Highest", id: "1" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/2`, iconUrl: "", name: "High", id: "2" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/3`, iconUrl: "", name: "Medium", id: "3" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/4`, iconUrl: "", name: "Low", id: "4" } ] },
-    assignee: { id: "assignee", key: "assignee", fieldId: "assignee", name: "Assignee", required: false, hasDefaultValue: false, schema: { type: "user", system: "assignee" }, operations: ["set"], allowedValues: getJiraUsersList(req) },
-    components: { id: "components", key: "components", fieldId: "components", name: "Components", required: false, hasDefaultValue: false, schema: { type: "array", items: "component", system: "components" }, operations: ["add", "set", "remove"], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10001`, id: "10001", name: "Backend SAST" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10002`, id: "10002", name: "Frontend SAST" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10003`, id: "10003", name: "DevOps Infrastructure" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10004`, id: "10004", name: "General Security" } ] },
-    parent: { id: "parent", key: "parent", fieldId: "parent", name: "Parent", required: false, hasDefaultValue: false, schema: { type: "issuelink", system: "parent" }, operations: ["set"], allowedValues: [] }
-  };
-
+  const fieldsObject = getEnrichedJiraFields(req);
   const fieldsList = Object.values(fieldsObject);
-  const issueTypesList = [
-    { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", name: "Bug", description: "Уязвимость или баг", subtask: false, statuses: statusList, fields: fieldsObject },
-    { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", name: "Task", description: "Задача разработки", subtask: false, statuses: statusList, fields: fieldsObject },
-    { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", description: "Уязвимость SAST/DAST", subtask: false, statuses: statusList, fields: fieldsObject }
-  ];
+  const issueTypesList = getEnrichedIssueTypes(req);
 
   if (path.includes('/issuetypes/') && path.match(/\/issuetypes\/[^\/]+$/)) {
     return res.status(200).json({
@@ -1310,8 +1254,8 @@ const handleJiraCreateIssue = (req, res) => {
   const description = fields.description || "Уязвимость, обнаруженная сканером DerScanner";
   const priorityName = fields.priority && (fields.priority.name || fields.priority.id) ? fields.priority.name : "High";
   const projectKey = fields.project && (fields.project.key || fields.project.id) ? fields.project.key : "PULSE";
-  const assigneeVal = fields.assignee && (fields.assignee.name || fields.assignee.key || fields.assignee.id) ? (fields.assignee.name || fields.assignee.key || fields.assignee.id) : null;
-  const componentsVal = fields.components && Array.isArray(fields.components) ? fields.components.map(c => c.name || c.id).join(', ') : null;
+  const assigneeVal = fields.assignee && (fields.assignee.name || fields.assignee.key || fields.assignee.id || fields.assignee.displayName) ? (fields.assignee.name || fields.assignee.key || fields.assignee.id || fields.assignee.displayName) : "admin";
+  const componentsVal = fields.components && Array.isArray(fields.components) && fields.components.length > 0 ? fields.components.map(c => c.name || c.id).join(', ') : "General Security";
 
   const newId = `fnd-${Date.now()}_${Math.floor(Math.random() * 1000)}`;
   const newFinding = {
