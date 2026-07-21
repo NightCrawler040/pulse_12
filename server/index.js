@@ -1058,23 +1058,23 @@ const handleJiraComponents = (req, res) => {
   ]);
 };
 
-const handleJiraUsersSearch = (req, res) => {
-  const users = (dbData.employees || [
-    { id: 'usr-1', name: 'admin', role: 'Security Admin', email: 'admin@pulse12.local', department: 'Security' },
-    { id: 'usr-2', name: 'lead', role: 'Engineering Lead', email: 'lead@pulse12.local', department: 'Engineering' },
-    { id: 'usr-3', name: 'security', role: 'SOC Auditor', email: 'security@pulse12.local', department: 'Security' }
-  ]).map(u => ({
-    self: `${req.protocol}://${req.get('host')}/rest/api/2/user?username=${u.name || u.id}`,
-    key: u.name || u.id,
-    name: u.name || u.id,
-    emailAddress: u.email || `${u.name || 'user'}@pulse12.local`,
+const getJiraUsersList = (req) => {
+  const list = (dbData.users && dbData.users.length > 0) ? dbData.users : (dbData.employees && dbData.employees.length > 0 ? dbData.employees : []);
+  return list.map(u => ({
+    self: `${req.protocol}://${req.get('host')}/rest/api/2/user?username=${encodeURIComponent(u.login || u.name || u.id)}`,
+    key: u.login || u.name || u.id,
+    name: u.login || u.name || u.id,
+    emailAddress: u.email || `${u.login || 'user'}@pulse12.local`,
     avatarUrls: { "48x48": u.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop" },
-    displayName: `${u.name || u.id} (${u.role || u.department || 'Employee'})`,
-    active: true,
+    displayName: `${u.name || u.login || u.id} (${u.role || u.department || 'Employee'})`,
+    active: u.isActive !== false,
     timeZone: "Asia/Almaty",
     locale: "ru_RU"
   }));
-  res.status(200).json(users);
+};
+
+const handleJiraUsersSearch = (req, res) => {
+  res.status(200).json(getJiraUsersList(req));
 };
 
 const handleJiraSearch = (req, res) => {
@@ -1161,7 +1161,7 @@ const handleJiraCreateMeta = (req, res) => {
     issuetype: { required: true, schema: { type: "issuetype", system: "issuetype" }, name: "Issue Type", fieldId: "issuetype", operations: [], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", name: "Bug", subtask: false }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", name: "Task", subtask: false }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", subtask: false } ] },
     project: { required: true, schema: { type: "project", system: "project" }, name: "Project", fieldId: "project", operations: [], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/project/10001`, id: "10001", key: "PULSE", name: "Pulse 12 Corporate Security & Dev Project" } ] },
     priority: { required: false, schema: { type: "priority", system: "priority" }, name: "Priority", fieldId: "priority", operations: ["set"], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/1`, iconUrl: "", name: "Highest", id: "1" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/2`, iconUrl: "", name: "High", id: "2" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/3`, iconUrl: "", name: "Medium", id: "3" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/4`, iconUrl: "", name: "Low", id: "4" } ] },
-    assignee: { required: false, schema: { type: "user", system: "assignee" }, name: "Assignee", fieldId: "assignee", operations: ["set"], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/user?username=admin`, key: "admin", name: "admin", displayName: "Security Admin", active: true }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/user?username=lead`, key: "lead", name: "lead", displayName: "Engineering Lead", active: true } ] },
+    assignee: { required: false, schema: { type: "user", system: "assignee" }, name: "Assignee", fieldId: "assignee", operations: ["set"], allowedValues: getJiraUsersList(req) },
     components: { required: false, schema: { type: "array", items: "component", system: "components" }, name: "Components", fieldId: "components", operations: ["add", "set", "remove"], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10001`, id: "10001", name: "Backend SAST" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10002`, id: "10002", name: "Frontend SAST" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10003`, id: "10003", name: "DevOps Infrastructure" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10004`, id: "10004", name: "General Security" } ] },
     parent: { required: false, schema: { type: "issuelink", system: "parent" }, name: "Parent", fieldId: "parent", operations: ["set"], allowedValues: [] }
   };
