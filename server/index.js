@@ -72,6 +72,14 @@ const loginRateLimiter = (req, res, next) => {
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '2mb' })); // Ограничение размера JSON до безопасных 2 МБ (защита от Payload DoS)
 
+// Global HTTP Request Logger (для отслеживания любых обращений от внешних систем и DerScanner)
+app.use((req, res, next) => {
+  if (req.originalUrl && (req.originalUrl.includes('/rest/') || req.originalUrl.includes('/api/'))) {
+    console.log(`📥 [INCOMING HTTP] ${req.method} ${req.originalUrl}`);
+  }
+  next();
+});
+
 // Global Security Headers & CWE-319 Cleartext Transmission Protection Middleware
 app.use((req, res, next) => {
   // 1. Strict Transport Security (HSTS): принудительно используем HTTPS в течение 1 года
@@ -1108,7 +1116,79 @@ const handleJiraPriorities = (req, res) => {
   ]);
 };
 
+const handleJiraFields = (req, res) => {
+  res.status(200).json([
+    { id: "summary", name: "Summary", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "string", system: "summary" } },
+    { id: "description", name: "Description", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "string", system: "description" } },
+    { id: "issuetype", name: "Issue Type", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "issuetype", system: "issuetype" } },
+    { id: "project", name: "Project", custom: false, orderable: false, navigable: true, searchable: true, schema: { type: "project", system: "project" } },
+    { id: "priority", name: "Priority", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "priority", system: "priority" } },
+    { id: "assignee", name: "Assignee", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "user", system: "assignee" } },
+    { id: "components", name: "Components", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "array", items: "component", system: "components" } },
+    { id: "parent", name: "Parent", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "issuelink", system: "parent" } }
+  ]);
+};
+
+const handleJiraStatuses = (req, res) => {
+  const url = req.originalUrl || req.url || req.path || '';
+  const statusList = [
+    { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/1`, description: "Новый инцидент", iconUrl: "", name: "New", id: "1", statusCategory: { id: 2, key: "new", colorName: "blue-gray", name: "To Do" } },
+    { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/2`, description: "В работе", iconUrl: "", name: "In Progress", id: "2", statusCategory: { id: 4, key: "indeterminate", colorName: "yellow", name: "In Progress" } },
+    { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/3`, description: "Решено", iconUrl: "", name: "Done", id: "3", statusCategory: { id: 3, key: "done", colorName: "green", name: "Done" } }
+  ];
+
+  if (url.includes('/project/') && url.includes('/statuses')) {
+    return res.status(200).json([
+      { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", name: "Bug", subtask: false, statuses: statusList },
+      { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", name: "Task", subtask: false, statuses: statusList },
+      { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", subtask: false, statuses: statusList }
+    ]);
+  }
+  res.status(200).json(statusList);
+};
+
+const handleJiraVersions = (req, res) => {
+  res.status(200).json([
+    { self: `${req.protocol}://${req.get('host')}/rest/api/2/version/10001`, id: "10001", name: "v1.0.0", archived: false, released: true, projectId: 10001 }
+  ]);
+};
+
 const handleJiraCreateMeta = (req, res) => {
+  const path = req.path || req.originalUrl || '';
+  const fieldsObject = {
+    summary: { required: true, schema: { type: "string", system: "summary" }, name: "Summary", fieldId: "summary", operations: ["set"] },
+    description: { required: false, schema: { type: "string", system: "description" }, name: "Description", fieldId: "description", operations: ["set"] },
+    issuetype: { required: true, schema: { type: "issuetype", system: "issuetype" }, name: "Issue Type", fieldId: "issuetype", operations: [], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", name: "Bug", subtask: false }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", name: "Task", subtask: false }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", subtask: false } ] },
+    project: { required: true, schema: { type: "project", system: "project" }, name: "Project", fieldId: "project", operations: [], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/project/10001`, id: "10001", key: "PULSE", name: "Pulse 12 Corporate Security & Dev Project" } ] },
+    priority: { required: false, schema: { type: "priority", system: "priority" }, name: "Priority", fieldId: "priority", operations: ["set"], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/1`, iconUrl: "", name: "Highest", id: "1" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/2`, iconUrl: "", name: "High", id: "2" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/3`, iconUrl: "", name: "Medium", id: "3" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/4`, iconUrl: "", name: "Low", id: "4" } ] },
+    assignee: { required: false, schema: { type: "user", system: "assignee" }, name: "Assignee", fieldId: "assignee", operations: ["set"], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/user?username=admin`, key: "admin", name: "admin", displayName: "Security Admin", active: true }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/user?username=lead`, key: "lead", name: "lead", displayName: "Engineering Lead", active: true } ] },
+    components: { required: false, schema: { type: "array", items: "component", system: "components" }, name: "Components", fieldId: "components", operations: ["add", "set", "remove"], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10001`, id: "10001", name: "Backend SAST" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10002`, id: "10002", name: "Frontend SAST" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10003`, id: "10003", name: "DevOps Infrastructure" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10004`, id: "10004", name: "General Security" } ] },
+    parent: { required: false, schema: { type: "issuelink", system: "parent" }, name: "Parent", fieldId: "parent", operations: ["set"], allowedValues: [] }
+  };
+
+  if (path.includes('/issuetypes/') && path.match(/\/issuetypes\/[^\/]+$/)) {
+    return res.status(200).json({
+      maxResults: 50,
+      startAt: 0,
+      total: Object.keys(fieldsObject).length,
+      isLast: true,
+      values: Object.values(fieldsObject)
+    });
+  }
+  if (path.includes('/issuetypes')) {
+    return res.status(200).json({
+      maxResults: 50,
+      startAt: 0,
+      total: 3,
+      isLast: true,
+      values: [
+        { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", name: "Bug", subtask: false, fields: fieldsObject },
+        { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", name: "Task", subtask: false, fields: fieldsObject },
+        { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", subtask: false, fields: fieldsObject }
+      ]
+    });
+  }
+
   res.status(200).json({
     projects: [
       {
@@ -1116,54 +1196,9 @@ const handleJiraCreateMeta = (req, res) => {
         key: "PULSE",
         name: "Pulse 12 Corporate Security & Dev Project",
         issuetypes: [
-          {
-            self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`,
-            id: "10001",
-            name: "Bug",
-            subtask: false,
-            fields: {
-              summary: { required: true, schema: { type: "string" }, name: "Summary" },
-              description: { required: false, schema: { type: "string" }, name: "Description" },
-              issuetype: { required: true, schema: { type: "issuetype" }, name: "Issue Type" },
-              project: { required: true, schema: { type: "project" }, name: "Project" },
-              priority: { required: false, schema: { type: "priority" }, name: "Priority" },
-              assignee: { required: false, schema: { type: "user" }, name: "Assignee" },
-              components: { required: false, schema: { type: "array", items: "component" }, name: "Components" },
-              parent: { required: false, schema: { type: "issuelink" }, name: "Parent" }
-            }
-          },
-          {
-            self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`,
-            id: "10002",
-            name: "Task",
-            subtask: false,
-            fields: {
-              summary: { required: true, schema: { type: "string" }, name: "Summary" },
-              description: { required: false, schema: { type: "string" }, name: "Description" },
-              issuetype: { required: true, schema: { type: "issuetype" }, name: "Issue Type" },
-              project: { required: true, schema: { type: "project" }, name: "Project" },
-              priority: { required: false, schema: { type: "priority" }, name: "Priority" },
-              assignee: { required: false, schema: { type: "user" }, name: "Assignee" },
-              components: { required: false, schema: { type: "array", items: "component" }, name: "Components" },
-              parent: { required: false, schema: { type: "issuelink" }, name: "Parent" }
-            }
-          },
-          {
-            self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`,
-            id: "10003",
-            name: "Vulnerability",
-            subtask: false,
-            fields: {
-              summary: { required: true, schema: { type: "string" }, name: "Summary" },
-              description: { required: false, schema: { type: "string" }, name: "Description" },
-              issuetype: { required: true, schema: { type: "issuetype" }, name: "Issue Type" },
-              project: { required: true, schema: { type: "project" }, name: "Project" },
-              priority: { required: false, schema: { type: "priority" }, name: "Priority" },
-              assignee: { required: false, schema: { type: "user" }, name: "Assignee" },
-              components: { required: false, schema: { type: "array", items: "component" }, name: "Components" },
-              parent: { required: false, schema: { type: "issuelink" }, name: "Parent" }
-            }
-          }
+          { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", name: "Bug", subtask: false, fields: fieldsObject },
+          { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", name: "Task", subtask: false, fields: fieldsObject },
+          { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", subtask: false, fields: fieldsObject }
         ]
       }
     ]
@@ -1220,22 +1255,33 @@ app.get(['/rest/api/2/myself', '/rest/api/3/myself', '/rest/auth/1/session', '/a
 app.get(['/rest/api/2/project', '/api/v1/webhooks/derscanner/rest/api/2/project'], handleJiraProjects);
 app.get(['/rest/api/2/project/:projectIdOrKey', '/api/v1/webhooks/derscanner/rest/api/2/project/:projectIdOrKey'], handleJiraProjectDetail);
 app.get(['/rest/api/2/project/:projectIdOrKey/components', '/api/v1/webhooks/derscanner/rest/api/2/project/:projectIdOrKey/components', '/rest/api/2/component', '/api/v1/webhooks/derscanner/rest/api/2/component'], handleJiraComponents);
+app.get(['/rest/api/2/project/:projectIdOrKey/statuses', '/api/v1/webhooks/derscanner/rest/api/2/project/:projectIdOrKey/statuses', '/rest/api/2/status', '/api/v1/webhooks/derscanner/rest/api/2/status'], handleJiraStatuses);
+app.get(['/rest/api/2/project/:projectIdOrKey/versions', '/api/v1/webhooks/derscanner/rest/api/2/project/:projectIdOrKey/versions', '/rest/api/2/version', '/api/v1/webhooks/derscanner/rest/api/2/version'], handleJiraVersions);
 app.get(['/rest/api/2/user/assignable/search', '/api/v1/webhooks/derscanner/rest/api/2/user/assignable/search', '/rest/api/2/user/assignable/multiProjectSearch', '/api/v1/webhooks/derscanner/rest/api/2/user/assignable/multiProjectSearch', '/rest/api/2/user/search', '/api/v1/webhooks/derscanner/rest/api/2/user/search', '/rest/api/2/user/picker', '/api/v1/webhooks/derscanner/rest/api/2/user/picker', '/rest/api/2/user', '/api/v1/webhooks/derscanner/rest/api/2/user'], handleJiraUsersSearch);
 app.get(['/rest/api/2/search', '/api/v1/webhooks/derscanner/rest/api/2/search', '/rest/api/2/issue/picker', '/api/v1/webhooks/derscanner/rest/api/2/issue/picker'], handleJiraSearch);
 app.get(['/rest/api/2/issuetype', '/api/v1/webhooks/derscanner/rest/api/2/issuetype'], handleJiraIssueTypes);
 app.get(['/rest/api/2/priority', '/api/v1/webhooks/derscanner/rest/api/2/priority'], handleJiraPriorities);
-app.get(['/rest/api/2/issue/createmeta', '/api/v1/webhooks/derscanner/rest/api/2/issue/createmeta'], handleJiraCreateMeta);
+app.get(['/rest/api/2/field', '/api/v1/webhooks/derscanner/rest/api/2/field'], handleJiraFields);
+app.use('/rest/api/2/issue/createmeta', handleJiraCreateMeta);
+app.use('/api/v1/webhooks/derscanner/rest/api/2/issue/createmeta', handleJiraCreateMeta);
 app.post(['/rest/api/2/issue', '/api/v1/webhooks/derscanner/rest/api/2/issue'], handleJiraCreateIssue);
 
 // Catch-all wildcard для любых других запросов от DerScanner по путям /rest и /api/v1/webhooks/derscanner
 const handleWildcard = (req, res) => {
-  console.log(`📡 [Jira Gateway Wildcard] ${req.method} ${req.originalUrl}`);
+  const url = req.originalUrl || req.url || req.path || '';
+  console.log(`📡 [Jira Gateway Wildcard] ${req.method} ${url}`);
   if (req.method === 'GET') {
-    if (req.path.includes('/components')) return handleJiraComponents(req, res);
-    if (req.path.includes('/user')) return handleJiraUsersSearch(req, res);
-    if (req.path.includes('/search') || req.path.includes('/picker')) return handleJiraSearch(req, res);
-    if (req.path.includes('/createmeta')) return handleJiraCreateMeta(req, res);
-    if (req.path.includes('/project/')) return handleJiraProjectDetail(req, res);
+    if (url.includes('/components')) return handleJiraComponents(req, res);
+    if (url.includes('/user')) return handleJiraUsersSearch(req, res);
+    if (url.includes('/search') || url.includes('/picker')) return handleJiraSearch(req, res);
+    if (url.includes('/createmeta')) return handleJiraCreateMeta(req, res);
+    if (url.includes('/status')) return handleJiraStatuses(req, res);
+    if (url.includes('/version')) return handleJiraVersions(req, res);
+    if (url.includes('/field')) return handleJiraFields(req, res);
+    if (url.includes('/priority')) return handleJiraPriorities(req, res);
+    if (url.includes('/issuetype')) return handleJiraIssueTypes(req, res);
+    if (url.includes('/project/') || url.includes('/project?')) return handleJiraProjectDetail(req, res);
+    if (url.includes('/project')) return handleJiraProjects(req, res);
     res.status(200).json({ success: true, message: 'Pulse 12 Jira REST API Gateway response', items: [], values: [] });
   } else {
     handleExternalWebhook(req, res);
