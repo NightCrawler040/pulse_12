@@ -28,7 +28,12 @@ export const Analytics: React.FC = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Ошибка при формировании PDF-отчёта на сервере');
+        let serverError = `Ошибка сервера (HTTP ${response.status})`;
+        try {
+          const errData = await response.json();
+          if (errData.error) serverError = errData.error;
+        } catch (e) {}
+        throw new Error(serverError);
       }
 
       const blob = await response.blob();
@@ -40,9 +45,9 @@ export const Analytics: React.FC = () => {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Download error:', err);
-      alert('Не удалось скачать отчёт. Проверьте соединение с сервером.');
+      alert(`Не удалось скачать отчёт: ${err.message || 'Проверьте соединение с сервером'}`);
     } finally {
       setIsDownloadingPdf(false);
     }

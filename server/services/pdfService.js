@@ -108,10 +108,11 @@ export const generateSprintPdf = ({ dbData, sprintId, stream }) => {
     }
     
     row.forEach((cell, i) => {
+      const cleanStr = String(cell || '').replace(/[\u1000-\uFFFF]/g, '').trim();
       doc.font(isHeader ? 'CyrillicBold' : 'CyrillicRegular')
          .fontSize(isHeader ? 9 : 8.5)
          .fillColor(isHeader ? '#334155' : '#1e293b')
-         .text(String(cell), currX + 5, y + 6, { width: empColWidths[i] - 10, ellipsis: true });
+         .text(cleanStr, currX + 5, y + 6, { width: empColWidths[i] - 10, ellipsis: true });
       currX += empColWidths[i];
     });
   };
@@ -166,10 +167,11 @@ export const generateSprintPdf = ({ dbData, sprintId, stream }) => {
       doc.moveTo(40, y + 22).lineTo(doc.page.width - 40, y + 22).strokeColor('#e2e8f0').lineWidth(0.5).stroke();
     }
     row.forEach((cell, i) => {
+      const cleanStr = String(cell || '').replace(/[\u1000-\uFFFF]/g, '').trim();
       doc.font(isHeader ? 'CyrillicBold' : 'CyrillicRegular')
          .fontSize(isHeader ? 9 : 8.5)
          .fillColor(isHeader ? '#334155' : '#1e293b')
-         .text(String(cell), currX + 5, y + 6, { width: taskColWidths[i] - 10, ellipsis: true });
+         .text(cleanStr, currX + 5, y + 6, { width: taskColWidths[i] - 10, ellipsis: true });
       currX += taskColWidths[i];
     });
   };
@@ -185,10 +187,10 @@ export const generateSprintPdf = ({ dbData, sprintId, stream }) => {
   };
 
   const priorityMap = {
-    'urgent': 'Срочный 🔴',
-    'high': 'Высокий 🟠',
-    'medium': 'Средний 🟡',
-    'low': 'Низкий 🟢'
+    'urgent': 'Срочный (!)',
+    'high': 'Высокий',
+    'medium': 'Средний',
+    'low': 'Низкий'
   };
 
   tasks.slice(0, 100).forEach(t => {
