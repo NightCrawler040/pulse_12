@@ -1063,17 +1063,19 @@ const handleJiraComponents = (req, res) => {
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10003`, id: "10003", name: "DevOps Infrastructure", description: "CI/CD & Docker" },
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10004`, id: "10004", name: "General Security", description: "Overall audit" }
   ];
-  if (url.includes('/component/project') || url.includes('/components/paginated')) {
-    return res.status(200).json({
-      maxResults: 50,
-      startAt: 0,
-      total: components.length,
-      isLast: true,
-      values: components,
-      components: components
-    });
+  if (url.match(/\/component\/(1000[1-4])$/)) {
+    const matchedId = url.match(/\/component\/(1000[1-4])$/)[1];
+    const found = components.find(c => c.id === matchedId) || components[0];
+    return res.status(200).json(found);
   }
-  return res.status(200).json(components);
+  return res.status(200).json({
+    maxResults: 50,
+    startAt: 0,
+    total: components.length,
+    isLast: true,
+    values: components,
+    components: components
+  });
 };
 
 const getJiraUsersList = (req) => {
@@ -1146,17 +1148,14 @@ const handleJiraIssueTypes = (req, res) => {
     const found = issueTypes.find(t => t.id === matchedId) || issueTypes[2];
     return res.status(200).json(found);
   }
-  if (url.includes('/issuetype/project')) {
-    return res.status(200).json({
-      maxResults: 50,
-      startAt: 0,
-      total: issueTypes.length,
-      isLast: true,
-      values: issueTypes,
-      issueTypes: issueTypes
-    });
-  }
-  return res.status(200).json(issueTypes);
+  return res.status(200).json({
+    maxResults: 50,
+    startAt: 0,
+    total: issueTypes.length,
+    isLast: true,
+    values: issueTypes,
+    issueTypes: issueTypes
+  });
 };
 
 const handleJiraPriorities = (req, res) => {
@@ -1167,17 +1166,19 @@ const handleJiraPriorities = (req, res) => {
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/3`, statusColor: "#eab308", description: "Medium", iconUrl: "", name: "Medium", id: "3" },
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/4`, statusColor: "#3b82f6", description: "Low", iconUrl: "", name: "Low", id: "4" }
   ];
-  if (url.includes('/priority/project')) {
-    return res.status(200).json({
-      maxResults: 50,
-      startAt: 0,
-      total: priorities.length,
-      isLast: true,
-      values: priorities,
-      priorities: priorities
-    });
+  if (url.match(/\/priority\/([1-4])$/)) {
+    const matchedId = url.match(/\/priority\/([1-4])$/)[1];
+    const found = priorities.find(p => p.id === matchedId) || priorities[0];
+    return res.status(200).json(found);
   }
-  return res.status(200).json(priorities);
+  return res.status(200).json({
+    maxResults: 50,
+    startAt: 0,
+    total: priorities.length,
+    isLast: true,
+    values: priorities,
+    priorities: priorities
+  });
 };
 
 const handleJiraFields = (req, res) => {
@@ -1192,17 +1193,19 @@ const handleJiraFields = (req, res) => {
     { id: "components", key: "components", name: "Components", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "array", items: "component", system: "components" } },
     { id: "parent", key: "parent", name: "Parent", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "issuelink", system: "parent" } }
   ];
-  if (url.includes('/field/project')) {
-    return res.status(200).json({
-      maxResults: 50,
-      startAt: 0,
-      total: fields.length,
-      isLast: true,
-      values: fields,
-      fields: fields
-    });
+  if (url.match(/\/field\/([a-zA-Z0-9_-]+)$/) && !url.includes('/field/project')) {
+    const matchedId = url.match(/\/field\/([a-zA-Z0-9_-]+)$/)[1];
+    const found = fields.find(f => f.id === matchedId) || fields[0];
+    return res.status(200).json(found);
   }
-  return res.status(200).json(fields);
+  return res.status(200).json({
+    maxResults: 50,
+    startAt: 0,
+    total: fields.length,
+    isLast: true,
+    values: fields,
+    fields: fields
+  });
 };
 
 const handleJiraStatuses = (req, res) => {
@@ -1220,7 +1223,19 @@ const handleJiraStatuses = (req, res) => {
       { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", subtask: false, statuses: statusList }
     ]);
   }
-  return res.status(200).json(statusList);
+  if (url.match(/\/status\/([1-3])$/)) {
+    const matchedId = url.match(/\/status\/([1-3])$/)[1];
+    const found = statusList.find(s => s.id === matchedId) || statusList[0];
+    return res.status(200).json(found);
+  }
+  return res.status(200).json({
+    maxResults: 50,
+    startAt: 0,
+    total: statusList.length,
+    isLast: true,
+    values: statusList,
+    statuses: statusList
+  });
 };
 
 const handleJiraVersions = (req, res) => {
