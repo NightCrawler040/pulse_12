@@ -6,12 +6,14 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initialUsers, initialSprints, initialTasks, initialGroups, initialFindings, initialApiKeys } from './initialData.js';
+import { initDb, getAllData, saveCollection, saveAllData, isPostgresMode } from './db.js';
 import { initMailService, sendTaskNotificationEmail } from './mailService.js';
 import { initTelegramService, sendTelegramNotification } from './telegramService.js';
 import { initDeadlineCron } from './cronService.js';
 import { generateSprintPdf } from './services/pdfService.js';
 import compression from 'compression';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
