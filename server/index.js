@@ -1122,26 +1122,20 @@ const handleJiraComponents = (req, res) => {
     const found = components.find(c => c.id === matchedId) || components[0];
     return res.status(200).json(found);
   }
-  return res.status(200).json({
-    maxResults: 50,
-    startAt: 0,
-    total: components.length,
-    isLast: true,
-    values: components,
-    components: components
-  });
+  // Jira REST API v2 GET /rest/api/2/project/{key}/components всегда возвращает JSON массив
+  return res.status(200).json(components);
 };
 
 const handleJiraUsersSearch = (req, res) => {
   const url = req.originalUrl || req.url || req.path || '';
   const list = getJiraUsersList(req);
-  if (url.includes('/user?') || (req.query && (req.query.username || req.query.key || req.query.accountId))) {
+  if (url.includes('/picker')) {
+    return res.status(200).json({ users: list, total: list.length, header: `Showing ${list.length} users` });
+  }
+  if (url.includes('/user?') && !url.includes('/search') && !url.includes('/assignable')) {
     const q = req.query.username || req.query.key || req.query.accountId || 'admin';
     const found = list.find(u => u.name === q || u.key === q || u.accountId === q || u.emailAddress === q) || list[0];
     return res.status(200).json(found);
-  }
-  if (url.includes('/picker')) {
-    return res.status(200).json({ users: list, total: list.length, header: `Showing ${list.length} users` });
   }
   return res.status(200).json(list);
 };
