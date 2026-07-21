@@ -1,5 +1,5 @@
 import { io, Socket } from 'socket.io-client';
-import type { Task, Sprint, User, Group, NotificationItem } from '../types';
+import type { Task, Sprint, User, Group, NotificationItem, ExternalFinding, ApiKeySettings } from '../types';
 
 const SERVER_URL_KEY = 'PULSE12_SERVER_URL';
 
@@ -87,6 +87,8 @@ export interface DatabaseData {
   users: User[];
   groups?: Group[];
   notifications?: NotificationItem[];
+  findings?: ExternalFinding[];
+  api_keys?: ApiKeySettings[];
 }
 
 export const apiService = {
@@ -153,6 +155,33 @@ export const apiService = {
     const baseUrl = getServerUrl();
     return { success: res.success, url: `${baseUrl}${res.url}`, size: res.size };
   },
+
+  fetchFindings: () => 
+    apiRequest<ExternalFinding[]>('/api/findings', { method: 'GET' }),
+
+  createFinding: (finding: Partial<ExternalFinding>) => 
+    apiRequest<ExternalFinding>('/api/findings', { method: 'POST', body: JSON.stringify(finding) }),
+
+  updateFindingStatus: (id: string, updates: Partial<ExternalFinding>) => 
+    apiRequest<{ success: boolean }>(`/api/findings/${id}`, { method: 'PUT', body: JSON.stringify(updates) }),
+
+  deleteFinding: (id: string) => 
+    apiRequest<{ success: boolean }>(`/api/findings/${id}`, { method: 'DELETE' }),
+
+  promoteFindingToTask: (id: string, assigneeId?: string, sprintId?: string, priority?: string) => 
+    apiRequest<{ success: boolean; task: Task; findingId: string }>(`/api/findings/${id}/promote`, { 
+      method: 'POST', 
+      body: JSON.stringify({ assigneeId, sprintId, priority }) 
+    }),
+
+  fetchApiKeys: () => 
+    apiRequest<ApiKeySettings[]>('/api/api-keys', { method: 'GET' }),
+
+  createApiKey: (name: string, source?: string) => 
+    apiRequest<ApiKeySettings>('/api/api-keys', { method: 'POST', body: JSON.stringify({ name, source }) }),
+
+  deleteApiKey: (id: string) => 
+    apiRequest<{ success: boolean }>(`/api/api-keys/${id}`, { method: 'DELETE' }),
     
   resetDatabase: () => 
     apiRequest<{ success: boolean }>('/api/reset', { method: 'POST' }),

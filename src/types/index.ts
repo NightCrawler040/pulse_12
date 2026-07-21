@@ -44,6 +44,7 @@ export interface Task {
   attachments?: Attachment[];
   tags: string[];
   teamReadiness?: Record<string, boolean>;
+  externalFindingId?: string;
   createdAt: string;
   updatedAt: string;
   sprintId: string | null;
@@ -107,4 +108,28 @@ export interface NotificationItem {
   linkTaskId?: string;
 }
 
-export type ViewMode = 'board' | 'backlog' | 'workload' | 'analytics' | 'profile' | 'admin' | 'help';
+export type ViewMode = 'board' | 'backlog' | 'workload' | 'analytics' | 'security' | 'profile' | 'admin' | 'help';
+
+export interface ExternalFinding {
+  id: string;
+  source: 'derscanner' | 'siem' | 'waf' | 'custom';
+  title: string;
+  description: string;
+  severity: 'Critical' | 'High' | 'Medium' | 'Low' | 'Info';
+  project?: string;
+  cwe?: string;
+  fileLocation?: string;
+  status: 'new' | 'analyzing' | 'false-positive' | 'false_positive' | 'resolved' | 'promoted';
+  promotedTaskId?: string | null;
+  rawPayload?: any;
+  createdAt: string;
+}
+
+export interface ApiKeySettings {
+  id: string;
+  name: string;
+  key: string;
+  source: 'derscanner' | 'siem' | 'waf' | 'custom';
+  createdAt: string;
+  lastUsedAt?: string | null;
+}

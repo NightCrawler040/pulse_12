@@ -6,12 +6,15 @@ import { apiService } from '../../services/api';
 import './AdminPanel.css';
 
 export const AdminPanel: React.FC = () => {
-  const { users, groups, onlineUserIds, addUser, updateUser, deleteUser, addGroup, updateGroup, deleteGroup } = useTaskContext();
+  const { users, groups, onlineUserIds, apiKeys, addUser, updateUser, deleteUser, addGroup, updateGroup, deleteGroup, addApiKey, deleteApiKey } = useTaskContext();
   const { isAdmin } = useAuth();
   const isProtectedAdmin = (u: User) => u.id === 'usr-1' || u.login?.toLowerCase() === 'admin';
   const employeeUsers = users.filter(u => !isProtectedAdmin(u));
 
-  const [activeTab, setActiveTab] = useState<'users' | 'groups'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'groups' | 'integrations'>('users');
+  const [newKeyName, setNewKeyName] = useState('');
+  const [newKeySource, setNewKeySource] = useState<'derscanner' | 'siem' | 'custom'>('derscanner');
+  const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
 
   // User modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -297,6 +300,12 @@ export const AdminPanel: React.FC = () => {
             >
               🏢 Команды и Группы ({groups.length})
             </button>
+            <button
+              className={`admin-tab-btn ${activeTab === 'integrations' ? 'active' : ''}`}
+              onClick={() => setActiveTab('integrations')}
+            >
+              🔌 Интеграции & API-ключи ({apiKeys.length})
+            </button>
           </div>
         </div>
 
@@ -330,9 +339,13 @@ export const AdminPanel: React.FC = () => {
               ➕ Добавить нового сотрудника
             </button>
           </div>
-        ) : (
+        ) : activeTab === 'groups' ? (
           <button className="btn-primary" onClick={handleOpenAddGroupModal}>
             ➕ Создать команду / группу
+          </button>
+        ) : (
+          <button className="btn-primary" onClick={() => { setNewKeyName(''); setIsKeyModalOpen(true); }}>
+            ➕ Сгенерировать API-ключ
           </button>
         )}
       </div>
@@ -609,6 +622,119 @@ export const AdminPanel: React.FC = () => {
         </div>
       )}
 
+      {/* Table & Management: INTEGRATIONS & API KEYS */}
+      {activeTab === 'integrations' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{
+            background: 'hsl(var(--bg-secondary))',
+            border: '1px solid hsl(var(--border-color))',
+            borderRadius: '12px',
+            padding: '18px 22px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '2rem' }}>🛡️</span>
+              <div>
+                <strong style={{ fontSize: '1.15rem', color: 'hsl(var(--text-primary))', display: 'block' }}>
+                  Интеграция со сканерами безопасности (DerScanner, SAST/DAST) и SIEM
+                </strong>
+                <span style={{ fontSize: '0.9rem', color: 'hsl(var(--text-secondary))' }}>
+                  Настройте автоматический прием тикетов и алертов об уязвимостях в Центр Инцидентов ИБ через защищенный REST Webhook.
+                </span>
+              </div>
+            </div>
+            <div style={{
+              background: 'rgba(59, 130, 246, 0.1)',
+              borderLeft: '4px solid hsl(var(--primary))',
+              padding: '12px 16px',
+              borderRadius: '6px',
+              fontSize: '0.88rem',
+              fontFamily: 'monospace',
+              color: 'hsl(var(--text-primary))',
+              lineHeight: '1.5',
+              wordBreak: 'break-all'
+            }}>
+              <div><strong>🌐 Webhook Endpoint URL:</strong> <code>http://&lt;IP-ВАШЕГО-СЕРВЕРА&gt;:3001/api/v1/webhooks/derscanner</code></div>
+              <div style={{ marginTop: '6px' }}><strong>🔑 Заголовок авторизации:</strong> <code>X-API-Key: &lt;ВАШ_СГЕНЕРИРОВАННЫЙ_КЛЮЧ&gt;</code></div>
+              <div style={{ marginTop: '6px', color: 'hsl(var(--text-secondary))' }}>
+                <em>Пример cURL запроса для проверки DerScanner:</em><br />
+                <code>{`curl -X POST http://localhost:3001/api/v1/webhooks/derscanner -H "X-API-Key: ds-live-8f92a4c17e3b9012d45a" -H "Content-Type: application/json" -d '{"source":"derscanner","title":"SQL Injection in LoginController","severity":"Critical","project":"Pulse12 Corporate","fileLocation":"AuthController.java:142","cwe":"CWE-89"}'`}</code>
+              </div>
+            </div>
+          </div>
+
+          <div className="admin-table-card">
+            <div className="table-responsive-wrapper">
+              <table className="users-admin-table">
+                <thead>
+                  <tr>
+                    <th>Название ключа / Системы</th>
+                    <th>Тип сканера</th>
+                    <th>Секретный токен (X-API-Key)</th>
+                    <th>Дата создания</th>
+                    <th>Последняя активность</th>
+                    <th style={{ textAlign: 'right' }}>Действия</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {apiKeys.map(k => (
+                    <tr key={k.id}>
+                      <td>
+                        <strong style={{ fontSize: '1rem', color: 'hsl(var(--text-primary))' }}>{k.name}</strong>
+                      </td>
+                      <td>
+                        <span className="badge-pill" style={{
+                          background: k.source === 'derscanner' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                          color: k.source === 'derscanner' ? '#ef4444' : '#3b82f6',
+                          fontWeight: 'bold',
+                          padding: '4px 10px',
+                          borderRadius: '12px',
+                          fontSize: '0.8rem'
+                        }}>
+                          {k.source === 'derscanner' ? '🛡️ DerScanner SAST' : k.source === 'siem' ? '🚨 SIEM Monitor' : '🔌 Custom API'}
+                        </span>
+                      </td>
+                      <td>
+                        <code style={{ background: 'hsl(var(--bg-secondary))', padding: '4px 8px', borderRadius: '4px', fontSize: '0.88rem', color: 'hsl(var(--primary))' }}>
+                          {k.key}
+                        </code>
+                      </td>
+                      <td style={{ fontSize: '0.88rem', color: 'hsl(var(--text-secondary))' }}>
+                        {new Date(k.createdAt).toLocaleDateString('ru-RU')}
+                      </td>
+                      <td style={{ fontSize: '0.88rem', color: k.lastUsedAt ? '#22c55e' : 'hsl(var(--text-muted))', fontWeight: k.lastUsedAt ? 600 : 400 }}>
+                        {k.lastUsedAt ? new Date(k.lastUsedAt).toLocaleString('ru-RU') : 'Ещё не использовался'}
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <button
+                          className="btn-icon-mini btn-icon-danger"
+                          onClick={() => {
+                            if (window.confirm(`Отзыв ключа "${k.name}" приведет к остановке приема инцидентов из этой системы. Продолжить?`)) {
+                              deleteApiKey(k.id);
+                            }
+                          }}
+                        >
+                          🗑️ Отозвать
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {apiKeys.length === 0 && (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'hsl(var(--text-muted))' }}>
+                        API-ключи еще не созданы. Нажмите «➕ Сгенерировать API-ключ» для подключения DerScanner.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add / Edit USER Modal */}
       {isModalOpen && (
         <div className="admin-modal-overlay" onClick={() => setIsModalOpen(false)}>
@@ -874,6 +1000,52 @@ export const AdminPanel: React.FC = () => {
         </div>
       )}
 
+      {/* Modal for API Key Generation */}
+      {isKeyModalOpen && (
+        <div className="admin-modal-overlay" onClick={() => setIsKeyModalOpen(false)}>
+          <div className="admin-modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+            <h2 className="admin-modal-title">🔑 Генерация нового API-ключа</h2>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              if (!newKeyName.trim()) return;
+              await addApiKey(newKeyName, newKeySource);
+              setIsKeyModalOpen(false);
+            }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div className="form-group">
+                <label className="form-label">Название интеграции / сканера</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="Например: DerScanner Production Scanner"
+                  value={newKeyName}
+                  onChange={e => setNewKeyName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Тип внешней системы</label>
+                <select
+                  className="input-field"
+                  value={newKeySource}
+                  onChange={e => setNewKeySource(e.target.value as any)}
+                >
+                  <option value="derscanner">🛡️ DerScanner SAST (Анализ кода на уязвимости)</option>
+                  <option value="siem">🚨 SIEM Monitor (Мониторинг безопасности)</option>
+                  <option value="custom">🔌 Custom Webhook / API</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '12px' }}>
+                <button type="button" className="btn-secondary" onClick={() => setIsKeyModalOpen(false)}>
+                  Отмена
+                </button>
+                <button type="submit" className="btn-primary">
+                  ✨ Сгенерировать ключ
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

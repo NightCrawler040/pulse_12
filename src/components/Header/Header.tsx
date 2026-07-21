@@ -23,7 +23,8 @@ import {
   ChevronUp,
   ChevronDown,
   Bell,
-  HelpCircle
+  HelpCircle,
+  ShieldAlert
 } from 'lucide-react';
 import { NotificationPopover } from '../Notifications/NotificationPopover';
 import './Header.css';
@@ -51,7 +52,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewTaskModal, onOpenLoginM
     isServerConnected,
     onlineUserIds,
     setIsNetworkModalOpen,
-    notifications
+    notifications,
+    findings
   } = useTaskContext();
   const { currentUser, isAdmin } = useAuth();
   const employeeUsersCount = users.filter(u => u.id !== 'usr-1' && u.login?.toLowerCase() !== 'admin').length;
@@ -105,11 +107,19 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewTaskModal, onOpenLoginM
     }
   };
 
+  const activeFindingsCount = findings.filter(f => f.status === 'new' || f.status === 'analyzing').length;
+
   const navItems: { mode: ViewMode; label: string; icon: React.ReactNode; badge?: string }[] = [
     { mode: 'board', label: 'Канбан-доска', icon: <LayoutDashboard size={18} /> },
     { mode: 'backlog', label: 'Бэклог & Спринты', icon: <ListTodo size={18} /> },
     { mode: 'workload', label: 'Команда', icon: <Users size={18} />, badge: `${employeeUsersCount} чел` },
     { mode: 'analytics', label: 'Аналитика', icon: <BarChart3 size={18} /> },
+    { 
+      mode: 'security', 
+      label: 'Сканеры & ИБ', 
+      icon: <ShieldAlert size={18} style={{ color: activeFindingsCount > 0 ? '#ef4444' : 'inherit' }} />, 
+      badge: activeFindingsCount > 0 ? `${activeFindingsCount} 🚨` : undefined 
+    },
     { mode: 'profile', label: 'Моя страница', icon: <UserIcon size={18} /> },
     { mode: 'help', label: 'Справка ❓', icon: <HelpCircle size={18} /> },
   ];

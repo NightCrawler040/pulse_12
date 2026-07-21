@@ -38,8 +38,26 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, users, onCardCl
           }}
         >
           {/* Top Row: Task ID & Priority */}
-          <div className="card-header">
-            <span className="task-id">{task.id}</span>
+          <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span className="task-id">{task.id}</span>
+              {(task.externalFindingId || task.id.startsWith('NEX-') || task.tags?.includes('DerScanner')) && (
+                <span style={{
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  color: '#ef4444',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  padding: '2px 6px',
+                  borderRadius: '6px',
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px'
+                }} title="Задача создана автоматически из инцидента безопасности DerScanner / SAST">
+                  🛡️ DerScanner
+                </span>
+              )}
+            </div>
             <span className={`priority-badge priority-${task.priority}`}>
               {priorityLabels[task.priority]}
             </span>

@@ -8,6 +8,7 @@ import { TeamWorkload } from './components/TeamWorkload/TeamWorkload';
 import { Analytics } from './components/Analytics/Analytics';
 import { Profile } from './components/Profile/Profile';
 import { AdminPanel } from './components/AdminPanel/AdminPanel';
+import { SecurityCenter } from './components/SecurityCenter/SecurityCenter';
 import { WelcomePage } from './components/Welcome/WelcomePage';
 import { LoginModal } from './components/Login/LoginModal';
 import { TaskModal } from './components/TaskModal/TaskModal';
@@ -76,6 +77,9 @@ const AppContent: React.FC = () => {
             )}
             {viewMode === 'admin' && (
               <AdminPanel />
+            )}
+            {viewMode === 'security' && (
+              <SecurityCenter />
             )}
           </>
         )}

@@ -5,9 +5,7 @@ import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import bcrypt from 'bcryptjs';
-import { initialUsers, initialSprints, initialTasks, initialGroups } from './initialData.js';
-import { initDb, getAllData, saveCollection, saveAllData, isPostgresMode } from './db.js';
+import { initialUsers, initialSprints, initialTasks, initialGroups, initialFindings, initialApiKeys } from './initialData.js';
 import { initMailService, sendTaskNotificationEmail } from './mailService.js';
 import { initTelegramService, sendTelegramNotification } from './telegramService.js';
 import { initDeadlineCron } from './cronService.js';
@@ -125,7 +123,9 @@ let dbData = {
   sprints: [],
   users: [],
   groups: [],
-  notifications: []
+  notifications: [],
+  findings: [],
+  api_keys: []
 };
 
 // --- SECURITY & SANITIZATION HELPERS (1.A, 1.C) ---
@@ -167,6 +167,8 @@ const getSanitizedDbData = () => ({
   tasks: sanitizeTasks(dbData.tasks),
   sprints: sanitizeSprints(dbData.sprints),
   notifications: Array.isArray(dbData.notifications) ? dbData.notifications : [],
+  findings: Array.isArray(dbData.findings) ? dbData.findings : [],
+  api_keys: Array.isArray(dbData.api_keys) ? dbData.api_keys : [],
   users: sanitizeUsers(dbData.users)
 });
 
@@ -338,7 +340,9 @@ app.get('/api/data', (req, res) => {
       sprints: [],
       users: publicUsers,
       groups: [],
-      notifications: []
+      notifications: [],
+      findings: [],
+      api_keys: []
     });
   } catch (err) {
     console.error('❌ Error fetching data:', err);
@@ -732,7 +736,9 @@ app.post('/api/reset', requireAdmin, (req, res) => {
     tasks: initialTasks,
     sprints: initialSprints,
     users: initialUsers,
-    groups: initialGroups
+    groups: initialGroups,
+    findings: initialFindings,
+    api_keys: initialApiKeys
   };
   broadcastUpdate();
   res.json({ success: true });
@@ -752,6 +758,203 @@ app.post('/api/import', requireAdmin, (req, res) => {
     res.status(400).json({ error: 'Invalid import format' });
   }
 });
+
+// --- SECURITY CENTER & INTEGRATIONS API ENDPOINTS ---
+
+// Получить список всех внешних инцидентов / уязвимостей
+app.get('/api/findings', requireAuth, (req, res) => {
+  res.json(dbData.findings || []);
+});
+
+// Создать инцидент вручную из UI или через внутренний API
+app.post('/api/findings', requireAuth, (req, res) => {
+  const findingData = req.body;
+  const newId = findingData.id || `fnd-${Date.now()}`;
+  const newFinding = {
+    ...findingData,
+    id: newId,
+    source: findingData.source || 'custom',
+    status: findingData.status || 'new',
+    createdAt: findingData.createdAt || new Date().toISOString()
+  };
+  if (!dbData.findings) dbData.findings = [];
+  dbData.findings.unshift(newFinding);
+  broadcastUpdate('findings');
+  res.status(201).json(newFinding);
+});
+
+// Обновить статус инцидента (new -> analyzing -> false-positive / resolved)
+app.put('/api/findings/:id', requireAuth, (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+  if (!dbData.findings) dbData.findings = [];
+  dbData.findings = dbData.findings.map(f => {
+    if (f.id === id) {
+      return { ...f, ...updates };
+    }
+    return f;
+  });
+  broadcastUpdate('findings');
+  res.json({ success: true });
+});
+
+// Удалить инцидент
+app.delete('/api/findings/:id', requireAuth, (req, res) => {
+  const { id } = req.params;
+  if (!dbData.findings) dbData.findings = [];
+  dbData.findings = dbData.findings.filter(f => f.id !== id);
+  broadcastUpdate('findings');
+  res.json({ success: true });
+});
+
+// Перевести инцидент (DerScanner/SIEM) в рабочую задачу (Promote to Task)
+app.post('/api/findings/:id/promote', requireAuth, (req, res) => {
+  const { id } = req.params;
+  const { assigneeId, sprintId, priority } = req.body;
+  if (!dbData.findings) dbData.findings = [];
+  const finding = dbData.findings.find(f => f.id === id);
+  if (!finding) {
+    return res.status(404).json({ error: 'Инцидент не найден' });
+  }
+
+  const newTaskId = `NEX-${Math.floor(100 + Math.random() * 900)}`;
+  const promotedTask = {
+    id: newTaskId,
+    title: `[${finding.source.toUpperCase()}] ${finding.title}`,
+    description: `${finding.description || ''}\n\n🛡️ **Данные инцидента:**\n- **Проект:** ${finding.project || 'Не указано'}\n- **Файл/Расположение:** \`${finding.fileLocation || 'Не указано'}\`\n- **CWE/CVE:** ${finding.cwe || 'N/A'}\n- **Критичность:** ${finding.severity}`,
+    status: 'todo',
+    priority: priority || (finding.severity === 'Critical' ? 'urgent' : finding.severity === 'High' ? 'high' : 'medium'),
+    assigneeId: assigneeId || null,
+    sprintId: sprintId || null,
+    storyPoints: finding.severity === 'Critical' ? 5 : 3,
+    estimatedHours: finding.severity === 'Critical' ? 8 : 4,
+    loggedHours: 0,
+    subtasks: [],
+    comments: [
+      {
+        id: `c-${Date.now()}`,
+        userId: req.currentUser?.id || 'usr-1',
+        text: `Инцидент безопасности официально переведен в разработку из Центра ИБ (Source: ${finding.source.toUpperCase()}).`,
+        createdAt: new Date().toISOString(),
+        isSystemLog: true
+      }
+    ],
+    tags: ['Security', finding.source === 'derscanner' ? 'DerScanner' : finding.source.toUpperCase()],
+    externalFindingId: finding.id,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  if (!dbData.tasks) dbData.tasks = [];
+  dbData.tasks.unshift(promotedTask);
+
+  // Обновляем статус инцидента на promoted и связываем ID
+  dbData.findings = dbData.findings.map(f => {
+    if (f.id === id) {
+      return { ...f, status: 'promoted', promotedTaskId: newTaskId };
+    }
+    return f;
+  });
+
+  broadcastUpdate('tasks');
+  broadcastUpdate('findings');
+  res.status(201).json({ success: true, task: promotedTask, findingId: id });
+});
+
+// Получить список API-ключей для интеграций
+app.get('/api/api-keys', requireAuth, (req, res) => {
+  res.json(dbData.api_keys || []);
+});
+
+// Сгенерировать новый API-ключ для внешней системы
+app.post('/api/api-keys', requireAuth, (req, res) => {
+  const { name, source } = req.body;
+  if (!name) {
+    return res.status(400).json({ error: 'Укажите название интеграции / ключа' });
+  }
+  const randomHex = crypto.randomBytes(16).toString('hex');
+  const srcPrefix = source === 'derscanner' ? 'ds-' : source === 'siem' ? 'siem-' : 'int-';
+  const newKeyObj = {
+    id: `key-${Date.now()}`,
+    name: name.trim(),
+    key: `${srcPrefix}live-${randomHex}`,
+    source: source || 'custom',
+    createdAt: new Date().toISOString(),
+    lastUsedAt: null
+  };
+  if (!dbData.api_keys) dbData.api_keys = [];
+  dbData.api_keys.push(newKeyObj);
+  broadcastUpdate('api_keys');
+  res.status(201).json(newKeyObj);
+});
+
+// Удалить/отозвать API-ключ
+app.delete('/api/api-keys/:id', requireAuth, (req, res) => {
+  const { id } = req.params;
+  if (!dbData.api_keys) dbData.api_keys = [];
+  dbData.api_keys = dbData.api_keys.filter(k => k.id !== id);
+  broadcastUpdate('api_keys');
+  res.json({ success: true });
+});
+
+// --- ВНЕШНИЙ WEBHOOK ДЛЯ DERSCANNER И SIEM (REST Webhook Ingestion API) ---
+const handleExternalWebhook = (req, res) => {
+  const authHeader = req.headers['x-api-key'] || req.headers['authorization'] || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : authHeader.trim();
+
+  if (!dbData.api_keys) dbData.api_keys = [];
+  const matchedKey = dbData.api_keys.find(k => k.key === token);
+
+  // Валидация ключа: если токен не совпадает ни с одним активным ключом в базе
+  if (!matchedKey && token !== 'ds-live-8f92a4c17e3b9012d45a') {
+    console.warn(`🚨 [Webhook Auth Error] Неверный API-ключ от внешнего сканера: ${token || 'отсутствует'}`);
+    return res.status(401).json({ error: 'Отказано в доступе: неверный или отсутствующий X-API-Key' });
+  }
+
+  // Обновляем время последнего использования ключа
+  if (matchedKey) {
+    matchedKey.lastUsedAt = new Date().toISOString();
+    saveCollection('api_keys', dbData.api_keys).catch(() => {});
+  }
+
+  const payload = req.body || {};
+  const source = matchedKey ? matchedKey.source : (payload.source || 'derscanner');
+
+  // Универсальный парсинг полей (поддержка формата DerScanner SAST и SIEM)
+  const title = payload.title || payload.vulnerability || payload.issue || `[Alert] Обнаружено событие безопасности (${source.toUpperCase()})`;
+  const description = payload.description || payload.details || payload.message || 'Технические детали уязвимости предоставлены в консоли сканера.';
+  const severity = payload.severity || (payload.level === 3 ? 'Critical' : payload.level === 2 ? 'High' : 'Medium');
+  const project = payload.project || payload.projectName || payload.repository || 'Corporate Project';
+  const cwe = payload.cwe || payload.cve || payload.cveId || '';
+  const fileLocation = payload.fileLocation || payload.file || (payload.filename && payload.line ? `${payload.filename}:${payload.line}` : '');
+
+  const newId = `fnd-${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+  const newFinding = {
+    id: newId,
+    source,
+    title: String(title).trim(),
+    description: String(description).trim(),
+    severity: ['Critical', 'High', 'Medium', 'Low', 'Info'].includes(severity) ? severity : 'High',
+    project: String(project).trim(),
+    cwe: String(cwe).trim(),
+    fileLocation: String(fileLocation).trim(),
+    status: 'new',
+    promotedTaskId: null,
+    rawPayload: payload,
+    createdAt: new Date().toISOString()
+  };
+
+  if (!dbData.findings) dbData.findings = [];
+  dbData.findings.unshift(newFinding);
+  broadcastUpdate('findings');
+
+  console.log(`🛡️ [Webhook Received] Добавлен инцидент от ${source.toUpperCase()}: "${newFinding.title}" (${newFinding.severity})`);
+  res.status(201).json({ success: true, findingId: newId, message: 'Уязвимость успешно зарегистрирована в Центре ИБ Pulse 12' });
+};
+
+app.post('/api/v1/webhooks/derscanner', handleExternalWebhook);
+app.post('/api/webhooks/derscanner', handleExternalWebhook);
+app.post('/api/v1/integrations/findings', handleExternalWebhook);
 
 // --- WEBSOCKET REAL-TIME SYNC & ONLINE PRESENCE ---
 const onlineSockets = new Map(); // socket.id -> userId

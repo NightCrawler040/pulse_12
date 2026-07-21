@@ -2,7 +2,7 @@ import pg from 'pg';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { initialUsers, initialSprints, initialTasks, initialGroups } from './initialData.js';
+import { initialUsers, initialSprints, initialTasks, initialGroups, initialFindings, initialApiKeys } from './initialData.js';
 
 const { Pool } = pg;
 const __filename = fileURLToPath(import.meta.url);
@@ -36,7 +36,9 @@ let localDbData = {
   sprints: [],
   users: [],
   groups: [],
-  notifications: []
+  notifications: [],
+  findings: [],
+  api_keys: []
 };
 
 const loadLocalFile = () => {
@@ -50,7 +52,9 @@ const loadLocalFile = () => {
           sprints: (parsed.sprints && parsed.sprints.length > 0) ? parsed.sprints : initialSprints,
           users: (parsed.users && parsed.users.length >= 5) ? parsed.users : initialUsers,
           groups: (parsed.groups && parsed.groups.length > 0) ? parsed.groups : initialGroups,
-          notifications: parsed.notifications || []
+          notifications: parsed.notifications || [],
+          findings: parsed.findings || initialFindings,
+          api_keys: parsed.api_keys || initialApiKeys
         };
         return;
       }
@@ -63,7 +67,9 @@ const loadLocalFile = () => {
     sprints: initialSprints,
     users: initialUsers,
     groups: initialGroups,
-    notifications: []
+    notifications: [],
+    findings: initialFindings,
+    api_keys: initialApiKeys
   };
   saveLocalFile();
 };
@@ -108,6 +114,8 @@ export const initDb = async () => {
       await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['users', JSON.stringify(initialUsers)]);
       await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['groups', JSON.stringify(initialGroups)]);
       await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['notifications', JSON.stringify([])]);
+      await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['findings', JSON.stringify(initialFindings)]);
+      await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['api_keys', JSON.stringify(initialApiKeys)]);
       console.log('✅ Стартовые корпоративные данные успешно загружены в PostgreSQL!');
     } else {
       console.log(`✅ В PostgreSQL найдено ${count} коллекций данных. Проверка целостности коллекций...`);
@@ -126,6 +134,14 @@ export const initDb = async () => {
       if (groupsRes.rows.length === 0 || !Array.isArray(groupsRes.rows[0].data) || groupsRes.rows[0].data.length === 0) {
         await client.query("INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data", ['groups', JSON.stringify(initialGroups)]);
       }
+      const findingsRes = await client.query("SELECT data FROM pulse_store WHERE key = 'findings'");
+      if (findingsRes.rows.length === 0 || !Array.isArray(findingsRes.rows[0].data)) {
+        await client.query("INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data", ['findings', JSON.stringify(initialFindings)]);
+      }
+      const keysRes = await client.query("SELECT data FROM pulse_store WHERE key = 'api_keys'");
+      if (keysRes.rows.length === 0 || !Array.isArray(keysRes.rows[0].data)) {
+        await client.query("INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data", ['api_keys', JSON.stringify(initialApiKeys)]);
+      }
     }
 
     client.release();
@@ -138,7 +154,9 @@ export const initDb = async () => {
         sprints: allPgData.sprints || [],
         users: allPgData.users || [],
         groups: allPgData.groups || [],
-        notifications: allPgData.notifications || []
+        notifications: allPgData.notifications || [],
+        findings: allPgData.findings || [],
+        api_keys: allPgData.api_keys || []
       };
       saveLocalFile();
     }
@@ -163,7 +181,9 @@ export const initDb = async () => {
             sprints: allPgData.sprints || [],
             users: allPgData.users || [],
             groups: allPgData.groups || [],
-            notifications: allPgData.notifications || []
+            notifications: allPgData.notifications || [],
+            findings: allPgData.findings || [],
+            api_keys: allPgData.api_keys || []
           };
           saveLocalFile();
         }
@@ -243,7 +263,9 @@ export const getAllData = async () => {
         sprints: [],
         users: [],
         groups: [],
-        notifications: []
+        notifications: [],
+        findings: [],
+        api_keys: []
       };
       res.rows.forEach(row => {
         if (result[row.key] !== undefined) {
@@ -294,7 +316,9 @@ export const saveAllData = async (dataObj) => {
           sprints: dataObj.sprints || [],
           users: dataObj.users || [],
           groups: dataObj.groups || [],
-          notifications: dataObj.notifications || []
+          notifications: dataObj.notifications || [],
+          findings: dataObj.findings || [],
+          api_keys: dataObj.api_keys || []
         };
         saveLocalFile();
       } catch (err) {
@@ -311,7 +335,9 @@ export const saveAllData = async (dataObj) => {
         sprints: dataObj.sprints || [],
         users: dataObj.users || [],
         groups: dataObj.groups || [],
-        notifications: dataObj.notifications || []
+        notifications: dataObj.notifications || [],
+        findings: dataObj.findings || [],
+        api_keys: dataObj.api_keys || []
       };
       saveLocalFile();
     }
@@ -321,7 +347,9 @@ export const saveAllData = async (dataObj) => {
       sprints: dataObj.sprints || [],
       users: dataObj.users || [],
       groups: dataObj.groups || [],
-      notifications: dataObj.notifications || []
+      notifications: dataObj.notifications || [],
+      findings: dataObj.findings || [],
+      api_keys: dataObj.api_keys || []
     };
     saveLocalFile();
   }

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import type { Task, User, Column, Sprint, FilterState, ViewMode, Status, Comment, Group, NotificationItem } from '../types';
+import type { Task, User, Column, Sprint, FilterState, ViewMode, Status, Comment, Group, NotificationItem, ExternalFinding, ApiKeySettings } from '../types';
 import { mockUsers, mockColumns, mockSprints, mockTasks } from '../data/mockData';
 import { apiService, getSocket } from '../services/api';
 
@@ -45,6 +45,14 @@ interface TaskContextType {
   markAllNotificationsRead: () => void;
   deleteNotification: (id: string) => void;
   clearAllNotifications: () => void;
+  findings: ExternalFinding[];
+  apiKeys: ApiKeySettings[];
+  addFinding: (finding: Omit<ExternalFinding, 'id' | 'createdAt'>) => ExternalFinding;
+  updateFindingStatus: (id: string, status: ExternalFinding['status'], promotedTaskId?: string) => void;
+  deleteFinding: (id: string) => void;
+  promoteFindingToTask: (id: string, assigneeId?: string, sprintId?: string, priority?: string) => Promise<any>;
+  addApiKey: (name: string, source?: string) => Promise<ApiKeySettings>;
+  deleteApiKey: (id: string) => void;
   resetToDefault: () => void;
   exportData: () => void;
   importData: (jsonData: string) => boolean;
@@ -112,6 +120,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch { return []; }
   });
   const [isNetworkModalOpen, setIsNetworkModalOpen] = useState<boolean>(false);
+  const [findings, setFindings] = useState<ExternalFinding[]>([]);
+  const [apiKeys, setApiKeys] = useState<ApiKeySettings[]>([]);
   const [activeSprintId, setActiveSprintId] = useState<string>('all');
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
   const [viewMode, setViewModeState] = useState<ViewMode>(() => {
@@ -179,6 +189,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (Array.isArray(data.users)) setUsers(deduplicateUsers(data.users));
         if (Array.isArray(data.groups)) setGroups(data.groups);
         if (Array.isArray(data.notifications)) setNotifications(data.notifications);
+        if (Array.isArray(data.findings)) setFindings(data.findings);
+        if (Array.isArray(data.api_keys)) setApiKeys(data.api_keys);
         setIsServerConnected(true);
       }
     }).catch(() => {
@@ -200,6 +212,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (Array.isArray(data.users)) setUsers(deduplicateUsers(data.users));
         if (Array.isArray(data.groups)) setGroups(data.groups);
         if (Array.isArray(data.notifications)) setNotifications(data.notifications);
+        if (Array.isArray(data.findings)) setFindings(data.findings);
+        if (Array.isArray(data.api_keys)) setApiKeys(data.api_keys);
       }
     };
     const onOnlineUsersUpdated = (ids: any) => {
@@ -752,13 +766,15 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (e) { console.error(e); }
   };
 
-  return (
+    return (
     <TaskContext.Provider value={{
       tasks,
       users,
       groups,
       onlineUserIds,
       notifications,
+      findings,
+      apiKeys,
       columns,
       sprints,
       activeSprintId,
@@ -795,6 +811,50 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       markAllNotificationsRead,
       deleteNotification,
       clearAllNotifications,
+      addFinding: (findingData) => {
+        const newId = `fnd-${Date.now()}`;
+        const newFinding: ExternalFinding = { ...findingData, id: newId, createdAt: new Date().toISOString() };
+        setFindings(prev => [newFinding, ...prev]);
+        apiService.createFinding(findingData).catch(e => console.error(e));
+        return newFinding;
+      },
+      updateFindingStatus: (id, status, promotedTaskId) => {
+        setFindings(prev => prev.map(f => f.id === id ? { ...f, status, promotedTaskId: promotedTaskId || f.promotedTaskId } : f));
+        apiService.updateFindingStatus(id, { status, promotedTaskId }).catch(e => console.error(e));
+      },
+      deleteFinding: (id) => {
+        setFindings(prev => prev.filter(f => f.id !== id));
+        apiService.deleteFinding(id).catch(e => console.error(e));
+      },
+      promoteFindingToTask: async (id, assigneeId, sprintId, priority) => {
+        try {
+          const res = await apiService.promoteFindingToTask(id, assigneeId, sprintId, priority);
+          if (res && res.task) {
+            setTasks(prev => [res.task, ...prev]);
+            setFindings(prev => prev.map(f => f.id === id ? { ...f, status: 'promoted', promotedTaskId: res.task.id } : f));
+          }
+          return res;
+        } catch (e) {
+          console.error('Failed to promote finding to task:', e);
+          throw e;
+        }
+      },
+      addApiKey: async (name, source) => {
+        try {
+          const res = await apiService.createApiKey(name, source);
+          if (res) {
+            setApiKeys(prev => [...prev, res]);
+          }
+          return res;
+        } catch (e) {
+          console.error('Failed to create API key:', e);
+          throw e;
+        }
+      },
+      deleteApiKey: (id) => {
+        setApiKeys(prev => prev.filter(k => k.id !== id));
+        apiService.deleteApiKey(id).catch(e => console.error(e));
+      },
       resetToDefault,
       exportData,
       importData

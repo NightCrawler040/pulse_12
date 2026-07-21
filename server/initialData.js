@@ -423,3 +423,43 @@ export const initialGroups = [
     memberIds: ['usr-7']
   }
 ];
+
+export const initialFindings = [
+  {
+    id: 'fnd-1',
+    source: 'derscanner',
+    title: 'SQL Injection in user authentication handler',
+    description: 'Несанитизированный ввод пользователя передается напрямую в SQL-запрос при поиске учетной записи по логину. Возможна обходная авторизация.',
+    severity: 'Critical',
+    project: 'Pulse 12 Core Backend',
+    cwe: 'CWE-89',
+    fileLocation: 'server/db.js:142',
+    status: 'new',
+    promotedTaskId: null,
+    createdAt: '2026-07-21T08:00:00Z'
+  },
+  {
+    id: 'fnd-2',
+    source: 'siem',
+    title: 'Suspicious WAF File Access Attempt / Policy Violation',
+    description: 'Многократная попытка доступа к защищенным директориям конфигурации (/etc/passwd, .env) с внешнего IP-адреса через шлюз WAF.',
+    severity: 'High',
+    project: 'Corporate Gateway WAF',
+    cwe: 'CWE-22',
+    fileLocation: 'gateway/waf_rules.conf:55',
+    status: 'analyzing',
+    promotedTaskId: null,
+    createdAt: '2026-07-21T09:15:00Z'
+  }
+];
+
+export const initialApiKeys = [
+  {
+    id: 'key-1',
+    name: 'DerScanner SAST Integration Key',
+    key: 'ds-live-8f92a4c17e3b9012d45a',
+    source: 'derscanner',
+    createdAt: '2026-07-21T07:00:00Z',
+    lastUsedAt: null
+  }
+];
