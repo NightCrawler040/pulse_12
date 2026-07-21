@@ -1050,12 +1050,20 @@ const handleJiraProjectDetail = (req, res) => {
 };
 
 const handleJiraComponents = (req, res) => {
-  res.status(200).json([
+  const components = [
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10001`, id: "10001", name: "Backend SAST", description: "Backend services" },
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10002`, id: "10002", name: "Frontend SAST", description: "UI components" },
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10003`, id: "10003", name: "DevOps Infrastructure", description: "CI/CD & Docker" },
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10004`, id: "10004", name: "General Security", description: "Overall audit" }
-  ]);
+  ];
+  return res.status(200).json({
+    maxResults: 50,
+    startAt: 0,
+    total: components.length,
+    isLast: true,
+    values: components,
+    components: components
+  });
 };
 
 const getJiraUsersList = (req) => {
@@ -1100,24 +1108,40 @@ const handleJiraSearch = (req, res) => {
 };
 
 const handleJiraIssueTypes = (req, res) => {
-  res.status(200).json([
+  const issueTypes = [
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", description: "Уязвимость безопасности или баг", iconUrl: "", name: "Bug", subtask: false, avatarId: 1 },
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", description: "Задача разработки", iconUrl: "", name: "Task", subtask: false, avatarId: 2 },
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", description: "Уязвимость SAST/DAST", iconUrl: "", name: "Vulnerability", subtask: false, avatarId: 3 }
-  ]);
+  ];
+  return res.status(200).json({
+    maxResults: 50,
+    startAt: 0,
+    total: issueTypes.length,
+    isLast: true,
+    values: issueTypes,
+    issueTypes: issueTypes
+  });
 };
 
 const handleJiraPriorities = (req, res) => {
-  res.status(200).json([
+  const priorities = [
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/1`, statusColor: "#ef4444", description: "Critical / Highest", iconUrl: "", name: "Highest", id: "1" },
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/2`, statusColor: "#f97316", description: "High", iconUrl: "", name: "High", id: "2" },
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/3`, statusColor: "#eab308", description: "Medium", iconUrl: "", name: "Medium", id: "3" },
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/4`, statusColor: "#3b82f6", description: "Low", iconUrl: "", name: "Low", id: "4" }
-  ]);
+  ];
+  return res.status(200).json({
+    maxResults: 50,
+    startAt: 0,
+    total: priorities.length,
+    isLast: true,
+    values: priorities,
+    priorities: priorities
+  });
 };
 
 const handleJiraFields = (req, res) => {
-  res.status(200).json([
+  const fields = [
     { id: "summary", name: "Summary", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "string", system: "summary" } },
     { id: "description", name: "Description", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "string", system: "description" } },
     { id: "issuetype", name: "Issue Type", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "issuetype", system: "issuetype" } },
@@ -1126,7 +1150,15 @@ const handleJiraFields = (req, res) => {
     { id: "assignee", name: "Assignee", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "user", system: "assignee" } },
     { id: "components", name: "Components", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "array", items: "component", system: "components" } },
     { id: "parent", name: "Parent", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "issuelink", system: "parent" } }
-  ]);
+  ];
+  return res.status(200).json({
+    maxResults: 50,
+    startAt: 0,
+    total: fields.length,
+    isLast: true,
+    values: fields,
+    fields: fields
+  });
 };
 
 const handleJiraStatuses = (req, res) => {
@@ -1259,9 +1291,9 @@ app.get(['/rest/api/2/project/:projectIdOrKey/statuses', '/api/v1/webhooks/dersc
 app.get(['/rest/api/2/project/:projectIdOrKey/versions', '/api/v1/webhooks/derscanner/rest/api/2/project/:projectIdOrKey/versions', '/rest/api/2/version', '/api/v1/webhooks/derscanner/rest/api/2/version'], handleJiraVersions);
 app.get(['/rest/api/2/user/assignable/search', '/api/v1/webhooks/derscanner/rest/api/2/user/assignable/search', '/rest/api/2/user/assignable/multiProjectSearch', '/api/v1/webhooks/derscanner/rest/api/2/user/assignable/multiProjectSearch', '/rest/api/2/user/search', '/api/v1/webhooks/derscanner/rest/api/2/user/search', '/rest/api/2/user/picker', '/api/v1/webhooks/derscanner/rest/api/2/user/picker', '/rest/api/2/user', '/api/v1/webhooks/derscanner/rest/api/2/user'], handleJiraUsersSearch);
 app.get(['/rest/api/2/search', '/api/v1/webhooks/derscanner/rest/api/2/search', '/rest/api/2/issue/picker', '/api/v1/webhooks/derscanner/rest/api/2/issue/picker'], handleJiraSearch);
-app.get(['/rest/api/2/issuetype', '/api/v1/webhooks/derscanner/rest/api/2/issuetype'], handleJiraIssueTypes);
-app.get(['/rest/api/2/priority', '/api/v1/webhooks/derscanner/rest/api/2/priority'], handleJiraPriorities);
-app.get(['/rest/api/2/field', '/api/v1/webhooks/derscanner/rest/api/2/field'], handleJiraFields);
+app.get(['/rest/api/2/issuetype', '/rest/api/2/issuetype/project', '/rest/api/3/issuetype/project', '/api/v1/webhooks/derscanner/rest/api/2/issuetype', '/api/v1/webhooks/derscanner/rest/api/2/issuetype/project'], handleJiraIssueTypes);
+app.get(['/rest/api/2/priority', '/rest/api/2/priority/project', '/api/v1/webhooks/derscanner/rest/api/2/priority', '/api/v1/webhooks/derscanner/rest/api/2/priority/project'], handleJiraPriorities);
+app.get(['/rest/api/2/field', '/rest/api/2/field/project', '/api/v1/webhooks/derscanner/rest/api/2/field', '/api/v1/webhooks/derscanner/rest/api/2/field/project'], handleJiraFields);
 app.use('/rest/api/2/issue/createmeta', handleJiraCreateMeta);
 app.use('/api/v1/webhooks/derscanner/rest/api/2/issue/createmeta', handleJiraCreateMeta);
 app.post(['/rest/api/2/issue', '/api/v1/webhooks/derscanner/rest/api/2/issue'], handleJiraCreateIssue);
