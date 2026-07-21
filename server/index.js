@@ -234,7 +234,7 @@ const generateAuthToken = (user) => {
 
 // Middleware проверки авторизации на API с криптографическим токеном HMAC (1.B)
 const requireAuth = async (req, res, next) => {
-  const userId = req.headers['x-auth-user'] || req.body.userId || req.query.userId;
+  const userId = req.headers['x-auth-user'] || (req.body && req.body.userId) || (req.query && req.query.userId);
   if (!userId) {
     return res.status(401).json({ error: 'Отказано в доступе: требуется идентификатор пользователя' });
   }
