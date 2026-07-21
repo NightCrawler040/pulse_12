@@ -1056,20 +1056,24 @@ const handleJiraProjectDetail = (req, res) => {
 };
 
 const handleJiraComponents = (req, res) => {
+  const url = req.originalUrl || req.url || req.path || '';
   const components = [
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10001`, id: "10001", name: "Backend SAST", description: "Backend services" },
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10002`, id: "10002", name: "Frontend SAST", description: "UI components" },
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10003`, id: "10003", name: "DevOps Infrastructure", description: "CI/CD & Docker" },
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10004`, id: "10004", name: "General Security", description: "Overall audit" }
   ];
-  return res.status(200).json({
-    maxResults: 50,
-    startAt: 0,
-    total: components.length,
-    isLast: true,
-    values: components,
-    components: components
-  });
+  if (url.includes('/component/project') || url.includes('/components/paginated')) {
+    return res.status(200).json({
+      maxResults: 50,
+      startAt: 0,
+      total: components.length,
+      isLast: true,
+      values: components,
+      components: components
+    });
+  }
+  return res.status(200).json(components);
 };
 
 const getJiraUsersList = (req) => {
@@ -1083,12 +1087,24 @@ const getJiraUsersList = (req) => {
     displayName: `${u.name || u.login || u.id} (${u.role || u.department || 'Employee'})`,
     active: u.isActive !== false,
     timeZone: "Asia/Almaty",
-    locale: "ru_RU"
+    locale: "ru_RU",
+    accountId: String(u.id || u.login || 'usr-1'),
+    accountType: "atlassian"
   }));
 };
 
 const handleJiraUsersSearch = (req, res) => {
-  res.status(200).json(getJiraUsersList(req));
+  const url = req.originalUrl || req.url || req.path || '';
+  const list = getJiraUsersList(req);
+  if (url.includes('/user?') || (req.query && (req.query.username || req.query.key || req.query.accountId))) {
+    const q = req.query.username || req.query.key || req.query.accountId || 'admin';
+    const found = list.find(u => u.name === q || u.key === q || u.accountId === q || u.emailAddress === q) || list[0];
+    return res.status(200).json(found);
+  }
+  if (url.includes('/picker')) {
+    return res.status(200).json({ users: list, total: list.length, header: `Showing ${list.length} users` });
+  }
+  return res.status(200).json(list);
 };
 
 const handleJiraSearch = (req, res) => {
@@ -1115,44 +1131,57 @@ const handleJiraSearch = (req, res) => {
 
 const handleJiraIssueTypes = (req, res) => {
   const url = req.originalUrl || req.url || req.path || '';
+  const statusList = [
+    { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/1`, description: "Новый инцидент", iconUrl: "", name: "New", id: "1", statusCategory: { id: 2, key: "new", colorName: "blue-gray", name: "To Do" } },
+    { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/2`, description: "В работе", iconUrl: "", name: "In Progress", id: "2", statusCategory: { id: 4, key: "indeterminate", colorName: "yellow", name: "In Progress" } },
+    { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/3`, description: "Решено", iconUrl: "", name: "Done", id: "3", statusCategory: { id: 3, key: "done", colorName: "green", name: "Done" } }
+  ];
   const issueTypes = [
-    { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", description: "Уязвимость безопасности или баг", iconUrl: "", name: "Bug", subtask: false, avatarId: 1 },
-    { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", description: "Задача разработки", iconUrl: "", name: "Task", subtask: false, avatarId: 2 },
-    { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", description: "Уязвимость SAST/DAST", iconUrl: "", name: "Vulnerability", subtask: false, avatarId: 3 }
+    { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", description: "Уязвимость безопасности или баг", iconUrl: "", name: "Bug", subtask: false, avatarId: 1, statuses: statusList },
+    { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", description: "Задача разработки", iconUrl: "", name: "Task", subtask: false, avatarId: 2, statuses: statusList },
+    { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", description: "Уязвимость SAST/DAST", iconUrl: "", name: "Vulnerability", subtask: false, avatarId: 3, statuses: statusList }
   ];
   if (url.match(/\/issuetype\/(1000[1-3])$/)) {
     const matchedId = url.match(/\/issuetype\/(1000[1-3])$/)[1];
     const found = issueTypes.find(t => t.id === matchedId) || issueTypes[2];
     return res.status(200).json(found);
   }
-  return res.status(200).json({
-    maxResults: 50,
-    startAt: 0,
-    total: issueTypes.length,
-    isLast: true,
-    values: issueTypes,
-    issueTypes: issueTypes
-  });
+  if (url.includes('/issuetype/project')) {
+    return res.status(200).json({
+      maxResults: 50,
+      startAt: 0,
+      total: issueTypes.length,
+      isLast: true,
+      values: issueTypes,
+      issueTypes: issueTypes
+    });
+  }
+  return res.status(200).json(issueTypes);
 };
 
 const handleJiraPriorities = (req, res) => {
+  const url = req.originalUrl || req.url || req.path || '';
   const priorities = [
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/1`, statusColor: "#ef4444", description: "Critical / Highest", iconUrl: "", name: "Highest", id: "1" },
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/2`, statusColor: "#f97316", description: "High", iconUrl: "", name: "High", id: "2" },
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/3`, statusColor: "#eab308", description: "Medium", iconUrl: "", name: "Medium", id: "3" },
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/4`, statusColor: "#3b82f6", description: "Low", iconUrl: "", name: "Low", id: "4" }
   ];
-  return res.status(200).json({
-    maxResults: 50,
-    startAt: 0,
-    total: priorities.length,
-    isLast: true,
-    values: priorities,
-    priorities: priorities
-  });
+  if (url.includes('/priority/project')) {
+    return res.status(200).json({
+      maxResults: 50,
+      startAt: 0,
+      total: priorities.length,
+      isLast: true,
+      values: priorities,
+      priorities: priorities
+    });
+  }
+  return res.status(200).json(priorities);
 };
 
 const handleJiraFields = (req, res) => {
+  const url = req.originalUrl || req.url || req.path || '';
   const fields = [
     { id: "summary", key: "summary", name: "Summary", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "string", system: "summary" } },
     { id: "description", key: "description", name: "Description", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "string", system: "description" } },
@@ -1163,14 +1192,17 @@ const handleJiraFields = (req, res) => {
     { id: "components", key: "components", name: "Components", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "array", items: "component", system: "components" } },
     { id: "parent", key: "parent", name: "Parent", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "issuelink", system: "parent" } }
   ];
-  return res.status(200).json({
-    maxResults: 50,
-    startAt: 0,
-    total: fields.length,
-    isLast: true,
-    values: fields,
-    fields: fields
-  });
+  if (url.includes('/field/project')) {
+    return res.status(200).json({
+      maxResults: 50,
+      startAt: 0,
+      total: fields.length,
+      isLast: true,
+      values: fields,
+      fields: fields
+    });
+  }
+  return res.status(200).json(fields);
 };
 
 const handleJiraStatuses = (req, res) => {
