@@ -1012,6 +1012,53 @@ const handleJiraMyself = (req, res) => {
   });
 };
 
+const getJiraUsersList = (req) => {
+  const list = (dbData.users && dbData.users.length > 0) ? dbData.users : (dbData.employees && dbData.employees.length > 0 ? dbData.employees : []);
+  return list.map(u => ({
+    self: `${req.protocol}://${req.get('host')}/rest/api/2/user?username=${encodeURIComponent(u.login || u.name || u.id)}`,
+    key: u.login || u.name || u.id,
+    name: u.login || u.name || u.id,
+    emailAddress: u.email || `${u.login || 'user'}@pulse12.local`,
+    avatarUrls: { "48x48": u.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop" },
+    displayName: `${u.name || u.login || u.id} (${u.role || u.department || 'Employee'})`,
+    active: u.isActive !== false,
+    timeZone: "Asia/Almaty",
+    locale: "ru_RU",
+    accountId: String(u.id || u.login || 'usr-1'),
+    accountType: "atlassian"
+  }));
+};
+
+const getEnrichedJiraFields = (req) => {
+  const usersList = getJiraUsersList(req);
+  const defaultUser = usersList.find(u => u.key === 'admin' || u.name === 'admin') || usersList[0] || { self: `${req.protocol}://${req.get('host')}/rest/api/2/user?username=admin`, name: "admin", key: "admin", accountId: "usr-1", accountType: "atlassian", displayName: "admin (Security Lead)" };
+  
+  return {
+    summary: { id: "summary", key: "summary", fieldId: "summary", name: "Summary", required: true, hasDefaultValue: true, defaultValue: "DerScanner Security Finding", schema: { type: "string", system: "summary" }, operations: ["set"] },
+    description: { id: "description", key: "description", fieldId: "description", name: "Description", required: false, hasDefaultValue: true, defaultValue: "Уязвимость, обнаруженная сканером DerScanner", schema: { type: "string", system: "description" }, operations: ["set"] },
+    issuetype: { id: "issuetype", key: "issuetype", fieldId: "issuetype", name: "Issue Type", required: true, hasDefaultValue: true, defaultValue: { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", subtask: false }, schema: { type: "issuetype", system: "issuetype" }, operations: [], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", name: "Bug", subtask: false }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", name: "Task", subtask: false }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", subtask: false } ] },
+    project: { id: "project", key: "project", fieldId: "project", name: "Project", required: true, hasDefaultValue: true, defaultValue: { self: `${req.protocol}://${req.get('host')}/rest/api/2/project/10001`, id: "10001", key: "PULSE", name: "Pulse 12 Corporate Security & Dev Project" }, schema: { type: "project", system: "project" }, operations: [], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/project/10001`, id: "10001", key: "PULSE", name: "Pulse 12 Corporate Security & Dev Project" } ] },
+    priority: { id: "priority", key: "priority", fieldId: "priority", name: "Priority", required: false, hasDefaultValue: true, defaultValue: { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/2`, iconUrl: "", name: "High", id: "2" }, schema: { type: "priority", system: "priority" }, operations: ["set"], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/1`, iconUrl: "", name: "Highest", id: "1" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/2`, iconUrl: "", name: "High", id: "2" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/3`, iconUrl: "", name: "Medium", id: "3" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/4`, iconUrl: "", name: "Low", id: "4" } ] },
+    assignee: { id: "assignee", key: "assignee", fieldId: "assignee", name: "Assignee", required: false, hasDefaultValue: true, defaultValue: defaultUser, schema: { type: "user", system: "assignee" }, operations: ["set"], allowedValues: usersList },
+    components: { id: "components", key: "components", fieldId: "components", name: "Components", required: false, hasDefaultValue: true, defaultValue: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10004`, id: "10004", name: "General Security" } ], schema: { type: "array", items: "component", system: "components" }, operations: ["add", "set", "remove"], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10001`, id: "10001", name: "Backend SAST" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10002`, id: "10002", name: "Frontend SAST" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10003`, id: "10003", name: "DevOps Infrastructure" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10004`, id: "10004", name: "General Security" } ] },
+    parent: { id: "parent", key: "parent", fieldId: "parent", name: "Parent", required: false, hasDefaultValue: false, schema: { type: "issuelink", system: "parent" }, operations: ["set"], allowedValues: [] }
+  };
+};
+
+const getEnrichedIssueTypes = (req) => {
+  const fieldsObject = getEnrichedJiraFields(req);
+  const statusList = [
+    { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/1`, description: "Новый инцидент", iconUrl: "", name: "New", id: "1", statusCategory: { id: 2, key: "new", colorName: "blue-gray", name: "To Do" } },
+    { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/2`, description: "В работе", iconUrl: "", name: "In Progress", id: "2", statusCategory: { id: 4, key: "indeterminate", colorName: "yellow", name: "In Progress" } },
+    { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/3`, description: "Решено", iconUrl: "", name: "Done", id: "3", statusCategory: { id: 3, key: "done", colorName: "green", name: "Done" } }
+  ];
+  return [
+    { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", name: "Bug", description: "Уязвимость безопасности или баг", iconUrl: "", subtask: false, avatarId: 1, statuses: statusList, fields: fieldsObject },
+    { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", name: "Task", description: "Задача разработки", iconUrl: "", subtask: false, avatarId: 2, statuses: statusList, fields: fieldsObject },
+    { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", description: "Уязвимость SAST/DAST", iconUrl: "", subtask: false, avatarId: 3, statuses: statusList, fields: fieldsObject }
+  ];
+};
+
 const getProjectObject = (req, keyOrId = 'PULSE') => {
   const p = (dbData.projects || []).find(x => String(x.key).toUpperCase() === String(keyOrId).toUpperCase() || String(x.id) === String(keyOrId));
   const pKey = p ? (p.key || 'PULSE').toUpperCase() : 'PULSE';
