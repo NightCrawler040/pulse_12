@@ -41,7 +41,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, users, onCardCl
           <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span className="task-id">{task.id}</span>
-              {(task.externalFindingId || task.id.startsWith('NEX-') || task.tags?.includes('DerScanner')) && (
+              {(task.externalFindingId || task.tags?.some(t => t.toLowerCase() === 'derscanner')) && !task.tags?.some(t => t.toLowerCase() === 'siem' || t.toLowerCase() === 'waf') && (
                 <span style={{
                   background: 'rgba(239, 68, 68, 0.15)',
                   color: '#ef4444',
@@ -53,8 +53,40 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, users, onCardCl
                   display: 'flex',
                   alignItems: 'center',
                   gap: '3px'
-                }} title="Задача создана автоматически из инцидента безопасности DerScanner / SAST">
+                }} title="Задача создана автоматически из уязвимости DerScanner SAST">
                   🛡️ DerScanner
+                </span>
+              )}
+              {task.tags?.some(t => t.toLowerCase() === 'siem') && (
+                <span style={{
+                  background: 'rgba(59, 130, 246, 0.15)',
+                  color: '#3b82f6',
+                  border: '1px solid rgba(59, 130, 246, 0.4)',
+                  padding: '2px 6px',
+                  borderRadius: '6px',
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px'
+                }} title="Задача создана по алерту SIEM">
+                  🛡️ SIEM
+                </span>
+              )}
+              {task.tags?.some(t => t.toLowerCase() === 'waf') && (
+                <span style={{
+                  background: 'rgba(249, 115, 22, 0.15)',
+                  color: '#f97316',
+                  border: '1px solid rgba(249, 115, 22, 0.4)',
+                  padding: '2px 6px',
+                  borderRadius: '6px',
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px'
+                }} title="Задача создана по событию WAF">
+                  🛡️ WAF
                 </span>
               )}
             </div>

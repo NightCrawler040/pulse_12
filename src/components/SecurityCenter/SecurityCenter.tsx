@@ -31,11 +31,27 @@ export const SecurityCenter: React.FC = () => {
     setActiveTaskModalId, 
     setViewMode 
   } = useTaskContext();
-  const { isAdmin } = useAuth();
+  const { isAdmin, currentUser } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('active');
   const [severityFilter, setSeverityFilter] = useState<string>('all');
+  const [systemTab, setSystemTab] = useState<'all' | 'derscanner' | 'siem' | 'waf'>('all');
+
+  const canAccessSystem = (source: string) => {
+    if (isAdmin || !currentUser) return true;
+    const userDept = currentUser.department || '';
+    if (source === 'derscanner') {
+      return ['Engineering', 'Security', 'QA Engineering', 'Product & Agile', 'Инженерный', 'Разработка', 'Кибербезопасность'].some(d => userDept.includes(d) || d.includes(userDept));
+    }
+    if (source === 'siem') {
+      return ['Security', 'DevOps', 'Engineering', 'Кибербезопасность', 'Инженерный'].some(d => userDept.includes(d) || d.includes(userDept));
+    }
+    if (source === 'waf') {
+      return ['Security', 'DevOps', 'Infrastructure', 'Кибербезопасность'].some(d => userDept.includes(d) || d.includes(userDept));
+    }
+    return true;
+  };
 
   // Modal states for promoting to task
   const [promotingFinding, setPromotingFinding] = useState<ExternalFinding | null>(null);
@@ -48,7 +64,17 @@ export const SecurityCenter: React.FC = () => {
   const criticalCount = findings.filter(f => (f.severity === 'Critical' || f.severity === 'High') && (f.status === 'new' || f.status === 'analyzing')).length;
   const promotedCount = findings.filter(f => f.status === 'promoted').length;
 
-  const filteredFindings = findings.filter(f => {
+  const accessibleFindings = findings.filter(f => {
+    if (isAdmin || !currentUser) return true;
+    const userDept = currentUser.department || '';
+    if (f && (f as any).allowedDepartments && Array.isArray((f as any).allowedDepartments) && !(f as any).allowedDepartments.includes('all')) {
+      return (f as any).allowedDepartments.some((d: string) => userDept.includes(d) || d.includes(userDept));
+    }
+    return canAccessSystem(f.source);
+  });
+
+  const filteredFindings = accessibleFindings.filter(f => {
+    if (systemTab !== 'all' && f.source !== systemTab) return false;
     if (statusFilter === 'active' && f.status !== 'new' && f.status !== 'analyzing') return false;
     if (statusFilter === 'new' && f.status !== 'new') return false;
     if (statusFilter === 'analyzing' && f.status !== 'analyzing') return false;
@@ -207,6 +233,44 @@ export const SecurityCenter: React.FC = () => {
         </div>
       </div>
 
+      {/* System Tabs Row */}
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'hsl(var(--text-secondary))', marginRight: '4px' }}>
+          Вкладки систем / Сканеров:
+        </span>
+        <button
+          className={`filter-btn ${systemTab === 'all' ? 'active' : ''}`}
+          onClick={() => setSystemTab('all')}
+          style={{ background: systemTab === 'all' ? 'hsl(var(--primary))' : undefined, color: systemTab === 'all' ? 'white' : undefined, fontWeight: 700 }}
+        >
+          🌐 Все системы ({accessibleFindings.length})
+        </button>
+        <button
+          className={`filter-btn ${systemTab === 'derscanner' ? 'active' : ''}`}
+          onClick={() => setSystemTab('derscanner')}
+          style={{ background: systemTab === 'derscanner' ? '#ef4444' : undefined, color: systemTab === 'derscanner' ? 'white' : undefined, display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
+        >
+          🛡️ DerScanner SAST/DAST ({accessibleFindings.filter(f => f.source === 'derscanner').length})
+          {!canAccessSystem('derscanner') && <span title="Ограничен по отделу">🔒</span>}
+        </button>
+        <button
+          className={`filter-btn ${systemTab === 'siem' ? 'active' : ''}`}
+          onClick={() => setSystemTab('siem')}
+          style={{ background: systemTab === 'siem' ? '#3b82f6' : undefined, color: systemTab === 'siem' ? 'white' : undefined, display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
+        >
+          🚨 SIEM Monitor ({accessibleFindings.filter(f => f.source === 'siem').length})
+          {!canAccessSystem('siem') && <span title="Ограничен по отделу">🔒</span>}
+        </button>
+        <button
+          className={`filter-btn ${systemTab === 'waf' ? 'active' : ''}`}
+          onClick={() => setSystemTab('waf')}
+          style={{ background: systemTab === 'waf' ? '#f97316' : undefined, color: systemTab === 'waf' ? 'white' : undefined, display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
+        >
+          🔥 WAF Gateway ({accessibleFindings.filter(f => f.source === 'waf').length})
+          {!canAccessSystem('waf') && <span title="Ограничен по отделу">🔒</span>}
+        </button>
+      </div>
+
       {/* Filters & Search */}
       <div className="security-filters-bar">
         <div className="filters-group">
@@ -276,7 +340,17 @@ export const SecurityCenter: React.FC = () => {
         </div>
       </div>
 
-      {/* Findings List */}
+      {/* Findings List or Restricted Notice */}
+      {systemTab !== 'all' && !canAccessSystem(systemTab) ? (
+        <div style={{ textAlign: 'center', padding: '70px 20px', background: 'hsl(var(--card-bg))', borderRadius: '16px', border: '1px solid hsl(var(--border-color))', marginTop: '16px' }}>
+          <div style={{ fontSize: '3.5rem', marginBottom: '16px' }}>🔒</div>
+          <h3 style={{ fontSize: '1.4rem', marginBottom: '10px', color: 'hsl(var(--text-primary))' }}>Доступ к системе «{systemTab.toUpperCase()}» ограничен для вашего отдела</h3>
+          <p style={{ color: 'hsl(var(--text-secondary))', maxWidth: '580px', margin: '0 auto 20px', lineHeight: '1.6' }}>
+            Ваш текущий отдел (<strong>{currentUser?.department || 'Не указан'}</strong>) не имеет прав на просмотр алертов из данной системы мониторинга.<br />
+            Права доступа к внешним сканерам и алертам безопасности настраиваются Администратором в разделе <strong>«⚙️ Панель Администратора &gt; 🔌 Интеграции & API-ключи»</strong>.
+          </p>
+        </div>
+      ) : (
       <div className="findings-list">
         {filteredFindings.map(finding => (
           <div key={finding.id} className={`finding-card severity-${finding.severity}`}>
@@ -423,6 +497,7 @@ export const SecurityCenter: React.FC = () => {
           </div>
         )}
       </div>
+      )}
 
       {/* Modal for Promoting Finding to Task */}
       {promotingFinding && (

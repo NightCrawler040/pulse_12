@@ -132,4 +132,5 @@ export interface ApiKeySettings {
   source: 'derscanner' | 'siem' | 'waf' | 'custom';
   createdAt: string;
   lastUsedAt?: string | null;
+  allowedDepartments?: string[];
 }

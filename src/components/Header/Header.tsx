@@ -318,8 +318,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewTaskModal, onOpenLoginM
         </div>
       </div>
 
-      {/* Bottom row: Sprint Select, Search, Team Avatars Filter */}
-      {currentUser && (
+      {/* Bottom row: Sprint Select, Search, Team Avatars Filter (Только для Канбан-доски, Бэклога и Нагрузки) */}
+      {currentUser && (viewMode === 'board' || viewMode === 'backlog' || viewMode === 'workload') && (
         <>
           <div className="header-bottom">
             <div className="sprint-selector">

@@ -313,29 +313,146 @@
   "users": [
     {
       "id": "usr-1",
-      "name": "Алексей Смирнов",
+      "name": "Александр Громов",
       "login": "admin",
       "password": "$2a$10$aGkS8h96LI6qn1Ca.aLUa.XvpxE0tMbfiY.uOPtYkbCfyZpDBFOJu",
       "role": "Tech Lead / Admin",
       "roleType": "admin",
       "department": "Engineering",
-      "email": "a.smirnov@corp.lan",
+      "email": "a.gromov@corp.lan",
       "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
       "pin": "$2a$10$Q/IUsVYACtPrHRHIMdXRqeg9heShRh8AtJMU/dcOXhfkSSVbyf83m",
       "isActive": true
     },
     {
-      "name": "Қайратов Біржан",
-      "email": "b.kairatov@enpf.kz",
-      "login": "b.kairatov",
-      "password": "$2a$10$Q/IUsVYACtPrHRHIMdXRqeg9heShRh8AtJMU/dcOXhfkSSVbyf83m",
-      "department": "Engineering",
-      "role": "Specialist",
+      "id": "usr-2",
+      "name": "Нурбек Ғани Нурбекулы",
+      "login": "nurbek",
+      "password": "$2a$10$alxnYjSz3oSN316jg1EcBuHmagbR2y7xTM/61FxBLuPDKdMQS6mfa",
+      "role": "Backend Engineer",
       "roleType": "member",
-      "pin": "$2a$10$Q/IUsVYACtPrHRHIMdXRqeg9heShRh8AtJMU/dcOXhfkSSVbyf83m",
-      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-      "isActive": true,
-      "id": "usr-1783173872219"
+      "department": "Engineering",
+      "email": "n.ghani@corp.lan",
+      "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+      "pin": "$2a$10$7EYHiBpwqj9oLa1ap862sORuzvr8DLrmVd9opNJPYcvhnOIEt43LG",
+      "isActive": true
+    },
+    {
+      "id": "usr-3",
+      "name": "Мейрамов Ернур Ерланович",
+      "login": "ernur",
+      "password": "$2a$10$UVX4NkB2ly.BMTX/N758le/9I9wPX2lg.hs7o7vaZNoaTkP/ZTiNi",
+      "role": "Frontend Lead",
+      "roleType": "member",
+      "department": "Engineering",
+      "email": "e.meiramov@corp.lan",
+      "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
+      "pin": "$2a$10$sfN930dtdd1YqipbaiJsAOcH/oBBlUZoh4xkbliMY5L2y7QvENvRm",
+      "isActive": true
+    },
+    {
+      "id": "usr-4",
+      "name": "Насыров Абылай Даниярулы",
+      "login": "abylay",
+      "password": "$2a$10$bFcOH.pCqcxwTboTI68wfOP/cvnEZ9Xs19gP/CcVLmaoHY3TYRHqi",
+      "role": "Fullstack Developer",
+      "roleType": "member",
+      "department": "Engineering",
+      "email": "a.nasyrov@corp.lan",
+      "avatar": "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150&auto=format&fit=crop&q=80",
+      "pin": "$2a$10$Py4xoLDrw/JnnNU8.mJaL.RGKf5PwuDqCdc.OLc1j1UFj5mr/.mSa",
+      "isActive": true
+    },
+    {
+      "id": "usr-5",
+      "name": "Надыров Марат Абдирехимович",
+      "login": "marat",
+      "password": "$2a$10$.SHgn9Yg3G6U2qk6k8ZYResxnQu8TRz4DV44RrHWFNo73NApcwRtu",
+      "role": "Product Manager",
+      "roleType": "member",
+      "department": "Product & Agile",
+      "email": "m.nadyrov@corp.lan",
+      "avatar": "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80",
+      "pin": "$2a$10$f3gYj247R2W8XPoTSBPFKun.mr7DhSHirVi53jQRukoSzz1G553Aq",
+      "isActive": true
+    },
+    {
+      "id": "usr-6",
+      "name": "Баубеков Николай Владимирович",
+      "login": "nikolay",
+      "password": "$2a$10$Kwh6VCQsqmxIqN9MVpQvZ.ntSrr9Dg0Z1O17toFKnlk0P08hviKVW",
+      "role": "QA Automation Lead",
+      "roleType": "member",
+      "department": "Quality Assurance",
+      "email": "n.baubekov@corp.lan",
+      "avatar": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80",
+      "pin": "$2a$10$8bsFGD3gTznevRRxlQjF8OGAGWc2jSYMnouNWEUi32nsAi5VWY5YG",
+      "isActive": true
+    },
+    {
+      "id": "usr-7",
+      "name": "Исмаилов Рамзан Денильбекович",
+      "login": "ramzan",
+      "password": "$2a$10$fA3qHqbyE543USXUNGSMxuQ6bp8A2dytGmGl8I8R3i.vaYoNtqUz6",
+      "role": "UI/UX Designer",
+      "roleType": "member",
+      "department": "Design Team",
+      "email": "r.ismailov@corp.lan",
+      "avatar": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80",
+      "pin": "$2a$10$IgqHRsDRvK/kWdR0l4RZ/ej9TUMHkKQlRPcajR.zg2uQ9MIpTY80a",
+      "isActive": true
+    },
+    {
+      "id": "usr-8",
+      "name": "Лоскутов Максим Викторович",
+      "login": "maksim",
+      "password": "$2a$10$aXk7TcSWDke84FN4/uakWedVZzeT0h5B8mhZqkJ9GN8VMnt3ITknm",
+      "role": "System Architect / DBA",
+      "roleType": "member",
+      "department": "Engineering",
+      "email": "m.loskutov@corp.lan",
+      "avatar": "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80",
+      "pin": "$2a$10$AnlYp2L4QlyqGqJl2dZF2e.bLj.fM8Xdc8CFsHJuCsNZ8FzgdKtxC",
+      "isActive": true
+    },
+    {
+      "id": "usr-9",
+      "name": "Немировский Михаил Юрьевич",
+      "login": "mikhail",
+      "password": "$2a$10$EOe7Zka/I6cNZh2pvhBS7.D8j9pTo6TdqX4jvnpIqefswyNxdWpXS",
+      "role": "DevOps / SRE Engineer",
+      "roleType": "member",
+      "department": "Engineering",
+      "email": "m.nemirovsky@corp.lan",
+      "avatar": "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80",
+      "pin": "$2a$10$iJH4wsXvq2GOvLQAxrIwceLsCtdXZVYwfXxwX0/RIZIjznzmCNCAu",
+      "isActive": true
+    },
+    {
+      "id": "usr-10",
+      "name": "Қайратов БіржанЧИК Қайратұлы",
+      "login": "birzhan",
+      "password": "$2a$10$OfQvpErbSW020oi3hEg40.4UaO.oVIEB.fQ8eZcxI24hePP4AgN22",
+      "role": "Scrum Master / Agile Coach",
+      "roleType": "member",
+      "department": "Product & Agile",
+      "email": "b.kairatov@corp.lan",
+      "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+      "pin": "$2a$10$YbAUo9/Fys5zNsBD59NY3ujVdI5DHJc.gBQyDjLCbre9g.hZObTZy",
+      "isActive": true
+    },
+    {
+      "id": "usr-11",
+      "name": "Нурманов Рауан Конысбаевич",
+      "login": "rauan",
+      "password": "$2a$10$BzL8GBihsv0a9jjonyOtSucx/8fhbvxyV8.cPa4z4OoQlaJU8pU1u",
+      "role": "Data Analyst / BI Specialist",
+      "roleType": "member",
+      "department": "Product & Agile",
+      "email": "r.nurmanov@corp.lan",
+      "avatar": "https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=150&auto=format&fit=crop&q=80",
+      "pin": "$2a$10$kIcGKC3BHGCUd0c418rGSO6omh0S3RYFZJFRW8fACNf3FlOLDpgHm",
+      "isActive": true
     }
   ],
   "groups": [
@@ -364,6 +481,45 @@
       "name": "🎨 Дизайн и UX (Design Team)",
       "color": "#ec4899",
       "memberIds": []
+    }
+  ],
+  "notifications": [],
+  "findings": [
+    {
+      "id": "fnd-1",
+      "source": "derscanner",
+      "title": "SQL Injection in user authentication handler",
+      "description": "Несанитизированный ввод пользователя передается напрямую в SQL-запрос при поиске учетной записи по логину. Возможна обходная авторизация.",
+      "severity": "Critical",
+      "project": "Pulse 12 Core Backend",
+      "cwe": "CWE-89",
+      "fileLocation": "server/db.js:142",
+      "status": "new",
+      "promotedTaskId": null,
+      "createdAt": "2026-07-21T08:00:00Z"
+    },
+    {
+      "id": "fnd-2",
+      "source": "siem",
+      "title": "Suspicious WAF File Access Attempt / Policy Violation",
+      "description": "Многократная попытка доступа к защищенным директориям конфигурации (/etc/passwd, .env) с внешнего IP-адреса через шлюз WAF.",
+      "severity": "High",
+      "project": "Corporate Gateway WAF",
+      "cwe": "CWE-22",
+      "fileLocation": "gateway/waf_rules.conf:55",
+      "status": "analyzing",
+      "promotedTaskId": null,
+      "createdAt": "2026-07-21T09:15:00Z"
+    }
+  ],
+  "api_keys": [
+    {
+      "id": "key-1",
+      "name": "DerScanner SAST Integration Key",
+      "key": "ds-live-8f92a4c17e3b9012d45a",
+      "source": "derscanner",
+      "createdAt": "2026-07-21T07:00:00Z",
+      "lastUsedAt": null
     }
   ]
 }

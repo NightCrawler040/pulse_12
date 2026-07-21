@@ -14,6 +14,7 @@ export const AdminPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'users' | 'groups' | 'integrations'>('users');
   const [newKeyName, setNewKeyName] = useState('');
   const [newKeySource, setNewKeySource] = useState<'derscanner' | 'siem' | 'custom'>('derscanner');
+  const [newKeyAllowedDepts, setNewKeyAllowedDepts] = useState<string[]>(['all']);
   const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
 
   // User modal states
@@ -663,6 +664,28 @@ export const AdminPanel: React.FC = () => {
                 <code>{`curl -X POST http://localhost:3001/api/v1/webhooks/derscanner -H "X-API-Key: ds-live-8f92a4c17e3b9012d45a" -H "Content-Type: application/json" -d '{"source":"derscanner","title":"SQL Injection in LoginController","severity":"Critical","project":"Pulse12 Corporate","fileLocation":"AuthController.java:142","cwe":"CWE-89"}'`}</code>
               </div>
             </div>
+            <div style={{
+              background: 'rgba(249, 115, 22, 0.1)',
+              borderLeft: '4px solid #f97316',
+              padding: '14px 18px',
+              borderRadius: '6px',
+              fontSize: '0.9rem',
+              color: 'hsl(var(--text-primary))',
+              lineHeight: '1.5',
+              marginTop: '12px'
+            }}>
+              <strong style={{ display: 'block', marginBottom: '6px', color: '#f97316', fontSize: '1rem' }}>
+                💡 Настройка подключения в интерфейсе реального DerScanner (Аккаунт &gt; Доступы &gt; Таск-менеджер / Jira):
+              </strong>
+              <span>
+                При интеграции внешнего сканера (DerScanner / SIEM) через настройки подключения из скриншота укажите параметры:
+              </span>
+              <ul style={{ margin: '8px 0 0 20px', padding: 0 }}>
+                <li style={{ marginBottom: '4px' }}><strong>URL сервера (Jira / Webhook):</strong> <code>http://&lt;IP-ВАШЕГО-СЕРВЕРА&gt;:3001/api/v1/webhooks/derscanner</code></li>
+                <li style={{ marginBottom: '4px' }}><strong>Логин Jira (или Токен доступа):</strong> вставьте сгенерированный ключ <code>ds-live-...</code> (или передавайте в заголовке <code>X-API-Key</code>)</li>
+                <li><strong>Пароль Jira:</strong> можно указать <code>webhook-token</code> (или оставить пустым, если система разрешает)</li>
+              </ul>
+            </div>
           </div>
 
           <div className="admin-table-card">
@@ -673,6 +696,7 @@ export const AdminPanel: React.FC = () => {
                     <th>Название ключа / Системы</th>
                     <th>Тип сканера</th>
                     <th>Секретный токен (X-API-Key)</th>
+                    <th>Доступ (Отделы)</th>
                     <th>Дата создания</th>
                     <th>Последняя активность</th>
                     <th style={{ textAlign: 'right' }}>Действия</th>
@@ -700,6 +724,21 @@ export const AdminPanel: React.FC = () => {
                         <code style={{ background: 'hsl(var(--bg-secondary))', padding: '4px 8px', borderRadius: '4px', fontSize: '0.88rem', color: 'hsl(var(--primary))' }}>
                           {k.key}
                         </code>
+                      </td>
+                      <td>
+                        {(!k.allowedDepartments || k.allowedDepartments.includes('all')) ? (
+                          <span style={{ fontSize: '0.82rem', background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', padding: '3px 8px', borderRadius: '6px', fontWeight: 600 }}>
+                            👥 Все отделы
+                          </span>
+                        ) : (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                            {k.allowedDepartments.map(dept => (
+                              <span key={dept} style={{ fontSize: '0.75rem', background: 'rgba(99, 102, 241, 0.15)', color: 'hsl(var(--primary))', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                                {dept}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </td>
                       <td style={{ fontSize: '0.88rem', color: 'hsl(var(--text-secondary))' }}>
                         {new Date(k.createdAt).toLocaleDateString('ru-RU')}
@@ -1008,8 +1047,10 @@ export const AdminPanel: React.FC = () => {
             <form onSubmit={async (e) => {
               e.preventDefault();
               if (!newKeyName.trim()) return;
-              await addApiKey(newKeyName, newKeySource);
+              await addApiKey(newKeyName, newKeySource, newKeyAllowedDepts);
               setIsKeyModalOpen(false);
+              setNewKeyName('');
+              setNewKeyAllowedDepts(['all']);
             }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div className="form-group">
                 <label className="form-label">Название интеграции / сканера</label>
@@ -1033,6 +1074,39 @@ export const AdminPanel: React.FC = () => {
                   <option value="siem">🚨 SIEM Monitor (Мониторинг безопасности)</option>
                   <option value="custom">🔌 Custom Webhook / API</option>
                 </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Доступ к уведомлениям и алертам для отделов:</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'hsl(var(--bg-secondary))', padding: '10px 12px', borderRadius: '8px', border: '1px solid hsl(var(--border-color))' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', cursor: 'pointer', fontWeight: 600 }}>
+                    <input
+                      type="checkbox"
+                      checked={newKeyAllowedDepts.includes('all')}
+                      onChange={e => {
+                        if (e.target.checked) setNewKeyAllowedDepts(['all']);
+                        else setNewKeyAllowedDepts(['Engineering', 'Security']);
+                      }}
+                    />
+                    <span>👥 Все отделы (Общий доступ)</span>
+                  </label>
+                  {!newKeyAllowedDepts.includes('all') && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '4px', paddingLeft: '16px', borderLeft: '2px solid hsl(var(--primary))' }}>
+                      {['Engineering', 'Security', 'DevOps', 'QA Engineering', 'Product & Agile'].map(dept => (
+                        <label key={dept} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={newKeyAllowedDepts.includes(dept)}
+                            onChange={e => {
+                              if (e.target.checked) setNewKeyAllowedDepts(prev => [...prev, dept]);
+                              else setNewKeyAllowedDepts(prev => prev.filter(d => d !== dept));
+                            }}
+                          />
+                          <span>{dept}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '12px' }}>
                 <button type="button" className="btn-secondary" onClick={() => setIsKeyModalOpen(false)}>

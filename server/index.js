@@ -870,7 +870,7 @@ app.get('/api/api-keys', requireAuth, (req, res) => {
 
 // Сгенерировать новый API-ключ для внешней системы
 app.post('/api/api-keys', requireAuth, (req, res) => {
-  const { name, source } = req.body;
+  const { name, source, allowedDepartments } = req.body;
   if (!name) {
     return res.status(400).json({ error: 'Укажите название интеграции / ключа' });
   }
@@ -881,6 +881,7 @@ app.post('/api/api-keys', requireAuth, (req, res) => {
     name: name.trim(),
     key: `${srcPrefix}live-${randomHex}`,
     source: source || 'custom',
+    allowedDepartments: Array.isArray(allowedDepartments) && allowedDepartments.length ? allowedDepartments : ['all'],
     createdAt: new Date().toISOString(),
     lastUsedAt: null
   };
@@ -942,6 +943,7 @@ const handleExternalWebhook = (req, res) => {
     fileLocation: String(fileLocation).trim(),
     status: 'new',
     promotedTaskId: null,
+    allowedDepartments: matchedKey && matchedKey.allowedDepartments ? matchedKey.allowedDepartments : ['all'],
     rawPayload: payload,
     createdAt: new Date().toISOString()
   };
