@@ -11,6 +11,136 @@ export const initialUsers = [
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     pin: process.env.ADMIN_PIN_HASH || '$2a$10$Q/IUsVYACtPrHRHIMdXRqeg9heShRh8AtJMU/dcOXhfkSSVbyf83m',
     isActive: true
+  },
+  {
+    id: 'usr-2',
+    name: 'Нурбек Ғани Нурбекулы',
+    login: 'nurbek',
+    password: 'user123',
+    role: 'Backend Engineer',
+    roleType: 'member',
+    department: 'Engineering',
+    email: 'n.ghani@corp.lan',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    pin: 'user123',
+    isActive: true
+  },
+  {
+    id: 'usr-3',
+    name: 'Мейрамов Ернур Ерланович',
+    login: 'ernur',
+    password: 'user123',
+    role: 'Frontend Lead',
+    roleType: 'member',
+    department: 'Engineering',
+    email: 'e.meiramov@corp.lan',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+    pin: 'user123',
+    isActive: true
+  },
+  {
+    id: 'usr-4',
+    name: 'Насыров Абылай Даниярулы',
+    login: 'abylay',
+    password: 'user123',
+    role: 'Fullstack Developer',
+    roleType: 'member',
+    department: 'Engineering',
+    email: 'a.nasyrov@corp.lan',
+    avatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150&auto=format&fit=crop&q=80',
+    pin: 'user123',
+    isActive: true
+  },
+  {
+    id: 'usr-5',
+    name: 'Надыров Марат Абдирехимович',
+    login: 'marat',
+    password: 'user123',
+    role: 'Product Manager',
+    roleType: 'member',
+    department: 'Product & Agile',
+    email: 'm.nadyrov@corp.lan',
+    avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
+    pin: 'user123',
+    isActive: true
+  },
+  {
+    id: 'usr-6',
+    name: 'Баубеков Николай Владимирович',
+    login: 'nikolay',
+    password: 'user123',
+    role: 'QA Automation Lead',
+    roleType: 'member',
+    department: 'Quality Assurance',
+    email: 'n.baubekov@corp.lan',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
+    pin: 'user123',
+    isActive: true
+  },
+  {
+    id: 'usr-7',
+    name: 'Исмаилов Рамзан Денильбекович',
+    login: 'ramzan',
+    password: 'user123',
+    role: 'UI/UX Designer',
+    roleType: 'member',
+    department: 'Design Team',
+    email: 'r.ismailov@corp.lan',
+    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
+    pin: 'user123',
+    isActive: true
+  },
+  {
+    id: 'usr-8',
+    name: 'Лоскутов Максим Викторович',
+    login: 'maksim',
+    password: 'user123',
+    role: 'System Architect / DBA',
+    roleType: 'member',
+    department: 'Engineering',
+    email: 'm.loskutov@corp.lan',
+    avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80',
+    pin: 'user123',
+    isActive: true
+  },
+  {
+    id: 'usr-9',
+    name: 'Немировский Михаил Юрьевич',
+    login: 'mikhail',
+    password: 'user123',
+    role: 'DevOps / SRE Engineer',
+    roleType: 'member',
+    department: 'Engineering',
+    email: 'm.nemirovsky@corp.lan',
+    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
+    pin: 'user123',
+    isActive: true
+  },
+  {
+    id: 'usr-10',
+    name: 'Қайратов БіржанЧИК Қайратұлы',
+    login: 'birzhan',
+    password: 'user123',
+    role: 'Scrum Master / Agile Coach',
+    roleType: 'member',
+    department: 'Product & Agile',
+    email: 'b.kairatov@corp.lan',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+    pin: 'user123',
+    isActive: true
+  },
+  {
+    id: 'usr-11',
+    name: 'Нурманов Рауан Конысбаевич',
+    login: 'rauan',
+    password: 'user123',
+    role: 'Data Analyst / BI Specialist',
+    roleType: 'member',
+    department: 'Product & Agile',
+    email: 'r.nurmanov@corp.lan',
+    avatar: 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=150&auto=format&fit=crop&q=80',
+    pin: 'user123',
+    isActive: true
   }
 ];
 
@@ -40,7 +170,9 @@ export const initialTasks = [
     description: 'Развернуть Node.js + Express + Socket.io сервер на центральном ноутбуке с доступом из локальной сети (LAN). Обеспечить хранение данных в db.json.',
     status: 'done',
     priority: 'urgent',
-    assigneeId: 'usr-1',
+    assigneeId: 'usr-9',
+    assignee: 'usr-9',
+    assigneeGroupId: 'grp-1',
     storyPoints: 8,
     estimatedHours: 16,
     loggedHours: 16,
@@ -50,80 +182,64 @@ export const initialTasks = [
     updatedAt: '2026-07-04T12:00:00Z',
     subtasks: [
       { id: 'sub-1', title: 'Установить express, cors, socket.io', completed: true },
-      { id: 'sub-2', title: 'Реализовать синхронизацию db.json', completed: true },
-      { id: 'sub-3', title: 'Проверить доступ по IP в локальной сети', completed: true }
+      { id: 'sub-2', title: 'Реализовать синхронизацию db.json', completed: true }
     ],
-    comments: [
-      {
-        id: 'c-1',
-        userId: 'usr-1',
-        text: 'Сервер успешно настроен на порту 3001. Любой ноутбук в Wi-Fi сети подключается мгновенно!',
-        createdAt: '2026-07-04T12:15:00Z'
-      }
-    ]
+    comments: []
   },
   {
     id: 'NEX-102',
     title: 'Реализация входа по Логину и Паролю для новых сотрудников',
     description: 'Обеспечить возможность Администратору создавать учетные записи с Логином и Паролем. Перевести модальное окно авторизации на форму ввода учетных данных.',
-    status: 'in-progress',
+    status: 'done',
     priority: 'high',
-    assigneeId: 'usr-1',
+    assigneeId: 'usr-3',
+    assignee: 'usr-3',
+    assigneeGroupId: 'grp-1',
     storyPoints: 5,
     estimatedHours: 12,
-    loggedHours: 6,
+    loggedHours: 12,
     sprintId: 'sprint-1',
     tags: ['Security', 'Frontend', 'UI/UX'],
     createdAt: '2026-07-02T10:00:00Z',
     updatedAt: '2026-07-04T14:00:00Z',
-    subtasks: [
-      { id: 'sub-4', title: 'Обновить интерфейс User (поля login и password)', completed: true },
-      { id: 'sub-5', title: 'Обновить AdminPanel для ввода логина и пароля', completed: false },
-      { id: 'sub-6', title: 'Обновить LoginModal для аутентификации', completed: false }
-    ],
+    subtasks: [],
     comments: []
   },
   {
     id: 'NEX-103',
     title: 'Мгновенная синхронизация через WebSockets (Socket.io) на всех ПК',
     description: 'Когда сотрудник перемещает задачу на своем ноутбуке, у всех остальных коллег в офисе доска должна обновляться автоматически без перезагрузки браузера.',
-    status: 'in-progress',
+    status: 'done',
     priority: 'urgent',
-    assigneeId: 'usr-1',
+    assigneeId: 'usr-2',
+    assignee: 'usr-2',
+    assigneeGroupId: 'grp-1',
     storyPoints: 8,
     estimatedHours: 20,
-    loggedHours: 10,
+    loggedHours: 20,
     sprintId: 'sprint-1',
     tags: ['Backend', 'Architecture', 'Frontend'],
     createdAt: '2026-07-02T11:30:00Z',
     updatedAt: '2026-07-04T13:45:00Z',
-    subtasks: [
-      { id: 'sub-7', title: 'Подключить socket.io-client в TaskContext', completed: false },
-      { id: 'sub-8', title: 'Обработка события data-updated', completed: false }
-    ],
-    comments: [
-      {
-        id: 'c-2',
-        userId: 'usr-1',
-        text: 'Это ключевая фича для совместных грумингов и планирования спринта!',
-        createdAt: '2026-07-03T09:20:00Z'
-      }
-    ]
+    subtasks: [],
+    comments: []
   },
   {
     id: 'NEX-104',
     title: 'Переключатель IP-адреса сервера в шапке портала',
     description: 'Добавить кнопку в Header, позволяющую сотрудникам в один клик указать IP-адрес центрального ноутбука в Wi-Fi сети.',
-    status: 'todo',
+    status: 'in-progress',
     priority: 'medium',
-    assigneeId: 'usr-1',
+    assigneeId: 'usr-4',
+    assignee: 'usr-4',
+    assigneeGroupId: 'grp-1',
     storyPoints: 3,
     estimatedHours: 6,
-    loggedHours: 0,
+    loggedHours: 4,
     sprintId: 'sprint-1',
     tags: ['Frontend', 'UI/UX'],
     createdAt: '2026-07-03T14:00:00Z',
-    updatedAt: '2026-07-03T14:00:00Z',
+    updatedAt: '2026-07-04T16:00:00Z',
     subtasks: [],
     comments: []
   },
@@ -133,7 +249,9 @@ export const initialTasks = [
     description: 'Удалить тяжелые backdrop-filter: blur и непрерывные transition: all для мгновенного отклика при перетаскивании карточек на любых ноутбуках.',
     status: 'done',
     priority: 'high',
-    assigneeId: 'usr-1',
+    assigneeId: 'usr-3',
+    assignee: 'usr-3',
+    assigneeGroupId: 'grp-1',
     storyPoints: 5,
     estimatedHours: 10,
     loggedHours: 10,
@@ -141,10 +259,7 @@ export const initialTasks = [
     tags: ['Frontend', 'Architecture'],
     createdAt: '2026-07-01T10:00:00Z',
     updatedAt: '2026-07-04T11:00:00Z',
-    subtasks: [
-      { id: 'sub-9', title: 'Заменить blur на rgba фоны в index.css', completed: true },
-      { id: 'sub-10', title: 'Убрать transition: all в KanbanBoard.css', completed: true }
-    ],
+    subtasks: [],
     comments: []
   },
   {
@@ -153,7 +268,9 @@ export const initialTasks = [
     description: 'Создать вкладку с персональной статистикой KPI, отработанными часами, Story Points и списком закрепленных задач.',
     status: 'done',
     priority: 'medium',
-    assigneeId: 'usr-1',
+    assigneeId: 'usr-7',
+    assignee: 'usr-7',
+    assigneeGroupId: 'grp-4',
     storyPoints: 5,
     estimatedHours: 14,
     loggedHours: 14,
@@ -170,7 +287,9 @@ export const initialTasks = [
     description: 'Запретить обычным сотрудникам редактировать параметры чужих задач. Ограничить доступ к админской панели только для роли Admin.',
     status: 'done',
     priority: 'urgent',
-    assigneeId: 'usr-1',
+    assigneeId: 'usr-8',
+    assignee: 'usr-8',
+    assigneeGroupId: 'grp-1',
     storyPoints: 8,
     estimatedHours: 16,
     loggedHours: 16,
@@ -185,16 +304,94 @@ export const initialTasks = [
     id: 'NEX-108',
     title: 'Подготовка E2E тестов для автоматизированного тестирования задач',
     description: 'Написать сценарии проверки жизненного цикла задачи: создание -> взятие в работу -> проверка -> завершение.',
-    status: 'todo',
+    status: 'review',
     priority: 'medium',
-    assigneeId: 'usr-1',
+    assigneeId: 'usr-6',
+    assignee: 'usr-6',
+    assigneeGroupId: 'grp-3',
     storyPoints: 5,
     estimatedHours: 16,
-    loggedHours: 0,
-    sprintId: 'sprint-2',
+    loggedHours: 14,
+    sprintId: 'sprint-1',
     tags: ['QA', 'Architecture'],
     createdAt: '2026-07-03T16:00:00Z',
-    updatedAt: '2026-07-03T16:00:00Z',
+    updatedAt: '2026-07-04T15:00:00Z',
+    subtasks: [],
+    comments: []
+  },
+  {
+    id: 'NEX-109',
+    title: 'Формирование продуктовой дорожной карты (Roadmap) на Q3',
+    description: 'Согласование ключевых эпиков спринта с руководителями отделов и планирование релизных дат.',
+    status: 'done',
+    priority: 'high',
+    assigneeId: 'usr-5',
+    assignee: 'usr-5',
+    assigneeGroupId: 'grp-2',
+    storyPoints: 5,
+    estimatedHours: 14,
+    loggedHours: 14,
+    sprintId: 'sprint-1',
+    tags: ['Product', 'Agile'],
+    createdAt: '2026-07-01T10:00:00Z',
+    updatedAt: '2026-07-03T18:00:00Z',
+    subtasks: [],
+    comments: []
+  },
+  {
+    id: 'NEX-110',
+    title: 'Проведение Scrum-планирования и ежедневных Daily-митингов',
+    description: 'Синхронизация членов команды, снятие блокеров по задачам разработки и тестирования.',
+    status: 'in-progress',
+    priority: 'medium',
+    assigneeId: 'usr-10',
+    assignee: 'usr-10',
+    assigneeGroupId: 'grp-2',
+    storyPoints: 3,
+    estimatedHours: 10,
+    loggedHours: 6,
+    sprintId: 'sprint-1',
+    tags: ['Scrum', 'Management'],
+    createdAt: '2026-07-02T09:00:00Z',
+    updatedAt: '2026-07-04T11:00:00Z',
+    subtasks: [],
+    comments: []
+  },
+  {
+    id: 'NEX-111',
+    title: 'Аналитика и построение графиков KPI в PDF отчете',
+    description: 'Анализ распределения Story Points между сотрудниками, выгрузка детальных метрик в формате отчетов.',
+    status: 'done',
+    priority: 'high',
+    assigneeId: 'usr-11',
+    assignee: 'usr-11',
+    assigneeGroupId: 'grp-2',
+    storyPoints: 5,
+    estimatedHours: 12,
+    loggedHours: 12,
+    sprintId: 'sprint-1',
+    tags: ['Analytics', 'BI', 'PDF'],
+    createdAt: '2026-07-02T14:00:00Z',
+    updatedAt: '2026-07-04T16:00:00Z',
+    subtasks: [],
+    comments: []
+  },
+  {
+    id: 'NEX-112',
+    title: 'Оптимизация базы данных PostgreSQL и индексов поиска',
+    description: 'Профилирование медленных запросов при выборке больших объемов задач за спринт.',
+    status: 'in-progress',
+    priority: 'urgent',
+    assigneeId: 'usr-8',
+    assignee: 'usr-8',
+    assigneeGroupId: 'grp-1',
+    storyPoints: 8,
+    estimatedHours: 18,
+    loggedHours: 10,
+    sprintId: 'sprint-2',
+    tags: ['Backend', 'Database'],
+    createdAt: '2026-07-03T11:00:00Z',
+    updatedAt: '2026-07-04T17:00:00Z',
     subtasks: [],
     comments: []
   }
@@ -205,24 +402,24 @@ export const initialGroups = [
     id: 'grp-1',
     name: '🚀 Команда Разработки (Engineering)',
     color: '#3b82f6',
-    memberIds: ['usr-1']
+    memberIds: ['usr-1', 'usr-2', 'usr-3', 'usr-4', 'usr-8', 'usr-9']
   },
   {
     id: 'grp-2',
     name: '🎯 Менеджмент и Продукт (Product & Agile)',
     color: '#8b5cf6',
-    memberIds: []
+    memberIds: ['usr-5', 'usr-10', 'usr-11']
   },
   {
     id: 'grp-3',
     name: '🛡️ Отдел Тестирования (Quality Assurance)',
     color: '#10b981',
-    memberIds: []
+    memberIds: ['usr-6']
   },
   {
     id: 'grp-4',
     name: '🎨 Дизайн и UX (Design Team)',
     color: '#ec4899',
-    memberIds: []
+    memberIds: ['usr-7']
   }
 ];

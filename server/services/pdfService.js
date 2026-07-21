@@ -128,7 +128,7 @@ export const generateSprintPdf = ({ dbData, sprintId, stream }) => {
       doc.y += 22;
     }
 
-    const uTasks = tasks.filter(t => t.assignee === u.id || (Array.isArray(t.assigneeIds) && t.assigneeIds.includes(u.id)));
+    const uTasks = tasks.filter(t => (t.assigneeId || t.assignee) === u.id || (Array.isArray(t.assigneeIds) && t.assigneeIds.includes(u.id)));
     const uDone = uTasks.filter(t => t.status === 'done').length;
     const uInProg = uTasks.filter(t => t.status === 'in-progress' || t.status === 'review').length;
     const uSP = uTasks.reduce((sum, t) => sum + (t.storyPoints || 0), 0);
@@ -201,7 +201,7 @@ export const generateSprintPdf = ({ dbData, sprintId, stream }) => {
       doc.y += 22;
     }
 
-    const assigneeObj = (dbData.users || []).find(u => u.id === t.assignee);
+    const assigneeObj = (dbData.users || []).find(u => u.id === (t.assigneeId || t.assignee));
     const assigneeName = assigneeObj ? (assigneeObj.name || assigneeObj.login) : 'Не назначен';
 
     const rowData = [

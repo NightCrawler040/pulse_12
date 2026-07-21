@@ -46,10 +46,10 @@ const loadLocalFile = () => {
       const parsed = JSON.parse(raw);
       if (parsed && Array.isArray(parsed.tasks)) {
         localDbData = {
-          tasks: parsed.tasks || [],
-          sprints: parsed.sprints || initialSprints,
-          users: parsed.users || initialUsers,
-          groups: parsed.groups || initialGroups,
+          tasks: (parsed.tasks && parsed.tasks.length > 0) ? parsed.tasks : initialTasks,
+          sprints: (parsed.sprints && parsed.sprints.length > 0) ? parsed.sprints : initialSprints,
+          users: (parsed.users && parsed.users.length >= 5) ? parsed.users : initialUsers,
+          groups: (parsed.groups && parsed.groups.length > 0) ? parsed.groups : initialGroups,
           notifications: parsed.notifications || []
         };
         return;
@@ -110,7 +110,22 @@ export const initDb = async () => {
       await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['notifications', JSON.stringify([])]);
       console.log('✅ Стартовые корпоративные данные успешно загружены в PostgreSQL!');
     } else {
-      console.log(`✅ В PostgreSQL найдено ${count} коллекций данных. Система готова к работе.`);
+      console.log(`✅ В PostgreSQL найдено ${count} коллекций данных. Проверка целостности коллекций...`);
+      // Авто-восстановление пустых коллекций
+      const tasksRes = await client.query("SELECT data FROM pulse_store WHERE key = 'tasks'");
+      if (tasksRes.rows.length === 0 || !Array.isArray(tasksRes.rows[0].data) || tasksRes.rows[0].data.length === 0) {
+        console.log('🌱 Коллекция tasks в PostgreSQL пуста. Автовосстановление корпоративных задач...');
+        await client.query("INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data", ['tasks', JSON.stringify(initialTasks)]);
+      }
+      const usersRes = await client.query("SELECT data FROM pulse_store WHERE key = 'users'");
+      if (usersRes.rows.length === 0 || !Array.isArray(usersRes.rows[0].data) || usersRes.rows[0].data.length < 5) {
+        console.log('🌱 Коллекция users в PostgreSQL неполная. Обновление до полного штата сотрудников...');
+        await client.query("INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data", ['users', JSON.stringify(initialUsers)]);
+      }
+      const groupsRes = await client.query("SELECT data FROM pulse_store WHERE key = 'groups'");
+      if (groupsRes.rows.length === 0 || !Array.isArray(groupsRes.rows[0].data) || groupsRes.rows[0].data.length === 0) {
+        await client.query("INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data", ['groups', JSON.stringify(initialGroups)]);
+      }
     }
 
     client.release();
@@ -184,6 +199,14 @@ export const getCollection = async (key) => {
  * Сохранить/обновить коллекцию по ключу
  */
 export const saveCollection = async (key, dataArray) => {
+  if (key === 'users' && Array.isArray(dataArray)) {
+    const map = new Map();
+    dataArray.forEach(u => {
+      const k = u.id || u.login;
+      if (k) map.set(k, { ...map.get(k), ...u });
+    });
+    dataArray = Array.from(map.values());
+  }
   if (isPgConnected) {
     try {
       const query = `
@@ -247,6 +270,14 @@ export const saveAllData = async (dataObj) => {
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
+        if (dataObj.users && Array.isArray(dataObj.users)) {
+          const map = new Map();
+          dataObj.users.forEach(u => {
+            const k = u.id || u.login;
+            if (k) map.set(k, { ...map.get(k), ...u });
+          });
+          dataObj.users = Array.from(map.values());
+        }
         for (const [key, val] of Object.entries(dataObj)) {
           const query = `
             INSERT INTO pulse_store (key, data, updated_at)

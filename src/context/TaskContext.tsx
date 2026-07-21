@@ -79,17 +79,27 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return mockTasks;
   });
 
+  const deduplicateUsers = (list: User[]): User[] => {
+    if (!Array.isArray(list)) return [];
+    const map = new Map<string, User>();
+    list.forEach(u => {
+      const k = u.id || u.login;
+      if (k) map.set(k, { ...map.get(k), ...u });
+    });
+    return Array.from(map.values());
+  };
+
   const [users, setUsers] = useState<User[]>(() => {
     const saved = localStorage.getItem(USERS_STORAGE_KEY);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return deduplicateUsers(parsed);
       } catch (e) {
         console.error('Error loading users from localStorage', e);
       }
     }
-    return mockUsers;
+    return deduplicateUsers(mockUsers);
   });
   const [columns] = useState<Column[]>(mockColumns);
   const [sprints, setSprints] = useState<Sprint[]>(mockSprints);
@@ -166,7 +176,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data && Array.isArray(data.tasks)) {
         setTasks(data.tasks);
         if (Array.isArray(data.sprints)) setSprints(data.sprints);
-        if (Array.isArray(data.users)) setUsers(data.users);
+        if (Array.isArray(data.users)) setUsers(deduplicateUsers(data.users));
         if (Array.isArray(data.groups)) setGroups(data.groups);
         if (Array.isArray(data.notifications)) setNotifications(data.notifications);
         setIsServerConnected(true);
@@ -187,7 +197,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data && Array.isArray(data.tasks)) {
         setTasks(data.tasks);
         if (Array.isArray(data.sprints)) setSprints(data.sprints);
-        if (Array.isArray(data.users)) setUsers(data.users);
+        if (Array.isArray(data.users)) setUsers(deduplicateUsers(data.users));
         if (Array.isArray(data.groups)) setGroups(data.groups);
         if (Array.isArray(data.notifications)) setNotifications(data.notifications);
       }
@@ -226,6 +236,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [tasks, sprints]);
 
   useEffect(() => {
+    console.log('👥 [TaskContext] Users array updated. Deduplicated total:', users.length);
     localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
   }, [users]);
 

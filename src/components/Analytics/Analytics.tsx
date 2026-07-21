@@ -11,18 +11,18 @@ export const Analytics: React.FC = () => {
   const handleDownloadPdf = async () => {
     try {
       setIsDownloadingPdf(true);
-      const token = localStorage.getItem('pulse_api_token') || '';
+      const authUserStr = localStorage.getItem('korpjira-flowspace-auth-v1') || '';
+      const token = localStorage.getItem('korpjira-auth-token') || localStorage.getItem('pulse_api_token') || '';
       const currentUserStr = localStorage.getItem('pulse_current_user');
       const currentUser = currentUserStr ? JSON.parse(currentUserStr) : null;
+      const userId = currentUser?.id || authUserStr || 'usr-1';
 
       const headers: Record<string, string> = {
-        'x-api-token': token
+        'x-api-token': token,
+        'x-auth-user': userId
       };
-      if (currentUser?.id) {
-        headers['x-auth-user'] = currentUser.id;
-      }
 
-      const response = await fetch(`/api/reports/pdf?sprintId=${activeSprintId}`, {
+      const response = await fetch(`/api/reports/pdf?sprintId=${activeSprintId}&userId=${userId}`, {
         method: 'GET',
         headers
       });
@@ -258,7 +258,10 @@ export const Analytics: React.FC = () => {
 
         <div className="leaderboard-grid">
           {employeeUsers.map(u => {
-            const uTasks = currentTasks.filter(t => t.assigneeId === u.id || (t.assigneeGroupId && groups.some(g => g.id === t.assigneeGroupId && g.memberIds?.includes(u.id))));
+            const uTasks = currentTasks.filter(t => {
+              const assignId = t.assigneeId || (t as any).assignee;
+              return assignId === u.id || (t.assigneeGroupId && groups.some(g => g.id === t.assigneeGroupId && g.memberIds?.includes(u.id)));
+            });
             const uDone = uTasks.filter(t => t.status === 'done').length;
             const uSP = uTasks.reduce((sum, t) => sum + (t.storyPoints || 0), 0);
             return (
@@ -288,7 +291,10 @@ export const Analytics: React.FC = () => {
 
           <div className="leaderboard-grid">
             {groups.map(grp => {
-              const grpTasks = currentTasks.filter(t => t.assigneeGroupId === grp.id || (t.assigneeId && grp.memberIds?.includes(t.assigneeId)));
+              const grpTasks = currentTasks.filter(t => {
+                const assignId = t.assigneeId || (t as any).assignee;
+                return t.assigneeGroupId === grp.id || (assignId && grp.memberIds?.includes(assignId));
+              });
               const grpDone = grpTasks.filter(t => t.status === 'done').length;
               const grpSP = grpTasks.reduce((sum, t) => sum + (t.storyPoints || 0), 0);
               return (
