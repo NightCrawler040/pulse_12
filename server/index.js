@@ -827,14 +827,20 @@ app.post('/api/findings/:id/promote', requireAuth, (req, res) => {
     return res.status(404).json({ error: 'Инцидент не найден' });
   }
 
+  let resolvedAssigneeId = assigneeId || null;
+  if (!resolvedAssigneeId && finding.assignee) {
+    const foundUser = (dbData.users || []).find(u => u.login === finding.assignee || u.id === finding.assignee || u.name === finding.assignee);
+    resolvedAssigneeId = foundUser ? foundUser.id : finding.assignee;
+  }
+
   const newTaskId = `NEX-${Math.floor(100 + Math.random() * 900)}`;
   const promotedTask = {
     id: newTaskId,
     title: `[${finding.source.toUpperCase()}] ${finding.title}`,
-    description: `${finding.description || ''}\n\n🛡️ **Данные инцидента:**\n- **Проект:** ${finding.project || 'Не указано'}\n- **Файл/Расположение:** \`${finding.fileLocation || 'Не указано'}\`\n- **CWE/CVE:** ${finding.cwe || 'N/A'}\n- **Критичность:** ${finding.severity}`,
+    description: `${finding.description || ''}\n\n🛡️ **Данные инцидента:**\n- **Проект:** ${finding.project || 'Не указано'}\n- **Файл/Расположение:** \`${finding.fileLocation || 'Не указано'}\`\n- **CWE/CVE:** ${finding.cwe || 'N/A'}\n- **Компонент:** ${finding.component || 'N/A'}\n- **Ответственный от сканера:** ${finding.assignee || 'Не назначен'}\n- **Критичность:** ${finding.severity}`,
     status: 'todo',
     priority: priority || (finding.severity === 'Critical' ? 'urgent' : finding.severity === 'High' ? 'high' : 'medium'),
-    assigneeId: assigneeId || null,
+    assigneeId: resolvedAssigneeId,
     sprintId: sprintId || null,
     storyPoints: finding.severity === 'Critical' ? 5 : 3,
     estimatedHours: finding.severity === 'Critical' ? 8 : 4,
@@ -1243,6 +1249,8 @@ const handleJiraCreateIssue = (req, res) => {
   const description = fields.description || "Уязвимость, обнаруженная сканером DerScanner";
   const priorityName = fields.priority && (fields.priority.name || fields.priority.id) ? fields.priority.name : "High";
   const projectKey = fields.project && (fields.project.key || fields.project.id) ? fields.project.key : "PULSE";
+  const assigneeVal = fields.assignee && (fields.assignee.name || fields.assignee.key || fields.assignee.id) ? (fields.assignee.name || fields.assignee.key || fields.assignee.id) : null;
+  const componentsVal = fields.components && Array.isArray(fields.components) ? fields.components.map(c => c.name || c.id).join(', ') : null;
 
   const newId = `fnd-${Date.now()}_${Math.floor(Math.random() * 1000)}`;
   const newFinding = {
@@ -1252,6 +1260,8 @@ const handleJiraCreateIssue = (req, res) => {
     description: typeof description === 'string' ? description : JSON.stringify(description),
     severity: ['Highest', 'Critical', '1'].includes(String(priorityName)) ? 'Critical' : ['High', '2'].includes(String(priorityName)) ? 'High' : 'Medium',
     project: String(projectKey).trim(),
+    assignee: assigneeVal,
+    component: componentsVal,
     cwe: 'SAST/DAST',
     fileLocation: fields.customfield_location || 'Смотрите описание в Jira тикете',
     status: 'new',
