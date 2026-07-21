@@ -4,9 +4,10 @@ import { BarChart3, TrendingUp, Clock, AlertCircle, Award, Download, Loader2 } f
 import './Analytics.css';
 
 export const Analytics: React.FC = () => {
-  const { tasks, users, groups, activeSprintId } = useTaskContext();
+  const { tasks, users, groups, activeSprintId, filters } = useTaskContext();
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const employeeUsers = users.filter(u => u.id !== 'usr-1' && u.login?.toLowerCase() !== 'admin');
+  const targetSprintId = (filters && filters.sprintId) ? filters.sprintId : activeSprintId;
 
   const handleDownloadPdf = async () => {
     try {
@@ -22,7 +23,7 @@ export const Analytics: React.FC = () => {
         'x-auth-user': userId
       };
 
-      const response = await fetch(`/api/reports/pdf?sprintId=${activeSprintId}&userId=${userId}`, {
+      const response = await fetch(`/api/reports/pdf?sprintId=${targetSprintId}&userId=${userId}`, {
         method: 'GET',
         headers
       });
@@ -53,9 +54,9 @@ export const Analytics: React.FC = () => {
     }
   };
 
-  const currentTasks = activeSprintId === 'all' 
+  const currentTasks = (targetSprintId === 'all' || !targetSprintId)
     ? tasks 
-    : tasks.filter(t => t.sprintId === activeSprintId);
+    : tasks.filter(t => t.sprintId === targetSprintId);
 
   const totalTasks = currentTasks.length || 1;
   const doneTasks = currentTasks.filter(t => t.status === 'done');
@@ -259,8 +260,10 @@ export const Analytics: React.FC = () => {
         <div className="leaderboard-grid">
           {employeeUsers.map(u => {
             const uTasks = currentTasks.filter(t => {
-              const assignId = t.assigneeId || (t as any).assignee;
-              return assignId === u.id || (t.assigneeGroupId && groups.some(g => g.id === t.assigneeGroupId && g.memberIds?.includes(u.id)));
+              const assignId = String(t.assigneeId || (t as any).assignee || '');
+              const matchesUser = assignId === u.id || (u.login && assignId.toLowerCase() === u.login.toLowerCase());
+              const matchesGroup = t.assigneeGroupId && groups?.some(g => g.id === t.assigneeGroupId && g.memberIds?.includes(u.id));
+              return matchesUser || matchesGroup;
             });
             const uDone = uTasks.filter(t => t.status === 'done').length;
             const uSP = uTasks.reduce((sum, t) => sum + (t.storyPoints || 0), 0);

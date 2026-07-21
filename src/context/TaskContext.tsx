@@ -112,7 +112,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch { return []; }
   });
   const [isNetworkModalOpen, setIsNetworkModalOpen] = useState<boolean>(false);
-  const [activeSprintId, setActiveSprintId] = useState<string>('sprint-1');
+  const [activeSprintId, setActiveSprintId] = useState<string>('all');
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
   const [viewMode, setViewModeState] = useState<ViewMode>(() => {
     const path = window.location.pathname.replace(/^\//, '').toLowerCase();
