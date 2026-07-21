@@ -1114,11 +1114,17 @@ const handleJiraSearch = (req, res) => {
 };
 
 const handleJiraIssueTypes = (req, res) => {
+  const url = req.originalUrl || req.url || req.path || '';
   const issueTypes = [
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", description: "Уязвимость безопасности или баг", iconUrl: "", name: "Bug", subtask: false, avatarId: 1 },
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", description: "Задача разработки", iconUrl: "", name: "Task", subtask: false, avatarId: 2 },
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", description: "Уязвимость SAST/DAST", iconUrl: "", name: "Vulnerability", subtask: false, avatarId: 3 }
   ];
+  if (url.match(/\/issuetype\/(1000[1-3])$/)) {
+    const matchedId = url.match(/\/issuetype\/(1000[1-3])$/)[1];
+    const found = issueTypes.find(t => t.id === matchedId) || issueTypes[2];
+    return res.status(200).json(found);
+  }
   return res.status(200).json({
     maxResults: 50,
     startAt: 0,
@@ -1148,14 +1154,14 @@ const handleJiraPriorities = (req, res) => {
 
 const handleJiraFields = (req, res) => {
   const fields = [
-    { id: "summary", name: "Summary", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "string", system: "summary" } },
-    { id: "description", name: "Description", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "string", system: "description" } },
-    { id: "issuetype", name: "Issue Type", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "issuetype", system: "issuetype" } },
-    { id: "project", name: "Project", custom: false, orderable: false, navigable: true, searchable: true, schema: { type: "project", system: "project" } },
-    { id: "priority", name: "Priority", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "priority", system: "priority" } },
-    { id: "assignee", name: "Assignee", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "user", system: "assignee" } },
-    { id: "components", name: "Components", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "array", items: "component", system: "components" } },
-    { id: "parent", name: "Parent", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "issuelink", system: "parent" } }
+    { id: "summary", key: "summary", name: "Summary", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "string", system: "summary" } },
+    { id: "description", key: "description", name: "Description", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "string", system: "description" } },
+    { id: "issuetype", key: "issuetype", name: "Issue Type", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "issuetype", system: "issuetype" } },
+    { id: "project", key: "project", name: "Project", custom: false, orderable: false, navigable: true, searchable: true, schema: { type: "project", system: "project" } },
+    { id: "priority", key: "priority", name: "Priority", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "priority", system: "priority" } },
+    { id: "assignee", key: "assignee", name: "Assignee", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "user", system: "assignee" } },
+    { id: "components", key: "components", name: "Components", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "array", items: "component", system: "components" } },
+    { id: "parent", key: "parent", name: "Parent", custom: false, orderable: true, navigable: true, searchable: true, schema: { type: "issuelink", system: "parent" } }
   ];
   return res.status(200).json({
     maxResults: 50,
@@ -1182,7 +1188,7 @@ const handleJiraStatuses = (req, res) => {
       { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", subtask: false, statuses: statusList }
     ]);
   }
-  res.status(200).json(statusList);
+  return res.status(200).json(statusList);
 };
 
 const handleJiraVersions = (req, res) => {
@@ -1193,37 +1199,49 @@ const handleJiraVersions = (req, res) => {
 
 const handleJiraCreateMeta = (req, res) => {
   const path = req.path || req.originalUrl || '';
+  const statusList = [
+    { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/1`, description: "Новый инцидент", iconUrl: "", name: "New", id: "1", statusCategory: { id: 2, key: "new", colorName: "blue-gray", name: "To Do" } },
+    { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/2`, description: "В работе", iconUrl: "", name: "In Progress", id: "2", statusCategory: { id: 4, key: "indeterminate", colorName: "yellow", name: "In Progress" } },
+    { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/3`, description: "Решено", iconUrl: "", name: "Done", id: "3", statusCategory: { id: 3, key: "done", colorName: "green", name: "Done" } }
+  ];
+
   const fieldsObject = {
-    summary: { required: true, schema: { type: "string", system: "summary" }, name: "Summary", fieldId: "summary", operations: ["set"] },
-    description: { required: false, schema: { type: "string", system: "description" }, name: "Description", fieldId: "description", operations: ["set"] },
-    issuetype: { required: true, schema: { type: "issuetype", system: "issuetype" }, name: "Issue Type", fieldId: "issuetype", operations: [], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", name: "Bug", subtask: false }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", name: "Task", subtask: false }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", subtask: false } ] },
-    project: { required: true, schema: { type: "project", system: "project" }, name: "Project", fieldId: "project", operations: [], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/project/10001`, id: "10001", key: "PULSE", name: "Pulse 12 Corporate Security & Dev Project" } ] },
-    priority: { required: false, schema: { type: "priority", system: "priority" }, name: "Priority", fieldId: "priority", operations: ["set"], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/1`, iconUrl: "", name: "Highest", id: "1" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/2`, iconUrl: "", name: "High", id: "2" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/3`, iconUrl: "", name: "Medium", id: "3" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/4`, iconUrl: "", name: "Low", id: "4" } ] },
-    assignee: { required: false, schema: { type: "user", system: "assignee" }, name: "Assignee", fieldId: "assignee", operations: ["set"], allowedValues: getJiraUsersList(req) },
-    components: { required: false, schema: { type: "array", items: "component", system: "components" }, name: "Components", fieldId: "components", operations: ["add", "set", "remove"], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10001`, id: "10001", name: "Backend SAST" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10002`, id: "10002", name: "Frontend SAST" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10003`, id: "10003", name: "DevOps Infrastructure" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10004`, id: "10004", name: "General Security" } ] },
-    parent: { required: false, schema: { type: "issuelink", system: "parent" }, name: "Parent", fieldId: "parent", operations: ["set"], allowedValues: [] }
+    summary: { id: "summary", key: "summary", fieldId: "summary", name: "Summary", required: true, hasDefaultValue: false, schema: { type: "string", system: "summary" }, operations: ["set"] },
+    description: { id: "description", key: "description", fieldId: "description", name: "Description", required: false, hasDefaultValue: false, schema: { type: "string", system: "description" }, operations: ["set"] },
+    issuetype: { id: "issuetype", key: "issuetype", fieldId: "issuetype", name: "Issue Type", required: true, hasDefaultValue: false, schema: { type: "issuetype", system: "issuetype" }, operations: [], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", name: "Bug", subtask: false }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", name: "Task", subtask: false }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", subtask: false } ] },
+    project: { id: "project", key: "project", fieldId: "project", name: "Project", required: true, hasDefaultValue: false, schema: { type: "project", system: "project" }, operations: [], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/project/10001`, id: "10001", key: "PULSE", name: "Pulse 12 Corporate Security & Dev Project" } ] },
+    priority: { id: "priority", key: "priority", fieldId: "priority", name: "Priority", required: false, hasDefaultValue: false, schema: { type: "priority", system: "priority" }, operations: ["set"], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/1`, iconUrl: "", name: "Highest", id: "1" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/2`, iconUrl: "", name: "High", id: "2" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/3`, iconUrl: "", name: "Medium", id: "3" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/4`, iconUrl: "", name: "Low", id: "4" } ] },
+    assignee: { id: "assignee", key: "assignee", fieldId: "assignee", name: "Assignee", required: false, hasDefaultValue: false, schema: { type: "user", system: "assignee" }, operations: ["set"], allowedValues: getJiraUsersList(req) },
+    components: { id: "components", key: "components", fieldId: "components", name: "Components", required: false, hasDefaultValue: false, schema: { type: "array", items: "component", system: "components" }, operations: ["add", "set", "remove"], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10001`, id: "10001", name: "Backend SAST" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10002`, id: "10002", name: "Frontend SAST" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10003`, id: "10003", name: "DevOps Infrastructure" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10004`, id: "10004", name: "General Security" } ] },
+    parent: { id: "parent", key: "parent", fieldId: "parent", name: "Parent", required: false, hasDefaultValue: false, schema: { type: "issuelink", system: "parent" }, operations: ["set"], allowedValues: [] }
   };
+
+  const fieldsList = Object.values(fieldsObject);
+  const issueTypesList = [
+    { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", name: "Bug", description: "Уязвимость или баг", subtask: false, statuses: statusList, fields: fieldsObject },
+    { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", name: "Task", description: "Задача разработки", subtask: false, statuses: statusList, fields: fieldsObject },
+    { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", description: "Уязвимость SAST/DAST", subtask: false, statuses: statusList, fields: fieldsObject }
+  ];
 
   if (path.includes('/issuetypes/') && path.match(/\/issuetypes\/[^\/]+$/)) {
     return res.status(200).json({
       maxResults: 50,
       startAt: 0,
-      total: Object.keys(fieldsObject).length,
+      total: fieldsList.length,
       isLast: true,
-      values: Object.values(fieldsObject)
+      values: fieldsList,
+      fields: fieldsObject,
+      items: fieldsList
     });
   }
   if (path.includes('/issuetypes')) {
     return res.status(200).json({
       maxResults: 50,
       startAt: 0,
-      total: 3,
+      total: issueTypesList.length,
       isLast: true,
-      values: [
-        { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", name: "Bug", subtask: false, fields: fieldsObject },
-        { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", name: "Task", subtask: false, fields: fieldsObject },
-        { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", subtask: false, fields: fieldsObject }
-      ]
+      values: issueTypesList,
+      issueTypes: issueTypesList
     });
   }
 
@@ -1233,11 +1251,7 @@ const handleJiraCreateMeta = (req, res) => {
         id: "10001",
         key: "PULSE",
         name: "Pulse 12 Corporate Security & Dev Project",
-        issuetypes: [
-          { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", name: "Bug", subtask: false, fields: fieldsObject },
-          { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", name: "Task", subtask: false, fields: fieldsObject },
-          { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", subtask: false, fields: fieldsObject }
-        ]
+        issuetypes: issueTypesList
       }
     ]
   });
