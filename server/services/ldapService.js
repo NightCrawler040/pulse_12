@@ -13,20 +13,15 @@ const safeUnbind = (client) => {
 };
 
 // Вспомогательная функция для автоматического разрешения имен групп AD (например internetdkb) в полный DN
-const resolveGroupFilter = async (client, baseDN, rawFilter) => {
-  if (!rawFilter || typeof rawFilter !== 'string') return rawFilter;
-  let resolvedFilter = rawFilter.trim();
+export const resolveGroupFilter = async (client, baseDN, userFilter) => {
+  if (!userFilter || typeof userFilter !== 'string') return '(objectClass=person)';
+  let resolvedFilter = userFilter.trim();
 
-  // Если ввели просто "group:internetdkb" или "group=internetdkb"
-  if (/^group[:=](.+)$/i.test(resolvedFilter)) {
-    const gName = resolvedFilter.replace(/^group[:=]/i, '').trim();
-    resolvedFilter = `memberOf=${gName}`;
-  } else if (/^[a-zA-Z0-9_\-\.а-яА-Я]+$/.test(resolvedFilter) && resolvedFilter.toLowerCase() !== 'person' && resolvedFilter.toLowerCase() !== 'user') {
-    // Если ввели просто одно слово вроде "internetdkb", ищем его либо как группу, либо в названии отдела
-    resolvedFilter = `(|(memberOf=${resolvedFilter})(department=*${resolvedFilter}*))`;
+  // Если ввели просто одно слово вроде "internetdkb", ищем его как группу
+  if (!resolvedFilter.includes('(') && !resolvedFilter.includes('=') && !resolvedFilter.includes(':')) {
+    resolvedFilter = `group:${resolvedFilter}`;
   }
 
-  // Ищем в фильтре конструкции memberOf=имяГруппы или memberOf=*имяГруппы* или group=имяГруппы
   const groupRegex = /(?:memberOf|group|groupName)[:=][\*]*([^)\*]+)[\*]*/gi;
   let match;
   let filterWithGroupDns = resolvedFilter;
@@ -55,7 +50,10 @@ const resolveGroupFilter = async (client, baseDN, rawFilter) => {
 
     if (groupDn) {
       console.log(`🔍 [LDAP Group Resolve] Группа AD "${groupName}" разрешена в DN: ${groupDn}`);
-      filterWithGroupDns = filterWithGroupDns.replace(fullMatch, `(memberOf=${groupDn})`);
+      const matchIndex = filterWithGroupDns.indexOf(fullMatch);
+      const isSurroundedByParens = matchIndex > 0 && filterWithGroupDns[matchIndex - 1] === '(' && filterWithGroupDns[matchIndex + fullMatch.length] === ')';
+      const replacement = isSurroundedByParens ? `memberOf=${groupDn}` : `(memberOf=${groupDn})`;
+      filterWithGroupDns = filterWithGroupDns.replace(fullMatch, replacement);
     } else {
       console.warn(`⚠️ [LDAP Group Resolve] Группа AD "${groupName}" не найдена в BaseDN: ${baseDN}. Поиск продолжится с исходным фильтром.`);
     }
@@ -189,9 +187,11 @@ export const fetchLdapUsers = async (settings) => {
 
         let filterToUse = resolvedFilter;
         if (!filterToUse.includes('(objectClass=')) {
-          filterToUse = `(&(objectClass=${objectClass})(!(objectClass=computer))(${filterToUse}))`;
+          const wrappedFilter = (filterToUse.startsWith('(') && filterToUse.endsWith(')')) ? filterToUse : `(${filterToUse})`;
+          filterToUse = `(&(objectClass=${objectClass})(!(objectClass=computer))${wrappedFilter})`;
         } else if (resolvedFilter !== rawUserFilter && !rawUserFilter.includes('objectClass=')) {
-          filterToUse = `(&(objectClass=${objectClass})(!(objectClass=computer))(${resolvedFilter}))`;
+          const wrappedFilter = (resolvedFilter.startsWith('(') && resolvedFilter.endsWith(')')) ? resolvedFilter : `(${resolvedFilter})`;
+          filterToUse = `(&(objectClass=${objectClass})(!(objectClass=computer))${wrappedFilter})`;
         }
 
         const attributesSet = new Set([
