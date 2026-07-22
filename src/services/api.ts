@@ -92,6 +92,10 @@ export interface DatabaseData {
 }
 
 export const apiService = {
+  get: <T>(endpoint: string, options?: RequestInit) => apiRequest<T>(endpoint, { ...options, method: 'GET' }),
+  post: <T>(endpoint: string, body?: any, options?: RequestInit) => apiRequest<T>(endpoint, { ...options, method: 'POST', body: body ? JSON.stringify(body) : undefined }),
+  put: <T>(endpoint: string, body?: any, options?: RequestInit) => apiRequest<T>(endpoint, { ...options, method: 'PUT', body: body ? JSON.stringify(body) : undefined }),
+  delete: <T>(endpoint: string, options?: RequestInit) => apiRequest<T>(endpoint, { ...options, method: 'DELETE' }),
   getServerUrl,
   setServerUrl,
   fetchData: () => apiRequest<DatabaseData>('/api/data'),

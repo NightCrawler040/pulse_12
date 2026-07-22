@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiService } from '../../services/api';
 
 interface LdapSettings {
   enabled: boolean;
@@ -49,12 +50,8 @@ export const LdapSettingsTab: React.FC = () => {
   const fetchSettings = async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('token') || '';
-      const res = await fetch('/api/ldap/settings', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
+      const data = await apiService.get<any>('/api/ldap/settings');
+      if (data) {
         setSettings(prev => ({ ...prev, ...data }));
       }
     } catch (err) {
@@ -69,23 +66,10 @@ export const LdapSettingsTab: React.FC = () => {
     setIsSaving(true);
     setTestResult(null);
     try {
-      const token = localStorage.getItem('token') || '';
-      const res = await fetch('/api/ldap/settings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(settings)
-      });
-      if (res.ok) {
-        setTestResult({ success: true, message: '✅ Настройки Active Directory / LDAP успешно сохранены в системе!' });
-      } else {
-        const errData = await res.json();
-        setTestResult({ success: false, error: errData.error || 'Ошибка сохранения настроек' });
-      }
+      await apiService.post<any>('/api/ldap/settings', settings);
+      setTestResult({ success: true, message: '✅ Настройки Active Directory / LDAP успешно сохранены в системе!' });
     } catch (err: any) {
-      setTestResult({ success: false, error: err.message });
+      setTestResult({ success: false, error: err.message || 'Ошибка сохранения настроек' });
     } finally {
       setIsSaving(false);
     }
@@ -95,23 +79,14 @@ export const LdapSettingsTab: React.FC = () => {
     setIsTesting(true);
     setTestResult(null);
     try {
-      const token = localStorage.getItem('token') || '';
-      const res = await fetch('/api/ldap/test', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(settings)
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const data = await apiService.post<any>('/api/ldap/test', settings);
+      if (data && data.success) {
         setTestResult({ success: true, message: data.message || '✅ Соединение с Active Directory установлено успешно!' });
       } else {
-        setTestResult({ success: false, error: data.error || 'Ошибка соединения' });
+        setTestResult({ success: false, error: (data && data.error) || 'Ошибка соединения' });
       }
     } catch (err: any) {
-      setTestResult({ success: false, error: err.message });
+      setTestResult({ success: false, error: err.message || 'Ошибка проверки соединения с AD' });
     } finally {
       setIsTesting(false);
     }
@@ -122,27 +97,18 @@ export const LdapSettingsTab: React.FC = () => {
     setSyncReport(null);
     setTestResult(null);
     try {
-      const token = localStorage.getItem('token') || '';
-      const res = await fetch('/api/ldap/sync', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(settings)
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const data = await apiService.post<any>('/api/ldap/sync', settings);
+      if (data && data.success) {
         setSyncReport(data.report);
         setTestResult({
           success: true,
           message: `🎉 Синхронизация завершена! Обработано сотрудников: ${data.report.syncedCount}, перепривязано задач по почте: ${data.report.reconciledTasksCount}`
         });
       } else {
-        setTestResult({ success: false, error: data.error || 'Ошибка синхронизации LDAP' });
+        setTestResult({ success: false, error: (data && data.error) || 'Ошибка синхронизации LDAP' });
       }
     } catch (err: any) {
-      setTestResult({ success: false, error: err.message });
+      setTestResult({ success: false, error: err.message || 'Ошибка синхронизации с AD' });
     } finally {
       setIsSyncing(false);
     }
