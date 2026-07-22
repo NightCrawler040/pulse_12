@@ -14,15 +14,13 @@ import {
   ExternalLink,
   Code2,
   FolderTree,
-  Bug,
-  Sparkles
+  Bug
 } from 'lucide-react';
 import './SecurityCenter.css';
 
 export const SecurityCenter: React.FC = () => {
   const { 
     findings, 
-    addFinding, 
     updateFindingStatus, 
     deleteFinding, 
     promoteFindingToTask, 
@@ -60,10 +58,6 @@ export const SecurityCenter: React.FC = () => {
   const [selectedPriority, setSelectedPriority] = useState<string>('high');
   const [isPromoting, setIsPromoting] = useState<boolean>(false);
 
-  const activeFindings = findings.filter(f => f.status === 'new' || f.status === 'analyzing');
-  const criticalCount = findings.filter(f => (f.severity === 'Critical' || f.severity === 'High') && (f.status === 'new' || f.status === 'analyzing')).length;
-  const promotedCount = findings.filter(f => f.status === 'promoted').length;
-
   const accessibleFindings = findings.filter(f => {
     if (isAdmin || !currentUser) return true;
     const userDept = currentUser.department || '';
@@ -73,8 +67,16 @@ export const SecurityCenter: React.FC = () => {
     return canAccessSystem(f.source);
   });
 
-  const filteredFindings = accessibleFindings.filter(f => {
+  const currentSystemFindings = accessibleFindings.filter(f => {
     if (systemTab !== 'all' && f.source !== systemTab) return false;
+    return true;
+  });
+
+  const activeFindings = currentSystemFindings.filter(f => f.status === 'new' || f.status === 'analyzing');
+  const criticalCount = currentSystemFindings.filter(f => (f.severity === 'Critical' || f.severity === 'High') && (f.status === 'new' || f.status === 'analyzing')).length;
+  const promotedCount = currentSystemFindings.filter(f => f.status === 'promoted').length;
+
+  const filteredFindings = currentSystemFindings.filter(f => {
     if (statusFilter === 'active' && f.status !== 'new' && f.status !== 'analyzing') return false;
     if (statusFilter === 'new' && f.status !== 'new') return false;
     if (statusFilter === 'analyzing' && f.status !== 'analyzing') return false;
@@ -118,43 +120,6 @@ export const SecurityCenter: React.FC = () => {
     }
   };
 
-  const handleSimulateAlert = () => {
-    const samples = [
-      {
-        source: 'derscanner' as const,
-        title: 'SQL Injection in AuthRepository.java',
-        description: 'Обнаружено неэкранированное построение SQL-запроса через конкатенацию строк в методе findUserByEmail(). Возможен несанкционированный доступ к БД.',
-        severity: 'Critical' as const,
-        project: 'Pulse12 Core Engine',
-        fileLocation: 'src/main/java/kz/pulse/AuthRepository.java:184',
-        cwe: 'CWE-89',
-        status: 'new' as const
-      },
-      {
-        source: 'derscanner' as const,
-        title: 'Cross-Site Scripting (Reflected XSS) in SearchBar',
-        description: 'Параметр q из GET-запроса выводится в DOM без предварительной санитизации HTML. Возможна инъекция вредоносного JS-скрипта.',
-        severity: 'High' as const,
-        project: 'Pulse12 Web Portal',
-        fileLocation: 'src/components/Search/SearchBar.tsx:42',
-        cwe: 'CWE-79',
-        status: 'new' as const
-      },
-      {
-        source: 'derscanner' as const,
-        title: 'Hardcoded API Secret Key in Config file',
-        description: 'В исходном коде обнаружен зашитый секретный ключ AWS S3. Требуется немедленно вынести секрет в переменные окружения.',
-        severity: 'Critical' as const,
-        project: 'Pulse12 Storage Service',
-        fileLocation: 'config/aws_s3.json:12',
-        cwe: 'CWE-798',
-        status: 'new' as const
-      }
-    ];
-    const randomSample = samples[Math.floor(Math.random() * samples.length)];
-    addFinding(randomSample);
-  };
-
   return (
     <div className="security-center-container">
       {/* Header Banner */}
@@ -176,17 +141,6 @@ export const SecurityCenter: React.FC = () => {
               Единый дашборд для приема и триажа алертов от статических (SAST/DAST) анализаторов кода (DerScanner) и систем мониторинга. Анализируйте уязвимости и в один клик отправляйте их разработчикам.
             </p>
           </div>
-        </div>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <button 
-            className="btn-secondary" 
-            style={{ background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.4)', color: 'hsl(var(--primary))', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}
-            onClick={handleSimulateAlert}
-            title="Смоделировать поступление алертов от DerScanner для проверки интерфейса"
-          >
-            <Sparkles size={16} />
-            🧪 Тестовый алерт DerScanner
-          </button>
         </div>
       </div>
 
@@ -226,7 +180,7 @@ export const SecurityCenter: React.FC = () => {
           <div className="stat-content">
             <div className="stat-label">Всего зафиксировано</div>
             <div className="stat-value">
-              {findings.length}
+              {currentSystemFindings.length}
             </div>
           </div>
           <CheckCircle2 size={32} style={{ color: 'hsl(var(--primary))', opacity: 0.8 }} />
@@ -278,37 +232,37 @@ export const SecurityCenter: React.FC = () => {
             className={`filter-btn ${statusFilter === 'active' ? 'active' : ''}`}
             onClick={() => setStatusFilter('active')}
           >
-            🔥 Активные ({findings.filter(f => f.status === 'new' || f.status === 'analyzing').length})
+            🔥 Активные ({currentSystemFindings.filter(f => f.status === 'new' || f.status === 'analyzing').length})
           </button>
           <button 
             className={`filter-btn ${statusFilter === 'new' ? 'active' : ''}`}
             onClick={() => setStatusFilter('new')}
           >
-            🆕 Новые ({findings.filter(f => f.status === 'new').length})
+            🆕 Новые ({currentSystemFindings.filter(f => f.status === 'new').length})
           </button>
           <button 
             className={`filter-btn ${statusFilter === 'analyzing' ? 'active' : ''}`}
             onClick={() => setStatusFilter('analyzing')}
           >
-            🔍 В анализе ({findings.filter(f => f.status === 'analyzing').length})
+            🔍 В анализе ({currentSystemFindings.filter(f => f.status === 'analyzing').length})
           </button>
           <button 
             className={`filter-btn ${statusFilter === 'promoted' ? 'active' : ''}`}
             onClick={() => setStatusFilter('promoted')}
           >
-            ➡️ В задачах ({findings.filter(f => f.status === 'promoted').length})
+            ➡️ В задачах ({currentSystemFindings.filter(f => f.status === 'promoted').length})
           </button>
           <button 
             className={`filter-btn ${statusFilter === 'false_positive' ? 'active' : ''}`}
             onClick={() => setStatusFilter('false_positive')}
           >
-            ✅ Ложные ({findings.filter(f => f.status === 'false_positive').length})
+            ✅ Ложные ({currentSystemFindings.filter(f => f.status === 'false_positive').length})
           </button>
           <button 
             className={`filter-btn ${statusFilter === 'all' ? 'active' : ''}`}
             onClick={() => setStatusFilter('all')}
           >
-            📂 Все ({findings.length})
+            📂 Все ({currentSystemFindings.length})
           </button>
 
           <span style={{ color: 'hsl(var(--border-color))', margin: '0 4px' }}>|</span>

@@ -857,6 +857,10 @@ app.post('/api/findings/:id/promote', requireAuth, (req, res) => {
     ],
     tags: ['Security', finding.source === 'derscanner' ? 'DerScanner' : finding.source.toUpperCase()],
     externalFindingId: finding.id,
+    project: finding.project || 'PULSE',
+    fileLocation: finding.fileLocation || 'Не указано',
+    cwe: finding.cwe || 'N/A',
+    component: finding.component || 'General Security',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };

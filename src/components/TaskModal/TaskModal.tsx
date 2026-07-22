@@ -429,6 +429,62 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
               />
             </div>
 
+            {/* Security & Project Summary Box */}
+            {existingTask && (existingTask.project || existingTask.externalFindingId || existingTask.cwe || existingTask.fileLocation || existingTask.tags?.some(t => ['derscanner', 'siem', 'waf', 'security'].includes(t.toLowerCase()))) && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(16, 185, 129, 0.08))',
+                border: '1px solid rgba(59, 130, 246, 0.35)',
+                borderRadius: '12px',
+                padding: '16px',
+                marginBottom: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(59, 130, 246, 0.2)', paddingBottom: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: 'hsl(var(--primary))', fontSize: '0.95rem' }}>
+                    <span>🛡️</span>
+                    <span>Контур безопасности и интеграции (Jira / DerScanner)</span>
+                  </div>
+                  {existingTask.externalFindingId && (
+                    <span style={{ fontSize: '0.75rem', background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
+                      ID инцидента: {existingTask.externalFindingId}
+                    </span>
+                  )}
+                </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '0.88rem' }}>
+                  <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px 12px', borderRadius: '8px', borderLeft: '3px solid hsl(var(--primary))' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 700 }}>Проект (Система)</div>
+                    <div style={{ fontWeight: 700, color: 'white', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      🏢 {existingTask.project || 'PULSE / Corporate Project'}
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px 12px', borderRadius: '8px', borderLeft: '3px solid #f97316' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 700 }}>Файл / Расположение</div>
+                    <div style={{ fontWeight: 600, color: '#fed7aa', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                      📁 {existingTask.fileLocation || 'Смотрите описание в тикете'}
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px 12px', borderRadius: '8px', borderLeft: '3px solid #eab308' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 700 }}>CWE / Категория</div>
+                    <div style={{ fontWeight: 700, color: '#fef08a' }}>
+                      🐛 {existingTask.cwe || 'SAST/DAST'}
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px 12px', borderRadius: '8px', borderLeft: '3px solid #22c55e' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'hsl(var(--text-muted))', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 700 }}>Компонент</div>
+                    <div style={{ fontWeight: 700, color: '#bbf7d0' }}>
+                      🧩 {existingTask.component || 'General Security'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Description */}
             <div className="form-group">
               <label className="form-label">Описание задачи (Markdown поддерживается)</label>
@@ -673,6 +729,24 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
 
           {/* Sidebar Grid Col (Metadata) */}
           <div className="modal-side-col">
+            {/* Project / Scanner System Box */}
+            {existingTask && (existingTask.project || existingTask.externalFindingId) && (
+              <div className="form-group" style={{ background: 'rgba(59, 130, 246, 0.08)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+                <label className="form-label" style={{ color: 'hsl(var(--primary))', fontWeight: 700, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>🏢</span>
+                  <span>Проект / Контур Jira</span>
+                </label>
+                <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'white' }}>
+                  {existingTask.project || 'PULSE / Corporate Project'}
+                </div>
+                {existingTask.externalFindingId && (
+                  <div style={{ fontSize: '0.75rem', color: '#60a5fa', marginTop: '4px' }}>
+                    Связан с инцидентом ИБ: <strong>#{existingTask.externalFindingId}</strong>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Assignee (12 employees or group) */}
             <div className="form-group">
               <label className="form-label">

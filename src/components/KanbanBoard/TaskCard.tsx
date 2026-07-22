@@ -95,6 +95,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, users, onCardCl
             </span>
           </div>
 
+          {/* Project Badge */}
+          {(task.project || task.externalFindingId) && (
+            <div style={{ fontSize: '0.74rem', fontWeight: 700, color: '#60a5fa', margin: '4px 0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span>🏢</span>
+              <span>Проект: {task.project || 'PULSE'}</span>
+            </div>
+          )}
+
           {/* Title */}
           <h4 className="task-title">{task.title}</h4>
 

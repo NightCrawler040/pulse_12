@@ -45,6 +45,10 @@ export interface Task {
   tags: string[];
   teamReadiness?: Record<string, boolean>;
   externalFindingId?: string;
+  project?: string;
+  fileLocation?: string;
+  cwe?: string;
+  component?: string;
   createdAt: string;
   updatedAt: string;
   sprintId: string | null;

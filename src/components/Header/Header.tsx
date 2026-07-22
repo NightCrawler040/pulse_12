@@ -13,7 +13,6 @@ import {
   Moon, 
   Download, 
   Upload, 
-  RotateCcw, 
   Filter, 
   X,
   Sparkles,
@@ -43,7 +42,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewTaskModal, onOpenLoginM
     users, 
     filters, 
     setFilters, 
-    resetToDefault, 
     exportData, 
     importData,
     sprints,
@@ -307,13 +305,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewTaskModal, onOpenLoginM
               accept=".json" 
               onChange={handleFileChange} 
             />
-            <button 
-              className="icon-btn danger-hover" 
-              onClick={resetToDefault} 
-              title="Сброс к демо-данным"
-            >
-              <RotateCcw size={18} />
-            </button>
           </div>
         </div>
       </div>
