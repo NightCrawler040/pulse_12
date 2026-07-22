@@ -125,7 +125,15 @@ export const fetchLdapUsers = async (settings) => {
       const searchOptions = {
         filter: filter,
         scope: 'sub',
-        attributes: [loginAttr, emailAttr, nameAttr, deptAttr, 'sAMAccountName', 'userPrincipalName', 'mail', 'displayName', 'cn', 'department', 'distinguishedName']
+        paged: true,
+        sizeLimit: 1000,
+        attributes: [
+          loginAttr, emailAttr, nameAttr, deptAttr,
+          'sAMAccountName', 'samaccountname',
+          'userPrincipalName', 'userprincipalname',
+          'mail', 'displayName', 'displayname',
+          'cn', 'department', 'distinguishedName', 'distinguishedname'
+        ]
       };
 
       client.search(settings.baseDN, searchOptions, (searchErr, res) => {
@@ -135,25 +143,47 @@ export const fetchLdapUsers = async (settings) => {
 
         res.on('searchEntry', (entry) => {
           const obj = entry.object || {};
-          const dn = entry.dn?.toString() || obj.distinguishedName || '';
+          const dn = entry.dn?.toString() || obj.distinguishedName || obj.distinguishedname || '';
           
           const getVal = (attrName) => {
-            if (!attrName || !obj[attrName]) return '';
-            if (Array.isArray(obj[attrName])) return String(obj[attrName][0]).trim();
-            return String(obj[attrName]).trim();
+            if (!attrName) return '';
+            // 1. Попытка точного совпадения или регистронезависимого поиска в entry.object
+            let val = obj[attrName];
+            if (!val && typeof obj === 'object') {
+              const lowerKey = attrName.toLowerCase();
+              const foundKey = Object.keys(obj).find(k => k.toLowerCase() === lowerKey);
+              if (foundKey) val = obj[foundKey];
+            }
+            // 2. Попытка поиска в entry.attributes (стандарт ldapjs)
+            if (!val && Array.isArray(entry.attributes)) {
+              const attr = entry.attributes.find(a => (a.type || a.name || '').toLowerCase() === attrName.toLowerCase());
+              if (attr && attr.values && attr.values.length > 0) {
+                val = attr.values;
+              } else if (attr && attr.vals && attr.vals.length > 0) {
+                val = attr.vals;
+              }
+            }
+            if (!val) return '';
+            if (Array.isArray(val)) return String(val[0]).trim();
+            return String(val).trim();
           };
 
           let email = getVal(emailAttr) || getVal('mail') || getVal('userPrincipalName');
           let login = getVal(loginAttr) || getVal('sAMAccountName') || getVal('userPrincipalName');
-          let name = getVal(nameAttr) || getVal('displayName') || getVal('cn') || login;
+          let name = getVal(nameAttr) || getVal('displayName') || getVal('cn');
           let department = getVal(deptAttr) || getVal('department') || 'Корпоративный отдел';
 
-          if (login || email) {
+          // Если есть хотя бы логин, почта или имя (CN) — сохраняем сотрудника!
+          if (!login && !email && name) {
+            login = getVal('sAMAccountName') || getVal('cn') || (dn.split(',')[0].replace(/CN=/i, '').trim()) || `user_${Date.now()}`;
+          }
+
+          if (login || email || name) {
             users.push({
               dn,
-              login: login || email.split('@')[0],
+              login: login || (email ? email.split('@')[0] : `user_${users.length + 1}`),
               email: email || `${login}@${settings.domainName || 'enpf.kz'}`,
-              name,
+              name: name || login || email,
               department
             });
           }
