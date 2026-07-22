@@ -524,6 +524,14 @@ export const importSelectedLdapUsers = async (dbData, saveCollection, selectedUs
   return await reconcileAndSaveLdapUsers(dbData, saveCollection, selectedUsers, settings);
 };
 
+const createLdapClient = (settings) => {
+  return ldap.createClient({
+    url: settings.serverUrl,
+    timeout: 30000,
+    connectTimeout: 15000
+  });
+};
+
 export const authenticateLdapUser = (loginInput, passwordInput, settings = {}) => {
   return new Promise((resolve) => {
     const cleanLogin = String(loginInput || '').trim();
@@ -604,9 +612,7 @@ export const authenticateLdapUser = (loginInput, passwordInput, settings = {}) =
       const nameAttr = settings.nameAttribute || 'displayName';
       const deptAttr = settings.departmentAttribute || 'department';
 
-      const filter = cleanLogin.includes('@')
-        ? `(|(${emailAttr}=${cleanLogin})(${loginAttr}=${cleanLogin})(mail=${cleanLogin})(userPrincipalName=${cleanLogin}))`
-        : `(|(${loginAttr}=${cleanLogin})(sAMAccountName=${cleanLogin})(userPrincipalName=${cleanLogin}))`;
+      const filter = `(|(${loginAttr}=${cleanLogin})(${emailAttr}=${cleanLogin})(sAMAccountName=${cleanLogin})(userPrincipalName=${cleanLogin})(mail=${cleanLogin})(cn=${cleanLogin})(displayName=${cleanLogin})(name=${cleanLogin}))`;
 
       client.search(settings.baseDN, { filter, scope: 'sub', sizeLimit: 1 }, (searchErr, res) => {
         if (searchErr) {

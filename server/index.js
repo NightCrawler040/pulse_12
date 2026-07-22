@@ -398,6 +398,14 @@ app.post('/api/login', loginRateLimiter, async (req, res) => {
     return res.status(400).json({ success: false, error: 'Введите Логин и Пароль' });
   }
 
+  try {
+    const latestData = await getAllData();
+    if (latestData.users && Array.isArray(latestData.users)) dbData.users = latestData.users;
+    if (latestData.ldap_settings !== undefined) dbData.ldap_settings = latestData.ldap_settings;
+  } catch (err) {
+    console.error('⚠️ [Login] Ошибка обновления dbData перед входом:', err.message);
+  }
+
   let user = dbData.users.find(u => {
     if (u.isActive === false) return false;
     const matchLogin = (u.login && String(u.login).trim().toLowerCase() === cleanLogin.toLowerCase()) || 
