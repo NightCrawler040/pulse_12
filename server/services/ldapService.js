@@ -135,7 +135,8 @@ export const fetchLdapUsers = async (settings) => {
           'sAMAccountName', 'samaccountname',
           'userPrincipalName', 'userprincipalname',
           'mail', 'displayName', 'displayname',
-          'cn', 'department', 'distinguishedName', 'distinguishedname'
+          'cn', 'department', 'distinguishedName', 'distinguishedname',
+          'objectClass', 'objectclass', 'objectCategory', 'objectcategory', 'userAccountControl', 'useraccountcontrol'
         ]
       };
 
@@ -171,10 +172,31 @@ export const fetchLdapUsers = async (settings) => {
             return String(val).trim();
           };
 
-          let email = getVal(emailAttr) || getVal('mail') || getVal('userPrincipalName');
           let login = getVal(loginAttr) || getVal('sAMAccountName') || getVal('userPrincipalName');
+          let email = getVal(emailAttr) || getVal('mail') || getVal('userPrincipalName');
           let name = getVal(nameAttr) || getVal('displayName') || getVal('cn');
           let department = getVal(deptAttr) || getVal('department') || 'Корпоративный отдел';
+
+          // --- АВТОМАТИЧЕСКАЯ ФИЛЬТРАЦИЯ СИСТЕМ И КОМПЬЮТЕРОВ (ОСТАВЛЯЕМ ТОЛЬКО ЛЮДЕЙ!) ---
+          // 1. Если sAMAccountName или логин заканчивается на $ (например, WEB-01$ или KRBTGT$) — это компьютер или сервис!
+          if (login.endsWith('$') || dn.includes('CN=Computers') || dn.includes('OU=Domain Controllers')) {
+            return;
+          }
+          // 2. Исключаем системные почтовые ящики Exchange (HealthMailbox, SystemMailbox, SM_*, CAS_*)
+          if (/^(HealthMailbox|SystemMailbox|SM_|CAS_|MSOL_|krbtgt)/i.test(login) || /^(HealthMailbox|SystemMailbox)/i.test(name)) {
+            return;
+          }
+          // 3. Проверяем objectClass (если это computer или group — пропускаем)
+          const objClassStr = String(getVal('objectClass') || '').toLowerCase();
+          if (objClassStr.includes('computer') || objClassStr.includes('group') || objClassStr.includes('organizationalunit') || objClassStr.includes('msds-groupmanagedserviceaccount')) {
+            return;
+          }
+          // 4. Проверяем флаги отключения или системности (userAccountControl: если установлен бит 2 - account disabled)
+          const uac = parseInt(getVal('userAccountControl') || '0', 10);
+          if (uac > 0 && (uac & 2) !== 0) {
+            // Учетная запись отключена (Account Disabled)
+            return;
+          }
 
           // Если есть хотя бы логин, почта или имя (CN) — сохраняем сотрудника!
           if (!login && !email && name) {
@@ -197,7 +219,7 @@ export const fetchLdapUsers = async (settings) => {
         });
 
         res.on('error', (err) => {
-          if (err && (err.name === 'ReferralError' || err.code === 10 || err.name === 'SizeLimitExceededError' || err.code === 4)) {
+          if (err && (err.name === 'ReferralError' || err.code === 10 || err.name === 'SizeLimitExceededError' || err.code === 4 || err.name === 'TimeLimitExceededError' || err.code === 3 || (err.message && (err.message.toLowerCase().includes('timeout') || err.message.toLowerCase().includes('limit exceeded'))))) {
             return finish(null, users);
           }
           finish(err);
