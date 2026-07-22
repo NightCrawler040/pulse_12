@@ -5,6 +5,13 @@ import ldap from 'ldapjs';
  * Handles LDAP connection testing, synchronization, user merging by email/login, and automatic task reconciliation.
  */
 
+const safeUnbind = (client) => {
+  if (!client) return;
+  try {
+    client.unbind((err) => {});
+  } catch (e) {}
+};
+
 export const testLdapConnection = async (settings) => {
   return new Promise((resolve) => {
     if (!settings || !settings.serverUrl) {
@@ -13,47 +20,61 @@ export const testLdapConnection = async (settings) => {
 
     const client = ldap.createClient({
       url: settings.serverUrl,
-      timeout: 6000,
-      connectTimeout: 6000
+      timeout: 8000,
+      connectTimeout: 8000
     });
 
+    let finished = false;
+    const finish = (result) => {
+      if (finished) return;
+      finished = true;
+      safeUnbind(client);
+      resolve(result);
+    };
+
     client.on('error', (err) => {
-      resolve({ success: false, error: `Ошибка соединения с LDAP/AD: ${err.message}` });
+      finish({ success: false, error: `Ошибка соединения с LDAP/AD: ${err.message}` });
     });
 
     const bindDn = settings.bindDN || settings.username || '';
     const bindPass = settings.bindPassword || settings.password || '';
 
     if (!bindDn) {
-      client.unbind();
-      return resolve({ success: false, error: 'Укажите имя пользователя (bindDN или UPN) для подключения к Active Directory' });
+      return finish({ success: false, error: 'Укажите имя пользователя (bindDN или UPN) для подключения к Active Directory' });
     }
 
     client.bind(bindDn, bindPass, (err) => {
       if (err) {
-        client.unbind();
-        return resolve({ success: false, error: `Ошибка аутентификации (bind): ${err.message}` });
+        return finish({ success: false, error: `Ошибка аутентификации (bind): ${err.message}` });
       }
 
-      // Если подключились успешно, попробуем сделать базовый поиск в baseDN (или просто вернем успех)
-      if (settings.baseDN) {
-        const searchOptions = {
-          filter: settings.userFilter || '(objectClass=person)',
-          scope: 'sub',
-          sizeLimit: 1
-        };
-        client.search(settings.baseDN, searchOptions, (searchErr, res) => {
-          if (searchErr) {
-            client.unbind();
-            return resolve({ success: true, message: `Подключение к LDAP успешно, но поиск в BaseDN (${settings.baseDN}) вернул предупреждение: ${searchErr.message}` });
-          }
-          client.unbind();
-          return resolve({ success: true, message: '✅ Подключение и авторизация в Active Directory прошли успешно!' });
-        });
-      } else {
-        client.unbind();
-        return resolve({ success: true, message: '✅ Подключение и авторизация в Active Directory прошли успешно!' });
+      if (!settings.baseDN) {
+        return finish({ success: true, message: '✅ Подключение и авторизация в Active Directory прошли успешно!' });
       }
+
+      const searchOptions = {
+        filter: settings.userFilter || '(objectClass=person)',
+        scope: 'sub',
+        sizeLimit: 1
+      };
+
+      client.search(settings.baseDN, searchOptions, (searchErr, res) => {
+        if (searchErr) {
+          return finish({ success: true, message: `Подключение к LDAP успешно, но поиск в BaseDN (${settings.baseDN}) вернул предупреждение: ${searchErr.message}` });
+        }
+
+        res.on('searchEntry', () => {});
+        res.on('searchReference', () => {});
+        res.on('error', (resErr) => {
+          if (resErr && (resErr.name === 'ReferralError' || resErr.code === 10 || resErr.name === 'SizeLimitExceededError' || resErr.code === 4)) {
+            return finish({ success: true, message: '✅ Подключение и авторизация в Active Directory прошли успешно!' });
+          }
+          finish({ success: true, message: `✅ Подключение успешно, но поиск в BaseDN (${settings.baseDN}) выдал ошибку: ${resErr.message}` });
+        });
+        res.on('end', () => {
+          finish({ success: true, message: '✅ Подключение и авторизация в Active Directory прошли успешно!' });
+        });
+      });
     });
   });
 };
@@ -66,12 +87,23 @@ export const fetchLdapUsers = async (settings) => {
 
     const client = ldap.createClient({
       url: settings.serverUrl,
-      timeout: 10000,
-      connectTimeout: 10000
+      timeout: 15000,
+      connectTimeout: 15000
     });
 
+    let finished = false;
+    const users = [];
+
+    const finish = (err, result) => {
+      if (finished) return;
+      finished = true;
+      safeUnbind(client);
+      if (err) reject(err);
+      else resolve(result);
+    };
+
     client.on('error', (err) => {
-      reject(err);
+      finish(err);
     });
 
     const bindDn = settings.bindDN || settings.username || '';
@@ -79,11 +111,9 @@ export const fetchLdapUsers = async (settings) => {
 
     client.bind(bindDn, bindPass, (bindErr) => {
       if (bindErr) {
-        client.unbind();
-        return reject(bindErr);
+        return finish(bindErr);
       }
 
-      const users = [];
       const loginAttr = settings.loginAttribute || 'userPrincipalName';
       const emailAttr = settings.emailAttribute || 'mail';
       const nameAttr = settings.nameAttribute || 'displayName';
@@ -100,12 +130,11 @@ export const fetchLdapUsers = async (settings) => {
 
       client.search(settings.baseDN, searchOptions, (searchErr, res) => {
         if (searchErr) {
-          client.unbind();
-          return reject(searchErr);
+          return finish(searchErr);
         }
 
         res.on('searchEntry', (entry) => {
-          const obj = entry.object;
+          const obj = entry.object || {};
           const dn = entry.dn?.toString() || obj.distinguishedName || '';
           
           const getVal = (attrName) => {
@@ -130,14 +159,19 @@ export const fetchLdapUsers = async (settings) => {
           }
         });
 
+        res.on('searchReference', () => {
+          // Игнорируем рефералы AD (например, DomainDnsZones / ForestDnsZones)
+        });
+
         res.on('error', (err) => {
-          client.unbind();
-          reject(err);
+          if (err && (err.name === 'ReferralError' || err.code === 10 || err.name === 'SizeLimitExceededError' || err.code === 4)) {
+            return finish(null, users);
+          }
+          finish(err);
         });
 
         res.on('end', () => {
-          client.unbind();
-          resolve(users);
+          finish(null, users);
         });
       });
     });
