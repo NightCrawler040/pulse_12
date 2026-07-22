@@ -17,7 +17,7 @@ export const resolveGroupFilter = async (client, baseDN, userFilter) => {
   if (!userFilter || typeof userFilter !== 'string') return '(objectClass=person)';
   let resolvedFilter = userFilter.trim();
 
-  // Если ввели просто одно слово вроде "internetdkb", ищем его как группу
+  // Если ввели просто одно слово вроде "internetdkb" или "Управление Защиты Информации", ищем его как группу или отдел
   if (!resolvedFilter.includes('(') && !resolvedFilter.includes('=') && !resolvedFilter.includes(':')) {
     resolvedFilter = `group:${resolvedFilter}`;
   }
@@ -31,31 +31,69 @@ export const resolveGroupFilter = async (client, baseDN, userFilter) => {
     const groupName = match[1].trim();
     if (!groupName || groupName.toUpperCase().startsWith('CN=')) continue;
 
-    const groupDn = await new Promise((resolve) => {
+    const groupResult = await new Promise((resolve) => {
       try {
-        const groupSearchFilter = `(&(objectClass=group)(|(sAMAccountName=${groupName})(cn=${groupName})(displayName=${groupName})))`;
-        client.search(baseDN, { filter: groupSearchFilter, scope: 'sub', sizeLimit: 1 }, (err, res) => {
+        const groupSearchFilter = `(|(&(objectClass=group)(|(sAMAccountName=${groupName})(cn=${groupName})(name=${groupName})(displayName=${groupName})))(&(objectClass=organizationalUnit)(|(ou=${groupName})(name=${groupName}))))`;
+        client.search(baseDN, { filter: groupSearchFilter, scope: 'sub', sizeLimit: 5 }, (err, res) => {
           if (err) return resolve(null);
           let foundDn = null;
+          let membersList = [];
           res.on('searchEntry', (entry) => {
-            if (!foundDn) foundDn = entry.dn?.toString() || entry.object?.distinguishedName || entry.object?.distinguishedname || '';
+            if (!foundDn) {
+              foundDn = entry.dn?.toString() || entry.object?.distinguishedName || entry.object?.distinguishedname || '';
+            }
+            if (entry.object && entry.object.member) {
+              const m = entry.object.member;
+              if (Array.isArray(m)) membersList.push(...m);
+              else if (typeof m === 'string') membersList.push(m);
+            } else if (Array.isArray(entry.attributes)) {
+              const mAttr = entry.attributes.find(a => (a.type || a.name || '').toLowerCase() === 'member');
+              if (mAttr && mAttr.values && mAttr.values.length > 0) {
+                membersList.push(...mAttr.values);
+              } else if (mAttr && mAttr.vals && mAttr.vals.length > 0) {
+                membersList.push(...mAttr.vals);
+              }
+            }
           });
-          res.on('error', () => resolve(foundDn));
-          res.on('end', () => resolve(foundDn));
+          res.on('error', () => resolve({ dn: foundDn, members: membersList }));
+          res.on('end', () => resolve({ dn: foundDn, members: membersList }));
         });
       } catch (e) {
         resolve(null);
       }
     });
 
-    if (groupDn) {
-      console.log(`🔍 [LDAP Group Resolve] Группа AD "${groupName}" разрешена в DN: ${groupDn}`);
-      const matchIndex = filterWithGroupDns.indexOf(fullMatch);
-      const isSurroundedByParens = matchIndex > 0 && filterWithGroupDns[matchIndex - 1] === '(' && filterWithGroupDns[matchIndex + fullMatch.length] === ')';
-      const replacement = isSurroundedByParens ? `memberOf=${groupDn}` : `(memberOf=${groupDn})`;
-      filterWithGroupDns = filterWithGroupDns.replace(fullMatch, replacement);
+    const matchIndex = filterWithGroupDns.indexOf(fullMatch);
+    const isSurroundedByParens = matchIndex > 0 && filterWithGroupDns[matchIndex - 1] === '(' && filterWithGroupDns[matchIndex + fullMatch.length] === ')';
+
+    if (groupResult && groupResult.dn) {
+      const gDn = groupResult.dn;
+      console.log(`🔍 [LDAP Group Resolve] Объект AD "${groupName}" найден в DN: ${gDn}. Прямых членов в атрибуте member: ${groupResult.members.length}`);
+
+      let replacementClause = `(memberOf=${gDn})`;
+      if (groupResult.members && groupResult.members.length > 0) {
+        const dnAssertions = groupResult.members
+          .slice(0, 250)
+          .map(mDn => `(distinguishedName=${mDn})`)
+          .join('');
+        replacementClause = `(|(memberOf=${gDn})(department=*${groupName}*)${dnAssertions})`;
+      } else {
+        replacementClause = `(|(memberOf=${gDn})(department=*${groupName}*))`;
+      }
+
+      if (isSurroundedByParens) {
+        filterWithGroupDns = filterWithGroupDns.slice(0, matchIndex - 1) + replacementClause + filterWithGroupDns.slice(matchIndex + fullMatch.length + 1);
+      } else {
+        filterWithGroupDns = filterWithGroupDns.replace(fullMatch, replacementClause);
+      }
     } else {
-      console.warn(`⚠️ [LDAP Group Resolve] Группа AD "${groupName}" не найдена в BaseDN: ${baseDN}. Поиск продолжится с исходным фильтром.`);
+      console.warn(`⚠️ [LDAP Group Resolve] Объект group/OU "${groupName}" не найден в BaseDN. Выполняется поиск сотрудников по атрибуту department/company/title.`);
+      const fallbackClause = `(|(department=*${groupName}*)(company=*${groupName}*)(description=*${groupName}*)(title=*${groupName}*))`;
+      if (isSurroundedByParens) {
+        filterWithGroupDns = filterWithGroupDns.slice(0, matchIndex - 1) + fallbackClause + filterWithGroupDns.slice(matchIndex + fullMatch.length + 1);
+      } else {
+        filterWithGroupDns = filterWithGroupDns.replace(fullMatch, fallbackClause);
+      }
     }
   }
 
