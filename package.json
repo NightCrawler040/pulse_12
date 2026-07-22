@@ -21,6 +21,7 @@
     "concurrently": "^10.0.3",
     "cors": "^2.8.6",
     "express": "^5.2.1",
+    "ldapjs": "^3.0.7",
     "lucide-react": "^1.23.0",
     "nodemailer": "^6.9.16",
     "pdfkit": "^0.19.1",

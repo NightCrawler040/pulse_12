@@ -14,6 +14,7 @@ import { generateSprintPdf } from './services/pdfService.js';
 import compression from 'compression';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
+import { testLdapConnection, fetchLdapUsers, syncLdapUsersAndTasks, authenticateLdapUser } from './services/ldapService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -135,7 +136,8 @@ let dbData = {
   groups: [],
   notifications: [],
   findings: [],
-  api_keys: []
+  api_keys: [],
+  ldap_settings: null
 };
 
 // --- SECURITY & SANITIZATION HELPERS (1.A, 1.C) ---
@@ -179,6 +181,7 @@ const getSanitizedDbData = () => ({
   notifications: Array.isArray(dbData.notifications) ? dbData.notifications : [],
   findings: Array.isArray(dbData.findings) ? dbData.findings : [],
   api_keys: Array.isArray(dbData.api_keys) ? dbData.api_keys : [],
+  ldap_settings: dbData.ldap_settings || {},
   users: sanitizeUsers(dbData.users)
 });
 
@@ -377,8 +380,8 @@ app.get('/api/reports/pdf', requireAuth, async (req, res) => {
   }
 });
 
-// Login check securely on backend with anti-bruteforce rate limiting (1.A, 1.C)
-app.post('/api/login', loginRateLimiter, (req, res) => {
+// Login check securely on backend with anti-bruteforce rate limiting (1.A, 1.C) + LDAP/AD Fallback
+app.post('/api/login', loginRateLimiter, async (req, res) => {
   const { login, password, pin, userId } = req.body;
   const cleanLogin = String(login || userId || '').trim();
   const passOrPin = String(password || pin || '').trim();
@@ -387,7 +390,7 @@ app.post('/api/login', loginRateLimiter, (req, res) => {
     return res.status(400).json({ success: false, error: 'Введите Логин и Пароль' });
   }
 
-  const user = dbData.users.find(u => {
+  let user = dbData.users.find(u => {
     if (u.isActive === false) return false;
     const matchLogin = (u.login && String(u.login).trim().toLowerCase() === cleanLogin.toLowerCase()) || 
                        (u.email && String(u.email).trim().toLowerCase() === cleanLogin.toLowerCase()) ||
@@ -396,6 +399,45 @@ app.post('/api/login', loginRateLimiter, (req, res) => {
     if (!matchLogin) return false;
     return verifyPasswordOrPin(passOrPin, u.password) || verifyPasswordOrPin(passOrPin, u.pin);
   });
+
+  // Если локальный вход не удался, проверяем LDAP аутентификацию
+  if (!user && dbData.ldap_settings && dbData.ldap_settings.enabled && dbData.ldap_settings.serverUrl) {
+    try {
+      const ldapUser = await authenticateLdapUser(cleanLogin, passOrPin, dbData.ldap_settings);
+      if (ldapUser) {
+        user = dbData.users.find(u => 
+          (u.email && u.email.trim().toLowerCase() === ldapUser.email.trim().toLowerCase()) ||
+          (u.login && u.login.trim().toLowerCase() === ldapUser.login.trim().toLowerCase())
+        );
+
+        if (user) {
+          user.ldapDn = ldapUser.dn || user.ldapDn;
+          user.authSource = 'LDAP';
+          if (ldapUser.email) user.email = ldapUser.email;
+          if (ldapUser.department) user.department = ldapUser.department;
+        } else {
+          const newId = `usr-ad-${ldapUser.login || Math.floor(Math.random() * 90000 + 10000)}`;
+          user = {
+            id: newId,
+            login: ldapUser.login,
+            email: ldapUser.email,
+            name: ldapUser.name || ldapUser.login,
+            department: ldapUser.department || 'Корпоративный отдел',
+            role: 'Сотрудник',
+            roleType: 'member',
+            authSource: 'LDAP',
+            ldapDn: ldapUser.dn,
+            isActive: true,
+            createdAt: new Date().toISOString()
+          };
+          dbData.users.push(user);
+        }
+        await saveCollection('users', dbData.users);
+      }
+    } catch (ldapErr) {
+      console.warn('⚠️ Ошибка LDAP аутентификации:', ldapErr.message);
+    }
+  }
 
   if (user) {
     const { password: _, pin: __, ...safeUser } = user;
@@ -766,6 +808,68 @@ app.post('/api/import', requireAdmin, (req, res) => {
     res.json({ success: true });
   } else {
     res.status(400).json({ error: 'Invalid import format' });
+  }
+});
+
+// --- LDAP / ACTIVE DIRECTORY API ENDPOINTS ---
+app.get('/api/ldap/settings', requireAuth, (req, res) => {
+  const settings = dbData.ldap_settings || {};
+  // Возвращаем настройки (со скрытым паролем, если он задан)
+  res.json({
+    ...settings,
+    bindPassword: settings.bindPassword ? '********' : ''
+  });
+});
+
+app.post('/api/ldap/settings', requireAuth, async (req, res) => {
+  if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin') {
+    // В демо/корпоративном режиме разрешаем настройку администраторам или ИБ
+  }
+  const updates = req.body;
+  const current = dbData.ldap_settings || {};
+  // Если пришел маскированный пароль '********', оставляем старый
+  const bindPassword = updates.bindPassword === '********' ? current.bindPassword : updates.bindPassword;
+
+  dbData.ldap_settings = {
+    ...current,
+    ...updates,
+    bindPassword
+  };
+  await saveCollection('ldap_settings', dbData.ldap_settings);
+  broadcastUpdate('ldap_settings');
+  res.json({ success: true, settings: dbData.ldap_settings });
+});
+
+app.post('/api/ldap/test', requireAuth, async (req, res) => {
+  try {
+    const settings = req.body;
+    const current = dbData.ldap_settings || {};
+    const testConfig = {
+      ...current,
+      ...settings,
+      bindPassword: settings.bindPassword === '********' ? current.bindPassword : settings.bindPassword
+    };
+    const result = await testLdapConnection(testConfig);
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/ldap/sync', requireAuth, async (req, res) => {
+  try {
+    const settings = req.body.serverUrl ? req.body : dbData.ldap_settings;
+    const result = await syncLdapUsersAndTasks(dbData, saveCollection, settings);
+    broadcastUpdate('users');
+    broadcastUpdate('tasks');
+    res.json({ success: true, report: result });
+  } catch (err) {
+    console.error('❌ Ошибка синхронизации LDAP:', err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 

@@ -3,6 +3,7 @@ import { useTaskContext } from '../../context/TaskContext';
 import { useAuth } from '../../context/AuthContext';
 import type { User, Group } from '../../types';
 import { apiService } from '../../services/api';
+import { LdapSettingsTab } from './LdapSettingsTab';
 import './AdminPanel.css';
 
 export const AdminPanel: React.FC = () => {
@@ -11,7 +12,7 @@ export const AdminPanel: React.FC = () => {
   const isProtectedAdmin = (u: User) => u.id === 'usr-1' || u.login?.toLowerCase() === 'admin';
   const employeeUsers = users.filter(u => !isProtectedAdmin(u));
 
-  const [activeTab, setActiveTab] = useState<'users' | 'groups' | 'integrations'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'groups' | 'integrations' | 'ldap'>('users');
   const [newKeyName, setNewKeyName] = useState('');
   const [newKeySource, setNewKeySource] = useState<'derscanner' | 'siem' | 'custom'>('derscanner');
   const [newKeyAllowedDepts, setNewKeyAllowedDepts] = useState<string[]>(['all']);
@@ -307,6 +308,12 @@ export const AdminPanel: React.FC = () => {
             >
               🔌 Интеграции & API-ключи ({apiKeys.length})
             </button>
+            <button
+              className={`admin-tab-btn ${activeTab === 'ldap' ? 'active' : ''}`}
+              onClick={() => setActiveTab('ldap')}
+            >
+              🏢 Active Directory (LDAP SSO)
+            </button>
           </div>
         </div>
 
@@ -344,11 +351,11 @@ export const AdminPanel: React.FC = () => {
           <button className="btn-primary" onClick={handleOpenAddGroupModal}>
             ➕ Создать команду / группу
           </button>
-        ) : (
+        ) : activeTab === 'integrations' ? (
           <button className="btn-primary" onClick={() => { setNewKeyName(''); setIsKeyModalOpen(true); }}>
             ➕ Сгенерировать API-ключ
           </button>
-        )}
+        ) : null}
       </div>
 
       {/* Table: USERS */}
@@ -772,6 +779,11 @@ export const AdminPanel: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Tab: LDAP SETTINGS */}
+      {activeTab === 'ldap' && (
+        <LdapSettingsTab />
       )}
 
       {/* Add / Edit USER Modal */}

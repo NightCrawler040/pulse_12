@@ -30,6 +30,22 @@ pool.on('error', (err) => {
 
 let isPgConnected = false;
 
+const defaultLdapSettings = {
+  enabled: true,
+  serverUrl: 'ldap://172.31.0.251',
+  baseDN: 'DC=enpf,DC=kz',
+  bindDN: 'security2@enpf.kz',
+  bindPassword: '',
+  userFilter: '(objectClass=person)',
+  loginAttribute: 'userPrincipalName',
+  emailAttribute: 'mail',
+  nameAttribute: 'displayName',
+  departmentAttribute: 'department',
+  objectClassUsers: 'person',
+  ignoreCase: true,
+  domainName: 'enpf.kz'
+};
+
 // Локальное файловое хранилище (для Fallback-режима без Docker/Postgres)
 let localDbData = {
   tasks: [],
@@ -38,7 +54,8 @@ let localDbData = {
   groups: [],
   notifications: [],
   findings: [],
-  api_keys: []
+  api_keys: [],
+  ldap_settings: { ...defaultLdapSettings }
 };
 
 const loadLocalFile = () => {
@@ -54,7 +71,8 @@ const loadLocalFile = () => {
           groups: (parsed.groups && parsed.groups.length > 0) ? parsed.groups : initialGroups,
           notifications: parsed.notifications || [],
           findings: parsed.findings || initialFindings,
-          api_keys: parsed.api_keys || initialApiKeys
+          api_keys: parsed.api_keys || initialApiKeys,
+          ldap_settings: parsed.ldap_settings || { ...defaultLdapSettings }
         };
         return;
       }
@@ -69,7 +87,8 @@ const loadLocalFile = () => {
     groups: initialGroups,
     notifications: [],
     findings: initialFindings,
-    api_keys: initialApiKeys
+    api_keys: initialApiKeys,
+    ldap_settings: { ...defaultLdapSettings }
   };
   saveLocalFile();
 };
@@ -116,10 +135,10 @@ export const initDb = async () => {
       await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['notifications', JSON.stringify([])]);
       await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['findings', JSON.stringify(initialFindings)]);
       await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['api_keys', JSON.stringify(initialApiKeys)]);
+      await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['ldap_settings', JSON.stringify(defaultLdapSettings)]);
       console.log('✅ Стартовые корпоративные данные успешно загружены в PostgreSQL!');
     } else {
       console.log(`✅ В PostgreSQL найдено ${count} коллекций данных. Проверка целостности коллекций...`);
-      // Авто-восстановление пустых коллекций
       const tasksRes = await client.query("SELECT data FROM pulse_store WHERE key = 'tasks'");
       if (tasksRes.rows.length === 0 || !Array.isArray(tasksRes.rows[0].data) || tasksRes.rows[0].data.length === 0) {
         console.log('🌱 Коллекция tasks в PostgreSQL пуста. Автовосстановление корпоративных задач...');
@@ -142,6 +161,10 @@ export const initDb = async () => {
       if (keysRes.rows.length === 0 || !Array.isArray(keysRes.rows[0].data)) {
         await client.query("INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data", ['api_keys', JSON.stringify(initialApiKeys)]);
       }
+      const ldapRes = await client.query("SELECT data FROM pulse_store WHERE key = 'ldap_settings'");
+      if (ldapRes.rows.length === 0 || !ldapRes.rows[0].data) {
+        await client.query("INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data", ['ldap_settings', JSON.stringify(defaultLdapSettings)]);
+      }
     }
 
     client.release();
@@ -156,7 +179,8 @@ export const initDb = async () => {
         groups: allPgData.groups || [],
         notifications: allPgData.notifications || [],
         findings: allPgData.findings || [],
-        api_keys: allPgData.api_keys || []
+        api_keys: allPgData.api_keys || [],
+        ldap_settings: allPgData.ldap_settings || { ...defaultLdapSettings }
       };
       saveLocalFile();
     }
@@ -183,7 +207,8 @@ export const initDb = async () => {
             groups: allPgData.groups || [],
             notifications: allPgData.notifications || [],
             findings: allPgData.findings || [],
-            api_keys: allPgData.api_keys || []
+            api_keys: allPgData.api_keys || [],
+            ldap_settings: allPgData.ldap_settings || { ...defaultLdapSettings }
           };
           saveLocalFile();
         }
@@ -195,7 +220,7 @@ export const initDb = async () => {
 };
 
 /**
- * Получить коллекцию по ключу ('tasks', 'users', 'sprints', 'groups', 'notifications')
+ * Получить коллекцию по ключу ('tasks', 'users', 'sprints', 'groups', 'notifications', 'ldap_settings')
  */
 export const getCollection = async (key) => {
   if (isPgConnected) {
@@ -204,28 +229,29 @@ export const getCollection = async (key) => {
       if (res.rows.length > 0) {
         return res.rows[0].data;
       }
-      return [];
+      return key === 'ldap_settings' ? { ...defaultLdapSettings } : [];
     } catch (err) {
       console.error(`❌ Ошибка PostgreSQL при получении коллекции "${key}":`, err.message);
       isPgConnected = false;
-      return localDbData[key] || [];
+      return localDbData[key] || (key === 'ldap_settings' ? { ...defaultLdapSettings } : []);
     }
   } else {
-    return localDbData[key] || [];
+    return localDbData[key] || (key === 'ldap_settings' ? { ...defaultLdapSettings } : []);
   }
 };
 
 /**
  * Сохранить/обновить коллекцию по ключу
  */
-export const saveCollection = async (key, dataArray) => {
-  if (key === 'users' && Array.isArray(dataArray)) {
+export const saveCollection = async (key, dataArrayOrObj) => {
+  let toSave = dataArrayOrObj;
+  if (key === 'users' && Array.isArray(toSave)) {
     const map = new Map();
-    dataArray.forEach(u => {
+    toSave.forEach(u => {
       const k = u.id || u.login;
       if (k) map.set(k, { ...map.get(k), ...u });
     });
-    dataArray = Array.from(map.values());
+    toSave = Array.from(map.values());
   }
   if (isPgConnected) {
     try {
@@ -235,18 +261,17 @@ export const saveCollection = async (key, dataArray) => {
         ON CONFLICT (key) DO UPDATE
         SET data = $2, updated_at = CURRENT_TIMESTAMP;
       `;
-      await pool.query(query, [key, JSON.stringify(dataArray)]);
-      // Фоновое обновление локальной копии для бесшовного Failover (3)
-      localDbData[key] = dataArray;
+      await pool.query(query, [key, JSON.stringify(toSave)]);
+      localDbData[key] = toSave;
       saveLocalFile();
     } catch (err) {
       console.error(`❌ Ошибка PostgreSQL при сохранении коллекции "${key}":`, err.message);
       isPgConnected = false;
-      localDbData[key] = dataArray;
+      localDbData[key] = toSave;
       saveLocalFile();
     }
   } else {
-    localDbData[key] = dataArray;
+    localDbData[key] = toSave;
     saveLocalFile();
   }
 };
@@ -265,7 +290,8 @@ export const getAllData = async () => {
         groups: [],
         notifications: [],
         findings: [],
-        api_keys: []
+        api_keys: [],
+        ldap_settings: { ...defaultLdapSettings }
       };
       res.rows.forEach(row => {
         if (result[row.key] !== undefined) {
@@ -284,7 +310,7 @@ export const getAllData = async () => {
 };
 
 /**
- * Сохранить все данные системы одновременно (например, при сбросе к демо-данным или импорте)
+ * Сохранить все данные системы одновременно
  */
 export const saveAllData = async (dataObj) => {
   if (isPgConnected) {
@@ -310,7 +336,6 @@ export const saveAllData = async (dataObj) => {
           await client.query(query, [key, JSON.stringify(val)]);
         }
         await client.query('COMMIT');
-        // Фоновое обновление локальной копии для бесшовного Failover (3)
         localDbData = {
           tasks: dataObj.tasks || [],
           sprints: dataObj.sprints || [],
@@ -318,7 +343,8 @@ export const saveAllData = async (dataObj) => {
           groups: dataObj.groups || [],
           notifications: dataObj.notifications || [],
           findings: dataObj.findings || [],
-          api_keys: dataObj.api_keys || []
+          api_keys: dataObj.api_keys || [],
+          ldap_settings: dataObj.ldap_settings || { ...defaultLdapSettings }
         };
         saveLocalFile();
       } catch (err) {
@@ -337,7 +363,8 @@ export const saveAllData = async (dataObj) => {
         groups: dataObj.groups || [],
         notifications: dataObj.notifications || [],
         findings: dataObj.findings || [],
-        api_keys: dataObj.api_keys || []
+        api_keys: dataObj.api_keys || [],
+        ldap_settings: dataObj.ldap_settings || { ...defaultLdapSettings }
       };
       saveLocalFile();
     }
@@ -349,7 +376,8 @@ export const saveAllData = async (dataObj) => {
       groups: dataObj.groups || [],
       notifications: dataObj.notifications || [],
       findings: dataObj.findings || [],
-      api_keys: dataObj.api_keys || []
+      api_keys: dataObj.api_keys || [],
+      ldap_settings: dataObj.ldap_settings || { ...defaultLdapSettings }
     };
     saveLocalFile();
   }
