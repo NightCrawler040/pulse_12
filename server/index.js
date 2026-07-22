@@ -174,6 +174,14 @@ const sanitizeTasks = (tasksArray) => {
   }));
 };
 
+const sanitizeLdapSettings = (settings) => {
+  if (!settings || typeof settings !== 'object') return {};
+  return {
+    ...settings,
+    bindPassword: settings.bindPassword ? '********' : ''
+  };
+};
+
 const getSanitizedDbData = () => ({
   ...dbData,
   tasks: sanitizeTasks(dbData.tasks),
@@ -181,7 +189,7 @@ const getSanitizedDbData = () => ({
   notifications: Array.isArray(dbData.notifications) ? dbData.notifications : [],
   findings: Array.isArray(dbData.findings) ? dbData.findings : [],
   api_keys: Array.isArray(dbData.api_keys) ? dbData.api_keys : [],
-  ldap_settings: dbData.ldap_settings || {},
+  ldap_settings: sanitizeLdapSettings(dbData.ldap_settings),
   users: sanitizeUsers(dbData.users)
 });
 
@@ -826,21 +834,18 @@ app.post('/api/import', requireAdmin, (req, res) => {
 // --- LDAP / ACTIVE DIRECTORY API ENDPOINTS ---
 app.get('/api/ldap/settings', requireAuth, (req, res) => {
   const settings = dbData.ldap_settings || {};
-  // Возвращаем настройки (со скрытым паролем, если он задан)
-  res.json({
-    ...settings,
-    bindPassword: settings.bindPassword ? '********' : ''
-  });
+  res.json(sanitizeLdapSettings(settings));
 });
 
 app.post('/api/ldap/settings', requireAuth, async (req, res) => {
   if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin') {
     // В демо/корпоративном режиме разрешаем настройку администраторам или ИБ
   }
-  const updates = req.body;
+  const updates = req.body || {};
   const current = dbData.ldap_settings || {};
-  // Если пришел маскированный пароль '********', оставляем старый
-  const bindPassword = updates.bindPassword === '********' ? current.bindPassword : updates.bindPassword;
+  // Если пришел маскированный пароль '********', пустой строка (при наличии старого), или точки, оставляем существующий пароль
+  const isMaskedOrEmpty = updates.bindPassword === '********' || updates.bindPassword === '••••••••' || (/^[•\*]+$/.test(updates.bindPassword || '')) || (!updates.bindPassword && current.bindPassword);
+  const bindPassword = isMaskedOrEmpty ? current.bindPassword : updates.bindPassword;
 
   dbData.ldap_settings = {
     ...current,
@@ -849,17 +854,18 @@ app.post('/api/ldap/settings', requireAuth, async (req, res) => {
   };
   await saveCollection('ldap_settings', dbData.ldap_settings);
   broadcastUpdate('ldap_settings');
-  res.json({ success: true, settings: dbData.ldap_settings });
+  res.json({ success: true, settings: sanitizeLdapSettings(dbData.ldap_settings) });
 });
 
 app.post('/api/ldap/test', requireAuth, async (req, res) => {
   try {
-    const settings = req.body;
+    const settings = req.body || {};
     const current = dbData.ldap_settings || {};
+    const isMaskedOrEmpty = settings.bindPassword === '********' || settings.bindPassword === '••••••••' || (/^[•\*]+$/.test(settings.bindPassword || '')) || (!settings.bindPassword && current.bindPassword);
     const testConfig = {
       ...current,
       ...settings,
-      bindPassword: settings.bindPassword === '********' ? current.bindPassword : settings.bindPassword
+      bindPassword: isMaskedOrEmpty ? current.bindPassword : settings.bindPassword
     };
     const result = await testLdapConnection(testConfig);
     if (result.success) {
@@ -876,10 +882,11 @@ app.post('/api/ldap/sync', requireAuth, async (req, res) => {
   try {
     const settings = req.body || {};
     const current = dbData.ldap_settings || {};
+    const isMaskedOrEmpty = settings.bindPassword === '********' || settings.bindPassword === '••••••••' || (/^[•\*]+$/.test(settings.bindPassword || '')) || (!settings.bindPassword && current.bindPassword);
     const syncConfig = {
       ...current,
       ...settings,
-      bindPassword: settings.bindPassword === '********' ? (current.bindPassword || '') : settings.bindPassword
+      bindPassword: isMaskedOrEmpty ? (current.bindPassword || '') : settings.bindPassword
     };
     const result = await syncLdapUsersAndTasks(dbData, saveCollection, syncConfig);
     broadcastUpdate('users');
@@ -895,10 +902,11 @@ app.post('/api/ldap/preview', requireAuth, async (req, res) => {
   try {
     const settings = req.body || {};
     const current = dbData.ldap_settings || {};
+    const isMaskedOrEmpty = settings.bindPassword === '********' || settings.bindPassword === '••••••••' || (/^[•\*]+$/.test(settings.bindPassword || '')) || (!settings.bindPassword && current.bindPassword);
     const previewConfig = {
       ...current,
       ...settings,
-      bindPassword: settings.bindPassword === '********' ? (current.bindPassword || '') : settings.bindPassword
+      bindPassword: isMaskedOrEmpty ? (current.bindPassword || '') : settings.bindPassword
     };
     const users = await fetchLdapUsers(previewConfig);
     res.json({ success: true, users });
@@ -915,10 +923,11 @@ app.post('/api/ldap/import-selected', requireAuth, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Не выбрано ни одного сотрудника для импорта' });
     }
     const current = dbData.ldap_settings || {};
+    const isMaskedOrEmpty = settings?.bindPassword === '********' || settings?.bindPassword === '••••••••' || (/^[•\*]+$/.test(settings?.bindPassword || '')) || (!settings?.bindPassword && current.bindPassword);
     const importConfig = {
       ...current,
       ...settings,
-      bindPassword: (settings && settings.bindPassword === '********') ? (current.bindPassword || '') : (settings?.bindPassword || current.bindPassword)
+      bindPassword: isMaskedOrEmpty ? (current.bindPassword || '') : (settings?.bindPassword || current.bindPassword)
     };
     const result = await importSelectedLdapUsers(dbData, saveCollection, selectedUsers, importConfig);
     broadcastUpdate('users');

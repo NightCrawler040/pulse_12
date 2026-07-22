@@ -37,16 +37,20 @@ const resolveGroupFilter = async (client, baseDN, rawFilter) => {
     if (!groupName || groupName.toUpperCase().startsWith('CN=')) continue;
 
     const groupDn = await new Promise((resolve) => {
-      const groupSearchFilter = `(&(objectClass=group)(|(sAMAccountName=${groupName})(cn=${groupName})(displayName=${groupName})))`;
-      client.search(baseDN, { filter: groupSearchFilter, scope: 'sub', sizeLimit: 1 }, (err, res) => {
-        if (err) return resolve(null);
-        let foundDn = null;
-        res.on('searchEntry', (entry) => {
-          if (!foundDn) foundDn = entry.dn?.toString() || entry.object?.distinguishedName || entry.object?.distinguishedname || '';
+      try {
+        const groupSearchFilter = `(&(objectClass=group)(|(sAMAccountName=${groupName})(cn=${groupName})(displayName=${groupName})))`;
+        client.search(baseDN, { filter: groupSearchFilter, scope: 'sub', sizeLimit: 1 }, (err, res) => {
+          if (err) return resolve(null);
+          let foundDn = null;
+          res.on('searchEntry', (entry) => {
+            if (!foundDn) foundDn = entry.dn?.toString() || entry.object?.distinguishedName || entry.object?.distinguishedname || '';
+          });
+          res.on('error', () => resolve(foundDn));
+          res.on('end', () => resolve(foundDn));
         });
-        res.on('error', () => resolve(foundDn));
-        res.on('end', () => resolve(foundDn));
-      });
+      } catch (e) {
+        resolve(null);
+      }
     });
 
     if (groupDn) {
@@ -97,39 +101,43 @@ export const testLdapConnection = async (settings) => {
         return finish({ success: false, error: `Ошибка аутентификации (bind): ${err.message}` });
       }
 
-      if (!settings.baseDN) {
-        return finish({ success: true, message: '✅ Подключение и авторизация в Active Directory прошли успешно!' });
-      }
-
-      const rawUserFilter = settings.userFilter || '(objectClass=person)';
-      const resolvedTestFilter = await resolveGroupFilter(client, settings.baseDN, rawUserFilter);
-
-      const searchOptions = {
-        filter: resolvedTestFilter,
-        scope: 'sub',
-        sizeLimit: 1
-      };
-
-      client.search(settings.baseDN, searchOptions, (searchErr, res) => {
-        if (searchErr) {
-          if (searchErr.message && (searchErr.message.includes('timeout') || searchErr.message.includes('interrupt'))) {
-            return finish({ success: true, message: '✅ Подключение и авторизация в Active Directory прошли успешно! (Поиск в корне домена занял больше 45с из-за объема AD, можно сузить BaseDN или фильтр)' });
-          }
-          return finish({ success: true, message: `Подключение к LDAP успешно, но поиск в BaseDN (${settings.baseDN}) вернул предупреждение: ${searchErr.message}` });
+      try {
+        if (!settings.baseDN) {
+          return finish({ success: true, message: '✅ Подключение и авторизация в Active Directory прошли успешно!' });
         }
 
-        res.on('searchEntry', () => {});
-        res.on('searchReference', () => {});
-        res.on('error', (resErr) => {
-          if (resErr && (resErr.name === 'ReferralError' || resErr.code === 10 || resErr.name === 'SizeLimitExceededError' || resErr.code === 4 || (resErr.message && (resErr.message.includes('timeout') || resErr.message.includes('interrupt'))))) {
-            return finish({ success: true, message: '✅ Подключение и авторизация в Active Directory прошли успешно!' });
+        const rawUserFilter = settings.userFilter || '(objectClass=person)';
+        const resolvedTestFilter = await resolveGroupFilter(client, settings.baseDN, rawUserFilter);
+
+        const searchOptions = {
+          filter: resolvedTestFilter,
+          scope: 'sub',
+          sizeLimit: 1
+        };
+
+        client.search(settings.baseDN, searchOptions, (searchErr, res) => {
+          if (searchErr) {
+            if (searchErr.message && (searchErr.message.includes('timeout') || searchErr.message.includes('interrupt'))) {
+              return finish({ success: true, message: '✅ Подключение и авторизация в Active Directory прошли успешно! (Поиск в корне домена занял больше 45с из-за объема AD, можно сузить BaseDN или фильтр)' });
+            }
+            return finish({ success: true, message: `Подключение к LDAP успешно, но поиск в BaseDN (${settings.baseDN}) вернул предупреждение: ${searchErr.message}` });
           }
-          finish({ success: true, message: `✅ Подключение успешно, но поиск в BaseDN (${settings.baseDN}) выдал ошибку: ${resErr.message}` });
+
+          res.on('searchEntry', () => {});
+          res.on('searchReference', () => {});
+          res.on('error', (resErr) => {
+            if (resErr && (resErr.name === 'ReferralError' || resErr.code === 10 || resErr.name === 'SizeLimitExceededError' || resErr.code === 4 || (resErr.message && (resErr.message.includes('timeout') || resErr.message.includes('interrupt'))))) {
+              return finish({ success: true, message: '✅ Подключение и авторизация в Active Directory прошли успешно!' });
+            }
+            finish({ success: true, message: `✅ Подключение успешно, но поиск в BaseDN (${settings.baseDN}) выдал ошибку: ${resErr.message}` });
+          });
+          res.on('end', () => {
+            finish({ success: true, message: '✅ Подключение и авторизация в Active Directory прошли успешно!' });
+          });
         });
-        res.on('end', () => {
-          finish({ success: true, message: '✅ Подключение и авторизация в Active Directory прошли успешно!' });
-        });
-      });
+      } catch (innerErr) {
+        finish({ success: false, error: `Ошибка при проверке AD: ${innerErr.message}` });
+      }
     });
   });
 };
@@ -169,126 +177,130 @@ export const fetchLdapUsers = async (settings) => {
         return finish(bindErr);
       }
 
-      const loginAttr = settings.loginAttribute || 'userPrincipalName';
-      const emailAttr = settings.emailAttribute || 'mail';
-      const nameAttr = settings.nameAttribute || 'displayName';
-      const deptAttr = settings.departmentAttribute || 'department';
-      const objectClass = settings.objectClassUsers || 'person';
+      try {
+        const loginAttr = settings.loginAttribute || 'userPrincipalName';
+        const emailAttr = settings.emailAttribute || 'mail';
+        const nameAttr = settings.nameAttribute || 'displayName';
+        const deptAttr = settings.departmentAttribute || 'department';
+        const objectClass = settings.objectClassUsers || 'person';
 
-      const rawUserFilter = settings.userFilter || `(&(objectClass=${objectClass})(!(objectClass=computer))(!(userAccountControl:1.2.840.113556.1.4.803:=2)))`;
-      const resolvedFilter = await resolveGroupFilter(client, settings.baseDN, rawUserFilter);
+        const rawUserFilter = settings.userFilter || `(&(objectClass=${objectClass})(!(objectClass=computer))(!(userAccountControl:1.2.840.113556.1.4.803:=2)))`;
+        const resolvedFilter = await resolveGroupFilter(client, settings.baseDN, rawUserFilter);
 
-      let filterToUse = resolvedFilter;
-      if (!filterToUse.includes('(objectClass=')) {
-        filterToUse = `(&(objectClass=${objectClass})(!(objectClass=computer))(!(userAccountControl:1.2.840.113556.1.4.803:=2))(${filterToUse}))`;
-      } else if (resolvedFilter !== rawUserFilter && !rawUserFilter.includes('objectClass=')) {
-        filterToUse = `(&(objectClass=${objectClass})(!(objectClass=computer))(!(userAccountControl:1.2.840.113556.1.4.803:=2))(${resolvedFilter}))`;
-      }
-
-      const searchOptions = {
-        filter: filterToUse,
-        scope: 'sub',
-        paged: true,
-        sizeLimit: 1000,
-        attributes: [
-          loginAttr, emailAttr, nameAttr, deptAttr,
-          'sAMAccountName', 'samaccountname',
-          'userPrincipalName', 'userprincipalname',
-          'mail', 'displayName', 'displayname',
-          'cn', 'department', 'distinguishedName', 'distinguishedname',
-          'objectClass', 'objectclass', 'objectCategory', 'objectcategory', 'userAccountControl', 'useraccountcontrol'
-        ]
-      };
-
-      client.search(settings.baseDN, searchOptions, (searchErr, res) => {
-        if (searchErr) {
-          return finish(searchErr);
+        let filterToUse = resolvedFilter;
+        if (!filterToUse.includes('(objectClass=')) {
+          filterToUse = `(&(objectClass=${objectClass})(!(objectClass=computer))(!(userAccountControl:1.2.840.113556.1.4.803:=2))(${filterToUse}))`;
+        } else if (resolvedFilter !== rawUserFilter && !rawUserFilter.includes('objectClass=')) {
+          filterToUse = `(&(objectClass=${objectClass})(!(objectClass=computer))(!(userAccountControl:1.2.840.113556.1.4.803:=2))(${resolvedFilter}))`;
         }
 
-        res.on('searchEntry', (entry) => {
-          const obj = entry.object || {};
-          const dn = entry.dn?.toString() || obj.distinguishedName || obj.distinguishedname || '';
-          
-          const getVal = (attrName) => {
-            if (!attrName) return '';
-            // 1. Попытка точного совпадения или регистронезависимого поиска в entry.object
-            let val = obj[attrName];
-            if (!val && typeof obj === 'object') {
-              const lowerKey = attrName.toLowerCase();
-              const foundKey = Object.keys(obj).find(k => k.toLowerCase() === lowerKey);
-              if (foundKey) val = obj[foundKey];
-            }
-            // 2. Попытка поиска в entry.attributes (стандарт ldapjs)
-            if (!val && Array.isArray(entry.attributes)) {
-              const attr = entry.attributes.find(a => (a.type || a.name || '').toLowerCase() === attrName.toLowerCase());
-              if (attr && attr.values && attr.values.length > 0) {
-                val = attr.values;
-              } else if (attr && attr.vals && attr.vals.length > 0) {
-                val = attr.vals;
+        const searchOptions = {
+          filter: filterToUse,
+          scope: 'sub',
+          paged: true,
+          sizeLimit: 1000,
+          attributes: [
+            loginAttr, emailAttr, nameAttr, deptAttr,
+            'sAMAccountName', 'samaccountname',
+            'userPrincipalName', 'userprincipalname',
+            'mail', 'displayName', 'displayname',
+            'cn', 'department', 'distinguishedName', 'distinguishedname',
+            'objectClass', 'objectclass', 'objectCategory', 'objectcategory', 'userAccountControl', 'useraccountcontrol'
+          ]
+        };
+
+        client.search(settings.baseDN, searchOptions, (searchErr, res) => {
+          if (searchErr) {
+            return finish(searchErr);
+          }
+
+          res.on('searchEntry', (entry) => {
+            const obj = entry.object || {};
+            const dn = entry.dn?.toString() || obj.distinguishedName || obj.distinguishedname || '';
+            
+            const getVal = (attrName) => {
+              if (!attrName) return '';
+              // 1. Попытка точного совпадения или регистронезависимого поиска в entry.object
+              let val = obj[attrName];
+              if (!val && typeof obj === 'object') {
+                const lowerKey = attrName.toLowerCase();
+                const foundKey = Object.keys(obj).find(k => k.toLowerCase() === lowerKey);
+                if (foundKey) val = obj[foundKey];
               }
+              // 2. Попытка поиска в entry.attributes (стандарт ldapjs)
+              if (!val && Array.isArray(entry.attributes)) {
+                const attr = entry.attributes.find(a => (a.type || a.name || '').toLowerCase() === attrName.toLowerCase());
+                if (attr && attr.values && attr.values.length > 0) {
+                  val = attr.values;
+                } else if (attr && attr.vals && attr.vals.length > 0) {
+                  val = attr.vals;
+                }
+              }
+              if (!val) return '';
+              if (Array.isArray(val)) return String(val[0]).trim();
+              return String(val).trim();
+            };
+
+            let login = getVal(loginAttr) || getVal('sAMAccountName') || getVal('userPrincipalName');
+            let email = getVal(emailAttr) || getVal('mail') || getVal('userPrincipalName');
+            let name = getVal(nameAttr) || getVal('displayName') || getVal('cn');
+            let department = getVal(deptAttr) || getVal('department') || 'Корпоративный отдел';
+
+            // --- АВТОМАТИЧЕСКАЯ ФИЛЬТРАЦИЯ СИСТЕМ И КОМПЬЮТЕРОВ (ОСТАВЛЯЕМ ТОЛЬКО ЛЮДЕЙ!) ---
+            // 1. Если sAMAccountName или логин заканчивается на $ (например, WEB-01$ или KRBTGT$) — это компьютер или сервис!
+            if (login.endsWith('$') || dn.includes('CN=Computers') || dn.includes('OU=Domain Controllers')) {
+              return;
             }
-            if (!val) return '';
-            if (Array.isArray(val)) return String(val[0]).trim();
-            return String(val).trim();
-          };
+            // 2. Исключаем системные почтовые ящики Exchange (HealthMailbox, SystemMailbox, SM_*, CAS_*)
+            if (/^(HealthMailbox|SystemMailbox|SM_|CAS_|MSOL_|krbtgt)/i.test(login) || /^(HealthMailbox|SystemMailbox)/i.test(name)) {
+              return;
+            }
+            // 3. Проверяем objectClass (если это computer или group — пропускаем)
+            const objClassStr = String(getVal('objectClass') || '').toLowerCase();
+            if (objClassStr.includes('computer') || objClassStr.includes('group') || objClassStr.includes('organizationalunit') || objClassStr.includes('msds-groupmanagedserviceaccount')) {
+              return;
+            }
+            // 4. Проверяем флаги отключения или системности (userAccountControl: если установлен бит 2 - account disabled)
+            const uac = parseInt(getVal('userAccountControl') || '0', 10);
+            if (uac > 0 && (uac & 2) !== 0) {
+              // Учетная запись отключена (Account Disabled)
+              return;
+            }
 
-          let login = getVal(loginAttr) || getVal('sAMAccountName') || getVal('userPrincipalName');
-          let email = getVal(emailAttr) || getVal('mail') || getVal('userPrincipalName');
-          let name = getVal(nameAttr) || getVal('displayName') || getVal('cn');
-          let department = getVal(deptAttr) || getVal('department') || 'Корпоративный отдел';
+            // Если есть хотя бы логин, почта или имя (CN) — сохраняем сотрудника!
+            if (!login && !email && name) {
+              login = getVal('sAMAccountName') || getVal('cn') || (dn.split(',')[0].replace(/CN=/i, '').trim()) || `user_${Date.now()}`;
+            }
 
-          // --- АВТОМАТИЧЕСКАЯ ФИЛЬТРАЦИЯ СИСТЕМ И КОМПЬЮТЕРОВ (ОСТАВЛЯЕМ ТОЛЬКО ЛЮДЕЙ!) ---
-          // 1. Если sAMAccountName или логин заканчивается на $ (например, WEB-01$ или KRBTGT$) — это компьютер или сервис!
-          if (login.endsWith('$') || dn.includes('CN=Computers') || dn.includes('OU=Domain Controllers')) {
-            return;
-          }
-          // 2. Исключаем системные почтовые ящики Exchange (HealthMailbox, SystemMailbox, SM_*, CAS_*)
-          if (/^(HealthMailbox|SystemMailbox|SM_|CAS_|MSOL_|krbtgt)/i.test(login) || /^(HealthMailbox|SystemMailbox)/i.test(name)) {
-            return;
-          }
-          // 3. Проверяем objectClass (если это computer или group — пропускаем)
-          const objClassStr = String(getVal('objectClass') || '').toLowerCase();
-          if (objClassStr.includes('computer') || objClassStr.includes('group') || objClassStr.includes('organizationalunit') || objClassStr.includes('msds-groupmanagedserviceaccount')) {
-            return;
-          }
-          // 4. Проверяем флаги отключения или системности (userAccountControl: если установлен бит 2 - account disabled)
-          const uac = parseInt(getVal('userAccountControl') || '0', 10);
-          if (uac > 0 && (uac & 2) !== 0) {
-            // Учетная запись отключена (Account Disabled)
-            return;
-          }
+            if (login || email || name) {
+              users.push({
+                dn,
+                login: login || (email ? email.split('@')[0] : `user_${users.length + 1}`),
+                email: email || `${login}@${settings.domainName || 'enpf.kz'}`,
+                name: name || login || email,
+                department
+              });
+            }
+          });
 
-          // Если есть хотя бы логин, почта или имя (CN) — сохраняем сотрудника!
-          if (!login && !email && name) {
-            login = getVal('sAMAccountName') || getVal('cn') || (dn.split(',')[0].replace(/CN=/i, '').trim()) || `user_${Date.now()}`;
-          }
+          res.on('searchReference', () => {
+            // Игнорируем рефералы AD (например, DomainDnsZones / ForestDnsZones)
+          });
 
-          if (login || email || name) {
-            users.push({
-              dn,
-              login: login || (email ? email.split('@')[0] : `user_${users.length + 1}`),
-              email: email || `${login}@${settings.domainName || 'enpf.kz'}`,
-              name: name || login || email,
-              department
-            });
-          }
+          res.on('error', (err) => {
+            if (err && (err.name === 'ReferralError' || err.code === 10 || err.name === 'SizeLimitExceededError' || err.code === 4 || err.name === 'TimeLimitExceededError' || err.code === 3 || (err.message && (err.message.toLowerCase().includes('timeout') || err.message.toLowerCase().includes('limit exceeded'))))) {
+              return finish(null, users);
+            }
+            finish(err);
+          });
+
+          res.on('end', () => {
+            finish(null, users);
+          });
         });
-
-        res.on('searchReference', () => {
-          // Игнорируем рефералы AD (например, DomainDnsZones / ForestDnsZones)
-        });
-
-        res.on('error', (err) => {
-          if (err && (err.name === 'ReferralError' || err.code === 10 || err.name === 'SizeLimitExceededError' || err.code === 4 || err.name === 'TimeLimitExceededError' || err.code === 3 || (err.message && (err.message.toLowerCase().includes('timeout') || err.message.toLowerCase().includes('limit exceeded'))))) {
-            return finish(null, users);
-          }
-          finish(err);
-        });
-
-        res.on('end', () => {
-          finish(null, users);
-        });
-      });
+      } catch (innerErr) {
+        finish(innerErr);
+      }
     });
   });
 };

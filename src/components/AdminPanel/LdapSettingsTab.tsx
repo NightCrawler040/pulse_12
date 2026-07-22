@@ -72,7 +72,12 @@ export const LdapSettingsTab: React.FC = () => {
     setIsSaving(true);
     setTestResult(null);
     try {
-      await apiService.post<any>('/api/ldap/settings', settings);
+      const res = await apiService.post<any>('/api/ldap/settings', settings);
+      if (res && res.settings) {
+        setSettings(prev => ({ ...prev, ...res.settings }));
+      } else {
+        await fetchSettings();
+      }
       setTestResult({ success: true, message: '✅ Настройки Active Directory / LDAP успешно сохранены в системе!' });
     } catch (err: any) {
       setTestResult({ success: false, error: err.message || 'Ошибка сохранения настроек' });
