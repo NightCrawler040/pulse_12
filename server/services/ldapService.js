@@ -55,8 +55,7 @@ const resolveGroupFilter = async (client, baseDN, rawFilter) => {
 
     if (groupDn) {
       console.log(`🔍 [LDAP Group Resolve] Группа AD "${groupName}" разрешена в DN: ${groupDn}`);
-      // Используем LDAP_MATCHING_RULE_IN_CHAIN (1.2.840.113556.1.4.1941) для нахождения членов группы и всех ее подгрупп
-      filterWithGroupDns = filterWithGroupDns.replace(fullMatch, `(|(memberOf=${groupDn})(memberOf:1.2.840.113556.1.4.1941:=${groupDn}))`);
+      filterWithGroupDns = filterWithGroupDns.replace(fullMatch, `(memberOf=${groupDn})`);
     } else {
       console.warn(`⚠️ [LDAP Group Resolve] Группа AD "${groupName}" не найдена в BaseDN: ${baseDN}. Поиск продолжится с исходным фильтром.`);
     }
@@ -185,14 +184,14 @@ export const fetchLdapUsers = async (settings) => {
         const deptAttr = cleanAttr(settings.departmentAttribute || 'department');
         const objectClass = cleanAttr(settings.objectClassUsers || 'person');
 
-        const rawUserFilter = settings.userFilter || `(&(objectClass=${objectClass})(!(objectClass=computer))(!(userAccountControl:1.2.840.113556.1.4.803:=2)))`;
+        const rawUserFilter = settings.userFilter || `(&(objectClass=${objectClass})(!(objectClass=computer)))`;
         const resolvedFilter = await resolveGroupFilter(client, settings.baseDN, rawUserFilter);
 
         let filterToUse = resolvedFilter;
         if (!filterToUse.includes('(objectClass=')) {
-          filterToUse = `(&(objectClass=${objectClass})(!(objectClass=computer))(!(userAccountControl:1.2.840.113556.1.4.803:=2))(${filterToUse}))`;
+          filterToUse = `(&(objectClass=${objectClass})(!(objectClass=computer))(${filterToUse}))`;
         } else if (resolvedFilter !== rawUserFilter && !rawUserFilter.includes('objectClass=')) {
-          filterToUse = `(&(objectClass=${objectClass})(!(objectClass=computer))(!(userAccountControl:1.2.840.113556.1.4.803:=2))(${resolvedFilter}))`;
+          filterToUse = `(&(objectClass=${objectClass})(!(objectClass=computer))(${resolvedFilter}))`;
         }
 
         const attributesSet = new Set([
