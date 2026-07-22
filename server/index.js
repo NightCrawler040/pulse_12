@@ -862,8 +862,14 @@ app.post('/api/ldap/test', requireAuth, async (req, res) => {
 
 app.post('/api/ldap/sync', requireAuth, async (req, res) => {
   try {
-    const settings = req.body.serverUrl ? req.body : dbData.ldap_settings;
-    const result = await syncLdapUsersAndTasks(dbData, saveCollection, settings);
+    const settings = req.body || {};
+    const current = dbData.ldap_settings || {};
+    const syncConfig = {
+      ...current,
+      ...settings,
+      bindPassword: settings.bindPassword === '********' ? (current.bindPassword || '') : settings.bindPassword
+    };
+    const result = await syncLdapUsersAndTasks(dbData, saveCollection, syncConfig);
     broadcastUpdate('users');
     broadcastUpdate('tasks');
     res.json({ success: true, report: result });
