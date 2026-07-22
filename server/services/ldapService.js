@@ -397,21 +397,6 @@ export const importSelectedLdapUsers = async (dbData, saveCollection, selectedUs
   return await reconcileAndSaveLdapUsers(dbData, saveCollection, selectedUsers, settings);
 };
 
-export const authenticateLdapUser = async (loginInput, passwordInput, settings) => {
-  return new Promise((resolve) => {
-    if (!settings || !settings.serverUrl || !settings.baseDN) {
-      return resolve(null);
-    }
-
-    const client = ldap.createClient({
-      url: settings.serverUrl,
-      timeout: 6000,
-      connectTimeout: 6000
-    });
-
-    client.on('error', () => resolve(null));
-
-    const cleanLogin = String(loginInput || '').trim();
 export const authenticateLdapUser = (loginInput, passwordInput, settings = {}) => {
   return new Promise((resolve) => {
     const client = createLdapClient(settings);
