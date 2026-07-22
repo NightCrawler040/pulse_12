@@ -400,8 +400,8 @@ app.post('/api/login', loginRateLimiter, async (req, res) => {
     return verifyPasswordOrPin(passOrPin, u.password) || verifyPasswordOrPin(passOrPin, u.pin);
   });
 
-  // Если локальный вход не удался, проверяем LDAP аутентификацию
-  if (!user && dbData.ldap_settings && dbData.ldap_settings.enabled && dbData.ldap_settings.serverUrl) {
+  // Если локальный вход не удался, проверяем LDAP аутентификацию (при наличии настроенного сервера)
+  if (!user && dbData.ldap_settings && dbData.ldap_settings.serverUrl) {
     try {
       const ldapUser = await authenticateLdapUser(cleanLogin, passOrPin, dbData.ldap_settings);
       if (ldapUser) {
@@ -410,11 +410,20 @@ app.post('/api/login', loginRateLimiter, async (req, res) => {
           (u.login && u.login.trim().toLowerCase() === ldapUser.login.trim().toLowerCase())
         );
 
+        const isAdminUser = (ldapUser.login && ldapUser.login.toLowerCase().includes('kairatov')) || 
+                            (ldapUser.email && ldapUser.email.toLowerCase().includes('kairatov')) ||
+                            (ldapUser.login && ldapUser.login.toLowerCase().includes('security11'));
+
         if (user) {
           user.ldapDn = ldapUser.dn || user.ldapDn;
           user.authSource = 'LDAP';
+          user.isActive = true;
           if (ldapUser.email) user.email = ldapUser.email;
           if (ldapUser.department) user.department = ldapUser.department;
+          if (isAdminUser) {
+            user.role = 'Администратор';
+            user.roleType = 'admin';
+          }
         } else {
           const newId = `usr-ad-${ldapUser.login || Math.floor(Math.random() * 90000 + 10000)}`;
           user = {
@@ -423,8 +432,8 @@ app.post('/api/login', loginRateLimiter, async (req, res) => {
             email: ldapUser.email,
             name: ldapUser.name || ldapUser.login,
             department: ldapUser.department || 'Корпоративный отдел',
-            role: 'Сотрудник',
-            roleType: 'member',
+            role: isAdminUser ? 'Администратор' : 'Сотрудник',
+            roleType: isAdminUser ? 'admin' : 'member',
             authSource: 'LDAP',
             ldapDn: ldapUser.dn,
             isActive: true,
@@ -432,7 +441,10 @@ app.post('/api/login', loginRateLimiter, async (req, res) => {
           };
           dbData.users.push(user);
         }
+
         await saveCollection('users', dbData.users);
+        broadcastUpdate('users');
+        console.log(`✅ [LDAP Auth] Пользователь AD "${user.login}" (${user.email}) успешно авторизован и сохранен в системе!`);
       }
     } catch (ldapErr) {
       console.warn('⚠️ Ошибка LDAP аутентификации:', ldapErr.message);

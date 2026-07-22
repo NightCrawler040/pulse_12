@@ -399,42 +399,77 @@ export const importSelectedLdapUsers = async (dbData, saveCollection, selectedUs
 
 export const authenticateLdapUser = (loginInput, passwordInput, settings = {}) => {
   return new Promise((resolve) => {
-    const client = createLdapClient(settings);
-    client.on('error', (err) => {
-      console.error('❌ LDAP Auth Client Error:', err.message);
-      resolve(null);
-    });
-
     const cleanLogin = String(loginInput || '').trim();
     const cleanPass = String(passwordInput || '').trim();
 
-    if (!cleanLogin || !cleanPass) {
-      client.unbind();
+    if (!cleanLogin || !cleanPass || !settings || !settings.serverUrl) {
       return resolve(null);
     }
+
+    const domain = settings.domainName || 'enpf.kz';
+    const domainPrefix = domain.split('.')[0].toUpperCase();
+    const tryUpn = cleanLogin.includes('@') ? cleanLogin : `${cleanLogin}@${domain}`;
+    const tryNetBios = cleanLogin.includes('\\') ? cleanLogin : `${domainPrefix}\\${cleanLogin.split('@')[0]}`;
+
+    // Вспомогательная функция прямого bind (Direct Fallback)
+    const tryDirectBindFallback = (reason) => {
+      console.log(`🔌 [LDAP Auth] Запуск резервной прямой проверки UPN/NetBIOS для "${cleanLogin}" (${reason})...`);
+      const directClient = createLdapClient(settings);
+      directClient.on('error', () => {});
+
+      // 1. Прямой bind по UPN (user@domain.kz)
+      directClient.bind(tryUpn, cleanPass, (errUpn) => {
+        if (!errUpn) {
+          directClient.unbind();
+          console.log(`✅ [LDAP Auth] Успешная прямая авторизация по UPN: ${tryUpn}`);
+          return resolve({
+            login: cleanLogin.split('@')[0],
+            email: tryUpn,
+            name: cleanLogin.split('@')[0],
+            department: 'Корпоративный отдел',
+            authSource: 'LDAP'
+          });
+        }
+
+        // 2. Прямой bind по NetBIOS (DOMAIN\user)
+        directClient.bind(tryNetBios, cleanPass, (errNetBios) => {
+          directClient.unbind();
+          if (!errNetBios) {
+            console.log(`✅ [LDAP Auth] Успешная прямая авторизация по NetBIOS: ${tryNetBios}`);
+            return resolve({
+              login: cleanLogin.split('@')[0],
+              email: tryUpn,
+              name: cleanLogin.split('@')[0],
+              department: 'Корпоративный отдел',
+              authSource: 'LDAP'
+            });
+          }
+
+          console.warn(`❌ [LDAP Auth] Прямая проверка отклонена AD для "${cleanLogin}" (Неверный логин или пароль)`);
+          resolve(null);
+        });
+      });
+    };
 
     const serviceBindDn = settings.bindDN || settings.username || '';
     const serviceBindPass = settings.bindPassword || settings.password || '';
 
+    // Если нет сервисной учетки, сразу запускаем прямой bind
     if (!serviceBindDn) {
-      // Попытка прямого bind под переданным логином/UPN
-      const tryUpn = cleanLogin.includes('@') ? cleanLogin : `${cleanLogin}@${settings.domainName || 'enpf.kz'}`;
-      client.bind(tryUpn, cleanPass, (err) => {
-        if (err) {
-          client.unbind();
-          return resolve(null);
-        }
-        client.unbind();
-        resolve({ login: cleanLogin.split('@')[0], email: tryUpn, authSource: 'LDAP' });
-      });
-      return;
+      return tryDirectBindFallback('Отсутствует сервисный bindDN');
     }
+
+    const client = createLdapClient(settings);
+    client.on('error', (err) => {
+      console.warn('⚠️ [LDAP Auth] Ошибка клиента при поиске, переход к прямой проверке:', err.message);
+      tryDirectBindFallback('Сетевой сбой сокета');
+    });
 
     client.bind(serviceBindDn, serviceBindPass, (bindErr) => {
       if (bindErr) {
-        console.error('❌ LDAP Auth Service Bind Error:', bindErr.message);
+        console.warn('⚠️ [LDAP Auth] Ошибка сервисного bind, переход к прямой проверке пользователя:', bindErr.message);
         client.unbind();
-        return resolve(null);
+        return tryDirectBindFallback('Ошибка сервисной учетки');
       }
 
       const loginAttr = settings.loginAttribute || 'userPrincipalName';
@@ -449,7 +484,7 @@ export const authenticateLdapUser = (loginInput, passwordInput, settings = {}) =
       client.search(settings.baseDN, { filter, scope: 'sub', sizeLimit: 1 }, (searchErr, res) => {
         if (searchErr) {
           client.unbind();
-          return resolve(null);
+          return tryDirectBindFallback('Ошибка поискового запроса');
         }
 
         let userEntry = null;
@@ -464,26 +499,23 @@ export const authenticateLdapUser = (loginInput, passwordInput, settings = {}) =
 
         res.on('error', (err) => {
           if (err && (err.name === 'ReferralError' || err.code === 10 || err.name === 'SizeLimitExceededError' || err.code === 4 || err.name === 'TimeLimitExceededError' || err.code === 3)) {
-            // Если мы уже нашли сотрудника до ошибки таймаута — продолжаем проверку пароля!
             if (userEntry) {
               return processUserBind();
             }
           }
           client.unbind();
-          resolve(null);
+          tryDirectBindFallback('Таймаут или ограничение поиска');
         });
 
         res.on('end', () => {
+          if (!userEntry) {
+            client.unbind();
+            return tryDirectBindFallback('Сотрудник не найден поиском в BaseDN');
+          }
           processUserBind();
         });
 
         function processUserBind() {
-          if (!userEntry) {
-            console.warn(`⚠️ Учетная запись AD для логина "${cleanLogin}" не найдена в поисковом запросе.`);
-            client.unbind();
-            return resolve(null);
-          }
-
           const obj = userEntry.object || {};
           const getVal = (attrName) => {
             if (!attrName) return '';
@@ -501,41 +533,42 @@ export const authenticateLdapUser = (loginInput, passwordInput, settings = {}) =
           };
 
           const userDn = userEntry.dn?.toString() || obj.distinguishedName || obj.distinguishedname || '';
-          const userUpn = getVal(loginAttr) || getVal('userPrincipalName') || (getVal('sAMAccountName') ? `${getVal('sAMAccountName')}@${settings.domainName || 'enpf.kz'}` : cleanLogin);
-          const email = getVal(emailAttr) || getVal('mail') || getVal('userPrincipalName') || `${cleanLogin}@${settings.domainName || 'enpf.kz'}`;
+          const userUpn = getVal(loginAttr) || getVal('userPrincipalName') || (getVal('sAMAccountName') ? `${getVal('sAMAccountName')}@${domain}` : tryUpn);
+          const email = getVal(emailAttr) || getVal('mail') || getVal('userPrincipalName') || tryUpn;
           const login = getVal('sAMAccountName') || getVal(loginAttr) || cleanLogin.split('@')[0];
           const name = getVal(nameAttr) || getVal('displayName') || getVal('cn') || login;
           const department = getVal(deptAttr) || getVal('department') || 'Корпоративный отдел';
 
-          const userClient = ldap.createClient({ url: settings.serverUrl, timeout: 15000 });
-          userClient.on('error', () => {
-            // Игнорируем сетевые ошибки сокета на закрытии
-          });
+          const userClient = createLdapClient(settings);
+          userClient.on('error', () => {});
 
-          // 1. Сначала пробуем привязаться по UPN (userPrincipalName, например b.kairatov@enpf.kz), так как Active Directory всегда надежно принимает UPN и не спотыкается о кириллицу в DN!
+          // 1. Попытка bind по UPN найденной карточки
           userClient.bind(userUpn, cleanPass, (bindUpnErr) => {
             if (!bindUpnErr) {
               userClient.unbind();
               client.unbind();
+              console.log(`✅ [LDAP Auth] Авторизация успешна по карточке AD (UPN: ${userUpn})`);
               return resolve({ dn: userDn, login, email, name, department, authSource: 'LDAP' });
             }
 
-            // 2. Если по UPN не вышло (или если DN отличается), пробуем bind по полному DN
+            // 2. Попытка bind по DN найденной карточки
             if (userDn && userDn !== userUpn) {
               userClient.bind(userDn, cleanPass, (bindDnErr) => {
-                userClient.unbind();
-                client.unbind();
                 if (!bindDnErr) {
+                  userClient.unbind();
+                  client.unbind();
+                  console.log(`✅ [LDAP Auth] Авторизация успешна по карточке AD (DN: ${userDn})`);
                   return resolve({ dn: userDn, login, email, name, department, authSource: 'LDAP' });
                 }
-                console.warn(`⚠️ Неверный пароль AD для сотрудника "${login}" (ошибки bind по UPN и DN)`);
-                resolve(null);
+                userClient.unbind();
+                client.unbind();
+                // Если по карточке не прошло, запускаем прямой fallback перед отказом!
+                tryDirectBindFallback('Ошибки bind под найденным DN/UPN');
               });
             } else {
               userClient.unbind();
               client.unbind();
-              console.warn(`⚠️ Неверный пароль AD для сотрудника "${login}" (ошибка bind по UPN)`);
-              resolve(null);
+              tryDirectBindFallback('Ошибка bind под найденным UPN');
             }
           });
         }
