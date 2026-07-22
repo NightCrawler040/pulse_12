@@ -20,19 +20,19 @@ interface LdapSettings {
 
 export const LdapSettingsTab: React.FC = () => {
   const [settings, setSettings] = useState<LdapSettings>({
-    enabled: true,
-    connectionName: 'enpf.kz',
-    serverUrl: 'ldap://172.31.0.251',
-    baseDN: 'DC=enpf,DC=kz',
-    userFilter: '(objectClass=person)',
-    loginAttribute: 'userPrincipalName',
-    objectClassUsers: 'person',
+    enabled: false,
+    connectionName: '',
+    serverUrl: '',
+    baseDN: '',
+    userFilter: '',
+    loginAttribute: '',
+    objectClassUsers: '',
     ignoreCase: true,
-    groupBaseDN: 'DC=enpf,DC=kz',
+    groupBaseDN: '',
     groupFilter: '',
-    objectClassGroups: 'group',
-    domainName: 'enpf.kz',
-    bindDN: 'security2@enpf.kz',
+    objectClassGroups: '',
+    domainName: '',
+    bindDN: '',
     bindPassword: ''
   });
 
@@ -203,7 +203,7 @@ export const LdapSettingsTab: React.FC = () => {
                 className="input-field"
                 value={settings.connectionName}
                 onChange={e => setSettings(p => ({ ...p, connectionName: e.target.value }))}
-                placeholder="enpf.kz"
+                placeholder=""
               />
             </div>
 
@@ -216,7 +216,7 @@ export const LdapSettingsTab: React.FC = () => {
                 className="input-field"
                 value={settings.serverUrl}
                 onChange={e => setSettings(p => ({ ...p, serverUrl: e.target.value }))}
-                placeholder="ldap://172.31.0.251 или ldaps://172.31.0.251:636"
+                placeholder=""
                 required
               />
             </div>
@@ -230,7 +230,7 @@ export const LdapSettingsTab: React.FC = () => {
                 className="input-field"
                 value={settings.domainName}
                 onChange={e => setSettings(p => ({ ...p, domainName: e.target.value }))}
-                placeholder="enpf.kz"
+                placeholder=""
               />
             </div>
 
@@ -243,7 +243,7 @@ export const LdapSettingsTab: React.FC = () => {
                 className="input-field"
                 value={settings.baseDN}
                 onChange={e => setSettings(p => ({ ...p, baseDN: e.target.value }))}
-                placeholder="DC=enpf,DC=kz"
+                placeholder=""
                 required
               />
             </div>
@@ -257,7 +257,7 @@ export const LdapSettingsTab: React.FC = () => {
                 className="input-field"
                 value={settings.bindDN}
                 onChange={e => setSettings(p => ({ ...p, bindDN: e.target.value }))}
-                placeholder="security2@enpf.kz или CN=admin,DC=enpf,DC=kz"
+                placeholder=""
               />
             </div>
 
@@ -270,7 +270,7 @@ export const LdapSettingsTab: React.FC = () => {
                 className="input-field"
                 value={settings.bindPassword || ''}
                 onChange={e => setSettings(p => ({ ...p, bindPassword: e.target.value }))}
-                placeholder={settings.bindPassword === '********' ? '•••••••• (Пароль сохранен)' : 'Введите пароль для чтения AD...'}
+                placeholder={settings.bindPassword === '********' ? '•••••••• (Пароль сохранен)' : ''}
               />
             </div>
           </div>
@@ -297,7 +297,7 @@ export const LdapSettingsTab: React.FC = () => {
                 className="input-field"
                 value={settings.userFilter || ''}
                 onChange={e => setSettings(p => ({ ...p, userFilter: e.target.value }))}
-                placeholder="(objectClass=person) или (&(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))"
+                placeholder=""
               />
             </div>
 
@@ -308,9 +308,9 @@ export const LdapSettingsTab: React.FC = () => {
               <input
                 type="text"
                 className="input-field"
-                value={settings.loginAttribute || 'userPrincipalName'}
+                value={settings.loginAttribute || ''}
                 onChange={e => setSettings(p => ({ ...p, loginAttribute: e.target.value }))}
-                placeholder="userPrincipalName или sAMAccountName"
+                placeholder=""
               />
             </div>
 
@@ -321,9 +321,9 @@ export const LdapSettingsTab: React.FC = () => {
               <input
                 type="text"
                 className="input-field"
-                value={settings.objectClassUsers || 'person'}
+                value={settings.objectClassUsers || ''}
                 onChange={e => setSettings(p => ({ ...p, objectClassUsers: e.target.value }))}
-                placeholder="person"
+                placeholder=""
               />
             </div>
 

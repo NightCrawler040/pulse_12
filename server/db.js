@@ -31,19 +31,19 @@ pool.on('error', (err) => {
 let isPgConnected = false;
 
 const defaultLdapSettings = {
-  enabled: true,
-  serverUrl: 'ldap://172.31.0.251',
-  baseDN: 'DC=enpf,DC=kz',
-  bindDN: 'security2@enpf.kz',
+  enabled: false,
+  serverUrl: '',
+  baseDN: '',
+  bindDN: '',
   bindPassword: '',
-  userFilter: '(objectClass=person)',
-  loginAttribute: 'userPrincipalName',
-  emailAttribute: 'mail',
-  nameAttribute: 'displayName',
-  departmentAttribute: 'department',
-  objectClassUsers: 'person',
+  userFilter: '',
+  loginAttribute: '',
+  emailAttribute: '',
+  nameAttribute: '',
+  departmentAttribute: '',
+  objectClassUsers: '',
   ignoreCase: true,
-  domainName: 'enpf.kz'
+  domainName: ''
 };
 
 // Локальное файловое хранилище (для Fallback-режима без Docker/Postgres)
