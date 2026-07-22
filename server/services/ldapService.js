@@ -412,6 +412,15 @@ export const authenticateLdapUser = async (loginInput, passwordInput, settings) 
     client.on('error', () => resolve(null));
 
     const cleanLogin = String(loginInput || '').trim();
+export const authenticateLdapUser = (loginInput, passwordInput, settings = {}) => {
+  return new Promise((resolve) => {
+    const client = createLdapClient(settings);
+    client.on('error', (err) => {
+      console.error('❌ LDAP Auth Client Error:', err.message);
+      resolve(null);
+    });
+
+    const cleanLogin = String(loginInput || '').trim();
     const cleanPass = String(passwordInput || '').trim();
 
     if (!cleanLogin || !cleanPass) {
@@ -419,8 +428,6 @@ export const authenticateLdapUser = async (loginInput, passwordInput, settings) 
       return resolve(null);
     }
 
-    // Если передан полный UPN (user@domain.kz) или DN — пробуем прямой bind
-    // Иначе сначала биндимся под сервисным bindDN, ищем DN пользователя, и затем биндимся под ним
     const serviceBindDn = settings.bindDN || settings.username || '';
     const serviceBindPass = settings.bindPassword || settings.password || '';
 
@@ -433,13 +440,14 @@ export const authenticateLdapUser = async (loginInput, passwordInput, settings) 
           return resolve(null);
         }
         client.unbind();
-        resolve({ login: cleanLogin, email: tryUpn, authSource: 'LDAP' });
+        resolve({ login: cleanLogin.split('@')[0], email: tryUpn, authSource: 'LDAP' });
       });
       return;
     }
 
     client.bind(serviceBindDn, serviceBindPass, (bindErr) => {
       if (bindErr) {
+        console.error('❌ LDAP Auth Service Bind Error:', bindErr.message);
         client.unbind();
         return resolve(null);
       }
@@ -462,51 +470,90 @@ export const authenticateLdapUser = async (loginInput, passwordInput, settings) 
         let userEntry = null;
 
         res.on('searchEntry', (entry) => {
-          userEntry = entry;
+          if (!userEntry) userEntry = entry;
+        });
+
+        res.on('searchReference', () => {
+          // Игнорируем рефералы AD
+        });
+
+        res.on('error', (err) => {
+          if (err && (err.name === 'ReferralError' || err.code === 10 || err.name === 'SizeLimitExceededError' || err.code === 4 || err.name === 'TimeLimitExceededError' || err.code === 3)) {
+            // Если мы уже нашли сотрудника до ошибки таймаута — продолжаем проверку пароля!
+            if (userEntry) {
+              return processUserBind();
+            }
+          }
+          client.unbind();
+          resolve(null);
         });
 
         res.on('end', () => {
+          processUserBind();
+        });
+
+        function processUserBind() {
           if (!userEntry) {
+            console.warn(`⚠️ Учетная запись AD для логина "${cleanLogin}" не найдена в поисковом запросе.`);
             client.unbind();
             return resolve(null);
           }
 
-          const userDn = userEntry.dn?.toString() || userEntry.object.distinguishedName || '';
-          if (!userDn) {
-            client.unbind();
-            return resolve(null);
-          }
+          const obj = userEntry.object || {};
+          const getVal = (attrName) => {
+            if (!attrName) return '';
+            let val = obj[attrName];
+            if (!val && typeof obj === 'object') {
+              const foundKey = Object.keys(obj).find(k => k.toLowerCase() === attrName.toLowerCase());
+              if (foundKey) val = obj[foundKey];
+            }
+            if (!val && Array.isArray(userEntry.attributes)) {
+              const attr = userEntry.attributes.find(a => (a.type || a.name || '').toLowerCase() === attrName.toLowerCase());
+              if (attr && (attr.values || attr.vals)) val = attr.values || attr.vals;
+            }
+            if (!val) return '';
+            return Array.isArray(val) ? String(val[0]).trim() : String(val).trim();
+          };
 
-          // Проверяем пароль пользователя прямым bind под его DN
-          const userClient = ldap.createClient({ url: settings.serverUrl, timeout: 5000 });
-          userClient.on('error', () => resolve(null));
-          userClient.bind(userDn, cleanPass, (userBindErr) => {
-            if (userBindErr) {
+          const userDn = userEntry.dn?.toString() || obj.distinguishedName || obj.distinguishedname || '';
+          const userUpn = getVal(loginAttr) || getVal('userPrincipalName') || (getVal('sAMAccountName') ? `${getVal('sAMAccountName')}@${settings.domainName || 'enpf.kz'}` : cleanLogin);
+          const email = getVal(emailAttr) || getVal('mail') || getVal('userPrincipalName') || `${cleanLogin}@${settings.domainName || 'enpf.kz'}`;
+          const login = getVal('sAMAccountName') || getVal(loginAttr) || cleanLogin.split('@')[0];
+          const name = getVal(nameAttr) || getVal('displayName') || getVal('cn') || login;
+          const department = getVal(deptAttr) || getVal('department') || 'Корпоративный отдел';
+
+          const userClient = ldap.createClient({ url: settings.serverUrl, timeout: 15000 });
+          userClient.on('error', () => {
+            // Игнорируем сетевые ошибки сокета на закрытии
+          });
+
+          // 1. Сначала пробуем привязаться по UPN (userPrincipalName, например b.kairatov@enpf.kz), так как Active Directory всегда надежно принимает UPN и не спотыкается о кириллицу в DN!
+          userClient.bind(userUpn, cleanPass, (bindUpnErr) => {
+            if (!bindUpnErr) {
               userClient.unbind();
               client.unbind();
-              return resolve(null);
+              return resolve({ dn: userDn, login, email, name, department, authSource: 'LDAP' });
             }
 
-            const obj = userEntry.object;
-            const getVal = (attr) => (obj[attr] ? (Array.isArray(obj[attr]) ? obj[attr][0] : obj[attr]) : '');
-
-            const email = getVal(emailAttr) || getVal('mail') || getVal('userPrincipalName') || '';
-            const login = getVal(loginAttr) || getVal('sAMAccountName') || cleanLogin;
-            const name = getVal(nameAttr) || getVal('displayName') || getVal('cn') || login;
-            const department = getVal(deptAttr) || getVal('department') || 'Корпоративный отдел';
-
-            userClient.unbind();
-            client.unbind();
-            resolve({
-              dn: userDn,
-              login,
-              email,
-              name,
-              department,
-              authSource: 'LDAP'
-            });
+            // 2. Если по UPN не вышло (или если DN отличается), пробуем bind по полному DN
+            if (userDn && userDn !== userUpn) {
+              userClient.bind(userDn, cleanPass, (bindDnErr) => {
+                userClient.unbind();
+                client.unbind();
+                if (!bindDnErr) {
+                  return resolve({ dn: userDn, login, email, name, department, authSource: 'LDAP' });
+                }
+                console.warn(`⚠️ Неверный пароль AD для сотрудника "${login}" (ошибки bind по UPN и DN)`);
+                resolve(null);
+              });
+            } else {
+              userClient.unbind();
+              client.unbind();
+              console.warn(`⚠️ Неверный пароль AD для сотрудника "${login}" (ошибка bind по UPN)`);
+              resolve(null);
+            }
           });
-        });
+        }
       });
     });
   });
