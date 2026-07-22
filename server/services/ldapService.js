@@ -12,6 +12,55 @@ const safeUnbind = (client) => {
   } catch (e) {}
 };
 
+// Вспомогательная функция для автоматического разрешения имен групп AD (например internetdkb) в полный DN
+const resolveGroupFilter = async (client, baseDN, rawFilter) => {
+  if (!rawFilter || typeof rawFilter !== 'string') return rawFilter;
+  let resolvedFilter = rawFilter.trim();
+
+  // Если ввели просто "group:internetdkb" или "group=internetdkb"
+  if (/^group[:=](.+)$/i.test(resolvedFilter)) {
+    const gName = resolvedFilter.replace(/^group[:=]/i, '').trim();
+    resolvedFilter = `memberOf=${gName}`;
+  } else if (/^[a-zA-Z0-9_\-\.а-яА-Я]+$/.test(resolvedFilter) && resolvedFilter.toLowerCase() !== 'person' && resolvedFilter.toLowerCase() !== 'user') {
+    // Если ввели просто одно слово вроде "internetdkb", ищем его либо как группу, либо в названии отдела
+    resolvedFilter = `(|(memberOf=${resolvedFilter})(department=*${resolvedFilter}*))`;
+  }
+
+  // Ищем в фильтре конструкции memberOf=имяГруппы или memberOf=*имяГруппы* или group=имяГруппы
+  const groupRegex = /(?:memberOf|group|groupName)[:=][\*]*([^)\*]+)[\*]*/gi;
+  let match;
+  let filterWithGroupDns = resolvedFilter;
+
+  while ((match = groupRegex.exec(resolvedFilter)) !== null) {
+    const fullMatch = match[0];
+    const groupName = match[1].trim();
+    if (!groupName || groupName.toUpperCase().startsWith('CN=')) continue;
+
+    const groupDn = await new Promise((resolve) => {
+      const groupSearchFilter = `(&(objectClass=group)(|(sAMAccountName=${groupName})(cn=${groupName})(displayName=${groupName})))`;
+      client.search(baseDN, { filter: groupSearchFilter, scope: 'sub', sizeLimit: 1 }, (err, res) => {
+        if (err) return resolve(null);
+        let foundDn = null;
+        res.on('searchEntry', (entry) => {
+          if (!foundDn) foundDn = entry.dn?.toString() || entry.object?.distinguishedName || entry.object?.distinguishedname || '';
+        });
+        res.on('error', () => resolve(foundDn));
+        res.on('end', () => resolve(foundDn));
+      });
+    });
+
+    if (groupDn) {
+      console.log(`🔍 [LDAP Group Resolve] Группа AD "${groupName}" разрешена в DN: ${groupDn}`);
+      // Используем LDAP_MATCHING_RULE_IN_CHAIN (1.2.840.113556.1.4.1941) для нахождения членов группы и всех ее подгрупп
+      filterWithGroupDns = filterWithGroupDns.replace(fullMatch, `(|(memberOf=${groupDn})(memberOf:1.2.840.113556.1.4.1941:=${groupDn}))`);
+    } else {
+      console.warn(`⚠️ [LDAP Group Resolve] Группа AD "${groupName}" не найдена в BaseDN: ${baseDN}. Поиск продолжится с исходным фильтром.`);
+    }
+  }
+
+  return filterWithGroupDns;
+};
+
 export const testLdapConnection = async (settings) => {
   return new Promise((resolve) => {
     if (!settings || !settings.serverUrl) {
@@ -43,7 +92,7 @@ export const testLdapConnection = async (settings) => {
       return finish({ success: false, error: 'Укажите имя пользователя (bindDN или UPN) для подключения к Active Directory' });
     }
 
-    client.bind(bindDn, bindPass, (err) => {
+    client.bind(bindDn, bindPass, async (err) => {
       if (err) {
         return finish({ success: false, error: `Ошибка аутентификации (bind): ${err.message}` });
       }
@@ -52,8 +101,11 @@ export const testLdapConnection = async (settings) => {
         return finish({ success: true, message: '✅ Подключение и авторизация в Active Directory прошли успешно!' });
       }
 
+      const rawUserFilter = settings.userFilter || '(objectClass=person)';
+      const resolvedTestFilter = await resolveGroupFilter(client, settings.baseDN, rawUserFilter);
+
       const searchOptions = {
-        filter: settings.userFilter || '(objectClass=person)',
+        filter: resolvedTestFilter,
         scope: 'sub',
         sizeLimit: 1
       };
@@ -112,7 +164,7 @@ export const fetchLdapUsers = async (settings) => {
     const bindDn = settings.bindDN || settings.username || '';
     const bindPass = settings.bindPassword || settings.password || '';
 
-    client.bind(bindDn, bindPass, (bindErr) => {
+    client.bind(bindDn, bindPass, async (bindErr) => {
       if (bindErr) {
         return finish(bindErr);
       }
@@ -123,10 +175,18 @@ export const fetchLdapUsers = async (settings) => {
       const deptAttr = settings.departmentAttribute || 'department';
       const objectClass = settings.objectClassUsers || 'person';
 
-      const filter = settings.userFilter || `(&(objectClass=${objectClass})(!(objectClass=computer))(!(userAccountControl:1.2.840.113556.1.4.803:=2)))`;
+      const rawUserFilter = settings.userFilter || `(&(objectClass=${objectClass})(!(objectClass=computer))(!(userAccountControl:1.2.840.113556.1.4.803:=2)))`;
+      const resolvedFilter = await resolveGroupFilter(client, settings.baseDN, rawUserFilter);
+
+      let filterToUse = resolvedFilter;
+      if (!filterToUse.includes('(objectClass=')) {
+        filterToUse = `(&(objectClass=${objectClass})(!(objectClass=computer))(!(userAccountControl:1.2.840.113556.1.4.803:=2))(${filterToUse}))`;
+      } else if (resolvedFilter !== rawUserFilter && !rawUserFilter.includes('objectClass=')) {
+        filterToUse = `(&(objectClass=${objectClass})(!(objectClass=computer))(!(userAccountControl:1.2.840.113556.1.4.803:=2))(${resolvedFilter}))`;
+      }
 
       const searchOptions = {
-        filter: filter,
+        filter: filterToUse,
         scope: 'sub',
         paged: true,
         sizeLimit: 1000,
