@@ -178,11 +178,12 @@ export const fetchLdapUsers = async (settings) => {
       }
 
       try {
-        const loginAttr = settings.loginAttribute || 'userPrincipalName';
-        const emailAttr = settings.emailAttribute || 'mail';
-        const nameAttr = settings.nameAttribute || 'displayName';
-        const deptAttr = settings.departmentAttribute || 'department';
-        const objectClass = settings.objectClassUsers || 'person';
+        const cleanAttr = (attr) => (attr ? String(attr).trim() : '');
+        const loginAttr = cleanAttr(settings.loginAttribute || 'userPrincipalName');
+        const emailAttr = cleanAttr(settings.emailAttribute || 'mail');
+        const nameAttr = cleanAttr(settings.nameAttribute || 'displayName');
+        const deptAttr = cleanAttr(settings.departmentAttribute || 'department');
+        const objectClass = cleanAttr(settings.objectClassUsers || 'person');
 
         const rawUserFilter = settings.userFilter || `(&(objectClass=${objectClass})(!(objectClass=computer))(!(userAccountControl:1.2.840.113556.1.4.803:=2)))`;
         const resolvedFilter = await resolveGroupFilter(client, settings.baseDN, rawUserFilter);
@@ -194,19 +195,36 @@ export const fetchLdapUsers = async (settings) => {
           filterToUse = `(&(objectClass=${objectClass})(!(objectClass=computer))(!(userAccountControl:1.2.840.113556.1.4.803:=2))(${resolvedFilter}))`;
         }
 
+        const attributesSet = new Set([
+          'sAMAccountName',
+          'userPrincipalName',
+          'mail',
+          'displayName',
+          'cn',
+          'department',
+          'distinguishedName',
+          'objectClass',
+          'objectCategory',
+          'userAccountControl'
+        ]);
+
+        [loginAttr, emailAttr, nameAttr, deptAttr].forEach(attr => {
+          if (attr) {
+            attr.split(/[,;\s]+/).forEach(part => {
+              const cleanPart = part.trim();
+              if (/^[a-zA-Z0-9\-]+$/.test(cleanPart)) {
+                attributesSet.add(cleanPart);
+              }
+            });
+          }
+        });
+
         const searchOptions = {
           filter: filterToUse,
           scope: 'sub',
           paged: true,
           sizeLimit: 1000,
-          attributes: [
-            loginAttr, emailAttr, nameAttr, deptAttr,
-            'sAMAccountName', 'samaccountname',
-            'userPrincipalName', 'userprincipalname',
-            'mail', 'displayName', 'displayname',
-            'cn', 'department', 'distinguishedName', 'distinguishedname',
-            'objectClass', 'objectclass', 'objectCategory', 'objectcategory', 'userAccountControl', 'useraccountcontrol'
-          ]
+          attributes: Array.from(attributesSet)
         };
 
         client.search(settings.baseDN, searchOptions, (searchErr, res) => {
