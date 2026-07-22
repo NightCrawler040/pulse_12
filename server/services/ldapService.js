@@ -20,8 +20,8 @@ export const testLdapConnection = async (settings) => {
 
     const client = ldap.createClient({
       url: settings.serverUrl,
-      timeout: 8000,
-      connectTimeout: 8000
+      timeout: 45000,
+      connectTimeout: 15000
     });
 
     let finished = false;
@@ -60,13 +60,16 @@ export const testLdapConnection = async (settings) => {
 
       client.search(settings.baseDN, searchOptions, (searchErr, res) => {
         if (searchErr) {
+          if (searchErr.message && (searchErr.message.includes('timeout') || searchErr.message.includes('interrupt'))) {
+            return finish({ success: true, message: '✅ Подключение и авторизация в Active Directory прошли успешно! (Поиск в корне домена занял больше 45с из-за объема AD, можно сузить BaseDN или фильтр)' });
+          }
           return finish({ success: true, message: `Подключение к LDAP успешно, но поиск в BaseDN (${settings.baseDN}) вернул предупреждение: ${searchErr.message}` });
         }
 
         res.on('searchEntry', () => {});
         res.on('searchReference', () => {});
         res.on('error', (resErr) => {
-          if (resErr && (resErr.name === 'ReferralError' || resErr.code === 10 || resErr.name === 'SizeLimitExceededError' || resErr.code === 4)) {
+          if (resErr && (resErr.name === 'ReferralError' || resErr.code === 10 || resErr.name === 'SizeLimitExceededError' || resErr.code === 4 || (resErr.message && (resErr.message.includes('timeout') || resErr.message.includes('interrupt'))))) {
             return finish({ success: true, message: '✅ Подключение и авторизация в Active Directory прошли успешно!' });
           }
           finish({ success: true, message: `✅ Подключение успешно, но поиск в BaseDN (${settings.baseDN}) выдал ошибку: ${resErr.message}` });
@@ -87,7 +90,7 @@ export const fetchLdapUsers = async (settings) => {
 
     const client = ldap.createClient({
       url: settings.serverUrl,
-      timeout: 15000,
+      timeout: 45000,
       connectTimeout: 15000
     });
 
@@ -208,13 +211,7 @@ export const fetchLdapUsers = async (settings) => {
   });
 };
 
-/**
- * Главный метод синхронизации с умной привязкой по почте и сохранением существующих ID (чтобы не ломать задачи)
- */
-export const syncLdapUsersAndTasks = async (dbData, saveCollection, customSettings = null) => {
-  const settings = customSettings || dbData.ldap_settings || {};
-  const adUsers = await fetchLdapUsers(settings);
-
+export const reconcileAndSaveLdapUsers = async (dbData, saveCollection, adUsers, settings = {}) => {
   let syncedCount = 0;
   let newUsersCount = 0;
   let updatedUsersCount = 0;
@@ -268,12 +265,12 @@ export const syncLdapUsersAndTasks = async (dbData, saveCollection, customSettin
       updatedUsersCount++;
     } else {
       // Создаем нового пользователя Active Directory
-      const newId = `usr-ad-${cleanAdLogin || cleanAdEmail.split('@')[0] || Math.floor(Math.random() * 90000 + 10000)}`;
+      const newId = `usr-ad-${cleanAdLogin || (cleanAdEmail ? cleanAdEmail.split('@')[0] : '') || Math.floor(Math.random() * 90000 + 10000)}`;
       const newUser = {
         id: newId,
-        login: adUser.login || adUser.email.split('@')[0],
-        email: adUser.email,
-        name: adUser.name || adUser.login,
+        login: adUser.login || (adUser.email ? adUser.email.split('@')[0] : `user_${Date.now()}`),
+        email: adUser.email || `${adUser.login || 'user'}@${settings.domainName || 'enpf.kz'}`,
+        name: adUser.name || adUser.login || adUser.email,
         department: adUser.department || 'Корпоративный отдел',
         role: 'Сотрудник',
         roleType: 'member',
@@ -291,8 +288,6 @@ export const syncLdapUsersAndTasks = async (dbData, saveCollection, customSettin
   });
 
   // 3. Автоматическая сверка и перепривязка задач (Task Reconciliation by Email / Login)
-  // Если задача ранее была назначена по почтовому адресу (например, e.meiramov@enpf.kz) или логину (e.meiramov),
-  // или если в assigneeId записан email — привязываем к реальному ID сотрудника!
   dbData.tasks.forEach(task => {
     let taskChanged = false;
 
@@ -307,7 +302,6 @@ export const syncLdapUsersAndTasks = async (dbData, saveCollection, customSettin
       return null;
     };
 
-    // Проверка assigneeId / assigneeEmail
     const targetUser = checkAndReconcile(task.assigneeId) || checkAndReconcile(task.assigneeEmail) || checkAndReconcile(task.assigneeName);
     if (targetUser) {
       if (task.assigneeId !== targetUser.id || task.assigneeEmail !== targetUser.email || task.assigneeName !== targetUser.name) {
@@ -318,7 +312,6 @@ export const syncLdapUsersAndTasks = async (dbData, saveCollection, customSettin
       }
     }
 
-    // Проверка комментариев
     if (Array.isArray(task.comments)) {
       task.comments.forEach(comment => {
         const commentUser = checkAndReconcile(comment.userId) || checkAndReconcile(comment.userEmail);
@@ -335,7 +328,7 @@ export const syncLdapUsersAndTasks = async (dbData, saveCollection, customSettin
     }
   });
 
-  // 4. Сверка инцидентов безопасности (DerScanner / SIEM / WAF) по почте/логину
+  // 4. Сверка инцидентов безопасности
   dbData.findings.forEach(finding => {
     if (finding.assignee) {
       const cleanAss = String(finding.assignee).trim().toLowerCase();
@@ -353,7 +346,6 @@ export const syncLdapUsersAndTasks = async (dbData, saveCollection, customSettin
     }
   });
 
-  // Сохраняем обновленные коллекции
   await saveCollection('users', dbData.users);
   if (reconciledTasksCount > 0) {
     await saveCollection('tasks', dbData.tasks);
@@ -370,6 +362,17 @@ export const syncLdapUsersAndTasks = async (dbData, saveCollection, customSettin
     reconciledFindingsCount,
     totalUsersCount: dbData.users.length
   };
+};
+
+export const syncLdapUsersAndTasks = async (dbData, saveCollection, customSettings = null) => {
+  const settings = customSettings || dbData.ldap_settings || {};
+  const adUsers = await fetchLdapUsers(settings);
+  return await reconcileAndSaveLdapUsers(dbData, saveCollection, adUsers, settings);
+};
+
+export const importSelectedLdapUsers = async (dbData, saveCollection, selectedUsers, customSettings = null) => {
+  const settings = customSettings || dbData.ldap_settings || {};
+  return await reconcileAndSaveLdapUsers(dbData, saveCollection, selectedUsers, settings);
 };
 
 export const authenticateLdapUser = async (loginInput, passwordInput, settings) => {

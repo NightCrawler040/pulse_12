@@ -14,7 +14,7 @@ import { generateSprintPdf } from './services/pdfService.js';
 import compression from 'compression';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-import { testLdapConnection, fetchLdapUsers, syncLdapUsersAndTasks, authenticateLdapUser } from './services/ldapService.js';
+import { testLdapConnection, fetchLdapUsers, syncLdapUsersAndTasks, importSelectedLdapUsers, authenticateLdapUser } from './services/ldapService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -875,6 +875,45 @@ app.post('/api/ldap/sync', requireAuth, async (req, res) => {
     res.json({ success: true, report: result });
   } catch (err) {
     console.error('❌ Ошибка синхронизации LDAP:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/ldap/preview', requireAuth, async (req, res) => {
+  try {
+    const settings = req.body || {};
+    const current = dbData.ldap_settings || {};
+    const previewConfig = {
+      ...current,
+      ...settings,
+      bindPassword: settings.bindPassword === '********' ? (current.bindPassword || '') : settings.bindPassword
+    };
+    const users = await fetchLdapUsers(previewConfig);
+    res.json({ success: true, users });
+  } catch (err) {
+    console.error('❌ Ошибка предпросмотра LDAP:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/ldap/import-selected', requireAuth, async (req, res) => {
+  try {
+    const { selectedUsers, settings } = req.body || {};
+    if (!Array.isArray(selectedUsers) || selectedUsers.length === 0) {
+      return res.status(400).json({ success: false, error: 'Не выбрано ни одного сотрудника для импорта' });
+    }
+    const current = dbData.ldap_settings || {};
+    const importConfig = {
+      ...current,
+      ...settings,
+      bindPassword: (settings && settings.bindPassword === '********') ? (current.bindPassword || '') : (settings?.bindPassword || current.bindPassword)
+    };
+    const result = await importSelectedLdapUsers(dbData, saveCollection, selectedUsers, importConfig);
+    broadcastUpdate('users');
+    broadcastUpdate('tasks');
+    res.json({ success: true, report: result });
+  } catch (err) {
+    console.error('❌ Ошибка выборочного импорта LDAP:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 });

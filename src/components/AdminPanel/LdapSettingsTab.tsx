@@ -40,8 +40,14 @@ export const LdapSettingsTab: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [isImportingSelected, setIsImportingSelected] = useState(false);
   const [testResult, setTestResult] = useState<{ success?: boolean; message?: string; error?: string } | null>(null);
   const [syncReport, setSyncReport] = useState<any | null>(null);
+
+  const [previewUsers, setPreviewUsers] = useState<any[] | null>(null);
+  const [selectedUserLogins, setSelectedUserLogins] = useState<Set<string>>(new Set());
+  const [previewSearchText, setPreviewSearchText] = useState('');
 
   useEffect(() => {
     fetchSettings();
@@ -89,6 +95,76 @@ export const LdapSettingsTab: React.FC = () => {
       setTestResult({ success: false, error: err.message || 'Ошибка проверки соединения с AD' });
     } finally {
       setIsTesting(false);
+    }
+  };
+
+  const handlePreviewList = async () => {
+    setIsPreviewing(true);
+    setTestResult(null);
+    setSyncReport(null);
+    try {
+      const data = await apiService.post<any>('/api/ldap/preview', settings);
+      if (data && data.success && Array.isArray(data.users)) {
+        setPreviewUsers(data.users);
+        setSelectedUserLogins(new Set(data.users.map((u: any) => u.login)));
+        setPreviewSearchText('');
+      } else {
+        setTestResult({ success: false, error: (data && data.error) || 'Не удалось получить список сотрудников из AD' });
+      }
+    } catch (err: any) {
+      setTestResult({ success: false, error: err.message || 'Ошибка загрузки списка из Active Directory' });
+    } finally {
+      setIsPreviewing(false);
+    }
+  };
+
+  const handleToggleUser = (login: string) => {
+    setSelectedUserLogins(prev => {
+      const next = new Set(prev);
+      if (next.has(login)) next.delete(login);
+      else next.add(login);
+      return next;
+    });
+  };
+
+  const handleToggleSelectAll = (filteredUsers: any[]) => {
+    const allFilteredSelected = filteredUsers.every(u => selectedUserLogins.has(u.login));
+    setSelectedUserLogins(prev => {
+      const next = new Set(prev);
+      if (allFilteredSelected) {
+        filteredUsers.forEach(u => next.delete(u.login));
+      } else {
+        filteredUsers.forEach(u => next.add(u.login));
+      }
+      return next;
+    });
+  };
+
+  const handleImportSelectedUsers = async () => {
+    if (!previewUsers) return;
+    const selectedList = previewUsers.filter(u => selectedUserLogins.has(u.login));
+    if (selectedList.length === 0) {
+      alert('Пожалуйста, выберите хотя бы одного сотрудника для импорта');
+      return;
+    }
+    setIsImportingSelected(true);
+    setTestResult(null);
+    try {
+      const data = await apiService.post<any>('/api/ldap/import-selected', { selectedUsers: selectedList, settings });
+      if (data && data.success) {
+        setSyncReport(data.report);
+        setTestResult({
+          success: true,
+          message: `🎉 Выборочный импорт завершен! Импортировано сотрудников: ${data.report.syncedCount} (Новых: ${data.report.newUsersCount}, Обновлено: ${data.report.updatedUsersCount})`
+        });
+        setPreviewUsers(null);
+      } else {
+        setTestResult({ success: false, error: (data && data.error) || 'Ошибка при выборочном импорте' });
+      }
+    } catch (err: any) {
+      setTestResult({ success: false, error: err.message || 'Ошибка при добавлении сотрудников в систему' });
+    } finally {
+      setIsImportingSelected(false);
     }
   };
 
@@ -369,9 +445,29 @@ export const LdapSettingsTab: React.FC = () => {
                 gap: '8px'
               }}
               onClick={handleTestConnection}
-              disabled={isTesting || isSyncing}
+              disabled={isTesting || isSyncing || isPreviewing}
             >
               {isTesting ? '⏳ Проверка соединения...' : '🔌 Проверить соединение с AD'}
+            </button>
+
+            <button
+              type="button"
+              className="btn-secondary"
+              style={{
+                background: 'rgba(168, 85, 247, 0.15)',
+                color: '#a855f7',
+                border: '1px solid rgba(168, 85, 247, 0.4)',
+                padding: '12px 20px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+              onClick={handlePreviewList}
+              disabled={isTesting || isSyncing || isPreviewing}
+            >
+              {isPreviewing ? '⏳ Поиск сотрудников в AD...' : '📋 Найти и выбрать сотрудников из AD...'}
             </button>
 
             <button
@@ -389,9 +485,9 @@ export const LdapSettingsTab: React.FC = () => {
                 gap: '8px'
               }}
               onClick={handleSyncNow}
-              disabled={isTesting || isSyncing}
+              disabled={isTesting || isSyncing || isPreviewing}
             >
-              {isSyncing ? '🔄 Синхронизация данных...' : '🔄 Синхронизировать пользователей и задачи сейчас'}
+              {isSyncing ? '🔄 Синхронизация данных...' : '🔄 Синхронизировать всех сейчас'}
             </button>
           </div>
 
@@ -399,11 +495,156 @@ export const LdapSettingsTab: React.FC = () => {
             type="submit"
             className="btn-primary"
             style={{ padding: '12px 28px', fontSize: '1rem', fontWeight: 'bold' }}
-            disabled={isSaving || isSyncing}
+            disabled={isSaving || isSyncing || isPreviewing}
           >
             {isSaving ? '💾 Сохранение...' : '💾 Сохранить параметры AD'}
           </button>
         </div>
+
+        {/* Interactive AD User Picker Overlay / Panel */}
+        {previewUsers && (
+          <div style={{
+            background: 'hsl(var(--bg-card))',
+            border: '2px solid #a855f7',
+            borderRadius: '16px',
+            padding: '24px',
+            marginTop: '16px',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.25)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'hsl(var(--text-primary))', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  📋 Список сотрудников из Active Directory ({previewUsers.length} чел.)
+                </h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.9rem', color: 'hsl(var(--text-secondary))' }}>
+                  Отметьте галочками сотрудников, которых нужно добавить или обновить в системе Pulse 12
+                </p>
+              </div>
+
+              <input
+                type="text"
+                className="input-field"
+                placeholder="🔍 Быстрый поиск в списке (ФИО, почта, логин)..."
+                value={previewSearchText}
+                onChange={e => setPreviewSearchText(e.target.value)}
+                style={{ width: '320px', margin: 0 }}
+              />
+            </div>
+
+            {(() => {
+              const filtered = previewUsers.filter(u => {
+                if (!previewSearchText.trim()) return true;
+                const q = previewSearchText.toLowerCase();
+                return (
+                  (u.name && u.name.toLowerCase().includes(q)) ||
+                  (u.email && u.email.toLowerCase().includes(q)) ||
+                  (u.login && u.login.toLowerCase().includes(q)) ||
+                  (u.department && u.department.toLowerCase().includes(q))
+                );
+              });
+
+              const allFilteredSelected = filtered.length > 0 && filtered.every(u => selectedUserLogins.has(u.login));
+
+              return (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'hsl(var(--bg-secondary))', padding: '12px 16px', borderRadius: '10px', marginBottom: '12px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 600, color: 'hsl(var(--text-primary))' }}>
+                      <input
+                        type="checkbox"
+                        checked={allFilteredSelected}
+                        onChange={() => handleToggleSelectAll(filtered)}
+                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                      />
+                      <span>Выбрать всех в списке ({filtered.length})</span>
+                    </label>
+                    <span style={{ fontWeight: 'bold', color: '#a855f7' }}>
+                      Отмечено для импорта: {selectedUserLogins.size} из {previewUsers.length}
+                    </span>
+                  </div>
+
+                  <div style={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid hsl(var(--border-color))', borderRadius: '10px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.95rem' }}>
+                      <thead>
+                        <tr style={{ background: 'hsl(var(--bg-secondary))', borderBottom: '1px solid hsl(var(--border-color))', position: 'sticky', top: 0 }}>
+                          <th style={{ padding: '12px 16px', width: '40px' }}>✔</th>
+                          <th style={{ padding: '12px 16px' }}>ФИО сотрудника</th>
+                          <th style={{ padding: '12px 16px' }}>Логин (AD)</th>
+                          <th style={{ padding: '12px 16px' }}>Почта (Email)</th>
+                          <th style={{ padding: '12px 16px' }}>Отдел / Подразделение</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filtered.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} style={{ padding: '30px', textAlign: 'center', color: 'hsl(var(--text-secondary))' }}>
+                              По вашему поисковому запросу ничего не найдено
+                            </td>
+                          </tr>
+                        ) : (
+                          filtered.map((u, idx) => {
+                            const isSelected = selectedUserLogins.has(u.login);
+                            return (
+                              <tr
+                                key={u.login || idx}
+                                onClick={() => handleToggleUser(u.login)}
+                                style={{
+                                  borderBottom: '1px solid hsl(var(--border-color))',
+                                  background: isSelected ? 'rgba(168, 85, 247, 0.08)' : 'transparent',
+                                  cursor: 'pointer',
+                                  transition: 'background 0.15s'
+                                }}
+                              >
+                                <td style={{ padding: '12px 16px' }} onClick={e => e.stopPropagation()}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => handleToggleUser(u.login)}
+                                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                  />
+                                </td>
+                                <td style={{ padding: '12px 16px', fontWeight: 600, color: 'hsl(var(--text-primary))' }}>{u.name || '—'}</td>
+                                <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: 'hsl(var(--text-secondary))' }}>{u.login || '—'}</td>
+                                <td style={{ padding: '12px 16px', color: 'hsl(var(--text-secondary))' }}>{u.email || '—'}</td>
+                                <td style={{ padding: '12px 16px', color: 'hsl(var(--text-secondary))' }}>{u.department || '—'}</td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', marginTop: '20px' }}>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      style={{ padding: '12px 24px', fontWeight: 'bold' }}
+                      onClick={() => setPreviewUsers(null)}
+                      disabled={isImportingSelected}
+                    >
+                      ❌ Отмена
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      style={{
+                        background: 'linear-gradient(135deg, #a855f7, #6366f1)',
+                        padding: '12px 32px',
+                        fontWeight: 'bold',
+                        fontSize: '1rem',
+                        boxShadow: '0 4px 15px rgba(168, 85, 247, 0.4)'
+                      }}
+                      onClick={handleImportSelectedUsers}
+                      disabled={isImportingSelected || selectedUserLogins.size === 0}
+                    >
+                      {isImportingSelected ? '⏳ Добавление в систему...' : `➕ Импортировать выбранных сотрудников (${selectedUserLogins.size})`}
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        )}
       </form>
     </div>
   );
