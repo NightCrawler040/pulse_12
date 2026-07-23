@@ -1,7 +1,7 @@
 // Cron-планировщик для автоматических напоминаний о горящих дедлайнах (dueDate)
 // Проверяет задачи каждые 15 минут и отправляет предупреждения за 24 часа и за 2 часа до сдачи.
 
-import { sendTelegramDeadlineWarning } from './telegramService.js';
+import { sendMailDeadlineWarning } from './services/mailService.js';
 
 const notified24h = new Set();
 const notified2h = new Set();
@@ -55,7 +55,7 @@ async function checkDeadlines(getDbDataFn) {
         notified2h.add(task.id);
         notified24h.add(task.id); // Чтобы 24ч тоже пометился
         console.log(`⏰ [CronService] Горящий дедлайн < 2ч для задачи "${task.title}" (Исполнитель: ${recipient?.name || task.assigneeId})`);
-        await sendTelegramDeadlineWarning(recipient, task, 'менее 2 часов (⚡ Срочно!)');
+        await sendMailDeadlineWarning(recipient, task, 'менее 2 часов (⚡ Срочно!)');
         continue;
       }
 
@@ -63,7 +63,7 @@ async function checkDeadlines(getDbDataFn) {
       if (diffHours <= 24 && !notified24h.has(task.id)) {
         notified24h.add(task.id);
         console.log(`⏰ [CronService] Дедлайн < 24ч для задачи "${task.title}" (Исполнитель: ${recipient?.name || task.assigneeId})`);
-        await sendTelegramDeadlineWarning(recipient, task, 'менее 24 часов');
+        await sendMailDeadlineWarning(recipient, task, 'менее 24 часов');
       }
     }
   } catch (err) {

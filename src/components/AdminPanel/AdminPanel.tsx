@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import type { User, Group } from '../../types';
 import { apiService } from '../../services/api';
 import { LdapSettingsTab } from './LdapSettingsTab';
+import { MailSettingsTab } from './MailSettingsTab';
 import './AdminPanel.css';
 
 export const AdminPanel: React.FC = () => {
@@ -12,7 +13,7 @@ export const AdminPanel: React.FC = () => {
   const isProtectedAdmin = (u: User) => u.id === 'usr-1' || u.login?.toLowerCase() === 'admin';
   const employeeUsers = users.filter(u => !isProtectedAdmin(u));
 
-  const [activeTab, setActiveTab] = useState<'users' | 'groups' | 'integrations' | 'ldap'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'groups' | 'integrations' | 'ldap' | 'mail'>('users');
   const [newKeyName, setNewKeyName] = useState('');
   const [newKeySource, setNewKeySource] = useState<'derscanner' | 'siem' | 'custom'>('derscanner');
   const [newKeyAllowedDepts, setNewKeyAllowedDepts] = useState<string[]>(['all']);
@@ -308,11 +309,17 @@ export const AdminPanel: React.FC = () => {
             >
               🔌 Интеграции & API-ключи ({apiKeys.length})
             </button>
-            <button
+            <button 
               className={`admin-tab-btn ${activeTab === 'ldap' ? 'active' : ''}`}
               onClick={() => setActiveTab('ldap')}
             >
-              🏢 Active Directory (LDAP SSO)
+              LDAP / AD
+            </button>
+            <button 
+              className={`admin-tab-btn ${activeTab === 'mail' ? 'active' : ''}`}
+              onClick={() => setActiveTab('mail')}
+            >
+              Почта и Оповещения
             </button>
           </div>
         </div>
@@ -784,6 +791,10 @@ export const AdminPanel: React.FC = () => {
       {/* Tab: LDAP SETTINGS */}
       {activeTab === 'ldap' && (
         <LdapSettingsTab />
+      )}
+
+      {activeTab === 'mail' && (
+        <MailSettingsTab />
       )}
 
       {/* Add / Edit USER Modal */}

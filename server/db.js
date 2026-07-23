@@ -55,7 +55,9 @@ let localDbData = {
   notifications: [],
   findings: [],
   api_keys: [],
-  ldap_settings: { ...defaultLdapSettings }
+  ldap_settings: { ...defaultLdapSettings },
+  mailSettings: {},
+  notificationEvents: {}
 };
 
 const loadLocalFile = () => {
@@ -120,6 +122,14 @@ export const initDb = async () => {
         data JSONB NOT NULL,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+      CREATE TABLE IF NOT EXISTS mail_settings (
+        id INTEGER PRIMARY KEY,
+        data JSONB
+      );
+      CREATE TABLE IF NOT EXISTS notification_events (
+        id INTEGER PRIMARY KEY,
+        data JSONB
+      );
     `);
 
     // Проверяем, пуста ли база данных
@@ -180,7 +190,9 @@ export const initDb = async () => {
         notifications: allPgData.notifications || [],
         findings: allPgData.findings || [],
         api_keys: allPgData.api_keys || [],
-        ldap_settings: allPgData.ldap_settings || { ...defaultLdapSettings }
+        ldap_settings: allPgData.ldap_settings || { ...defaultLdapSettings },
+        mailSettings: allPgData.mailSettings || {},
+        notificationEvents: allPgData.notificationEvents || {}
       };
       saveLocalFile();
     }
@@ -208,7 +220,9 @@ export const initDb = async () => {
             notifications: allPgData.notifications || [],
             findings: allPgData.findings || [],
             api_keys: allPgData.api_keys || [],
-            ldap_settings: allPgData.ldap_settings || { ...defaultLdapSettings }
+            ldap_settings: allPgData.ldap_settings || { ...defaultLdapSettings },
+            mailSettings: allPgData.mailSettings || {},
+            notificationEvents: allPgData.notificationEvents || {}
           };
           saveLocalFile();
         }
@@ -220,23 +234,28 @@ export const initDb = async () => {
 };
 
 /**
- * Получить коллекцию по ключу ('tasks', 'users', 'sprints', 'groups', 'notifications', 'ldap_settings')
+ * Получить коллекцию по ключу ('tasks', 'users', 'sprints', 'groups', 'notifications', 'ldap_settings', 'mailSettings', 'notificationEvents')
  */
 export const getCollection = async (key) => {
   if (isPgConnected) {
     try {
+      if (key === 'mailSettings' || key === 'notificationEvents') {
+        const tableName = key === 'mailSettings' ? 'mail_settings' : 'notification_events';
+        const res = await pool.query(`SELECT data FROM ${tableName} WHERE id = 1`);
+        return res.rows.length > 0 ? res.rows[0].data : {};
+      }
       const res = await pool.query('SELECT data FROM pulse_store WHERE key = $1', [key]);
       if (res.rows.length > 0) {
         return res.rows[0].data;
       }
-      return key === 'ldap_settings' ? { ...defaultLdapSettings } : [];
+      return key === 'ldap_settings' ? { ...defaultLdapSettings } : (key === 'mailSettings' ? {} : (key === 'notificationEvents' ? {} : []));
     } catch (err) {
       console.error(`❌ Ошибка PostgreSQL при получении коллекции "${key}":`, err.message);
       isPgConnected = false;
-      return localDbData[key] || (key === 'ldap_settings' ? { ...defaultLdapSettings } : []);
+      return localDbData[key] || (key === 'ldap_settings' ? { ...defaultLdapSettings } : {});
     }
   } else {
-    return localDbData[key] || (key === 'ldap_settings' ? { ...defaultLdapSettings } : []);
+    return localDbData[key] || (key === 'ldap_settings' ? { ...defaultLdapSettings } : {});
   }
 };
 
@@ -255,13 +274,22 @@ export const saveCollection = async (key, dataArrayOrObj) => {
   }
   if (isPgConnected) {
     try {
-      const query = `
-        INSERT INTO pulse_store (key, data, updated_at)
-        VALUES ($1, $2, CURRENT_TIMESTAMP)
-        ON CONFLICT (key) DO UPDATE
-        SET data = $2, updated_at = CURRENT_TIMESTAMP;
-      `;
-      await pool.query(query, [key, JSON.stringify(toSave)]);
+      if (key === 'ldap_settings' || key === 'mailSettings' || key === 'notificationEvents') {
+        const tableName = key === 'ldap_settings' ? 'pulse_store' : (key === 'mailSettings' ? 'mail_settings' : 'notification_events');
+        if (key === 'ldap_settings') {
+          await pool.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = $2', [key, JSON.stringify(toSave)]);
+        } else {
+          await pool.query(`INSERT INTO ${tableName} (id, data) VALUES (1, $1) ON CONFLICT (id) DO UPDATE SET data = $1`, [JSON.stringify(toSave)]);
+        }
+      } else {
+        const query = `
+          INSERT INTO pulse_store (key, data, updated_at)
+          VALUES ($1, $2, CURRENT_TIMESTAMP)
+          ON CONFLICT (key) DO UPDATE
+          SET data = $2, updated_at = CURRENT_TIMESTAMP;
+        `;
+        await pool.query(query, [key, JSON.stringify(toSave)]);
+      }
       localDbData[key] = toSave;
       saveLocalFile();
     } catch (err) {
@@ -283,6 +311,9 @@ export const getAllData = async () => {
   if (isPgConnected) {
     try {
       const res = await pool.query('SELECT key, data FROM pulse_store');
+      const resMail = await pool.query('SELECT data FROM mail_settings WHERE id = 1');
+      const resNotif = await pool.query('SELECT data FROM notification_events WHERE id = 1');
+      
       const result = {
         tasks: [],
         sprints: [],

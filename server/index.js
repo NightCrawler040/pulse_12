@@ -7,8 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { initialUsers, initialSprints, initialTasks, initialGroups, initialFindings, initialApiKeys } from './initialData.js';
 import { initDb, getAllData, saveCollection, saveAllData, isPostgresMode } from './db.js';
-import { initMailService, sendTaskNotificationEmail } from './mailService.js';
-import { initTelegramService, sendTelegramNotification } from './telegramService.js';
+import { initMailService, sendMailNotification, rebuildTransporter, testMailConnection } from './services/mailService.js';
 import { initDeadlineCron } from './cronService.js';
 import { generateSprintPdf } from './services/pdfService.js';
 import compression from 'compression';
@@ -1638,16 +1637,13 @@ io.on('connection', (socket) => {
     }
     io.emit('notification-received', notif);
 
-    // Автоматическая отправка уведомления (на почту и/или в Telegram)
+    // Автоматическая отправка уведомления на почту
     if (notif) {
       const recipient = dbData.users?.find(u => u.id === notif.userId);
-      if (recipient && recipient.email) {
-        sendTaskNotificationEmail(recipient, {
-          title: notif.title || 'Новое уведомление',
-          description: notif.message || ''
-        }, 'Pulse 12');
-      }
-      sendTelegramNotification(recipient, notif);
+      let eventType = 'taskAssigned'; // По умолчанию
+      if (notif.message && notif.message.includes('Статус задачи')) eventType = 'taskStatusChanged';
+      
+      sendMailNotification(recipient, notif.message || notif.title, eventType);
     }
   });
 
@@ -1692,6 +1688,41 @@ io.on('connection', (socket) => {
 });
 
 // --- STATIC FRONTEND SERVING FOR PRODUCTION (vSphere VM / Docker) ---
+  // Настройки почты (SMTP)
+  app.get('/api/settings/mail', (req, res) => {
+    res.json({
+      mailSettings: dbData.mailSettings || {},
+      notificationEvents: dbData.notificationEvents || {}
+    });
+  });
+
+  app.post('/api/settings/mail', (req, res) => {
+    try {
+      const { mailSettings, notificationEvents } = req.body;
+      dbData.mailSettings = { ...(dbData.mailSettings || {}), ...mailSettings };
+      dbData.notificationEvents = { ...(dbData.notificationEvents || {}), ...notificationEvents };
+      
+      saveCollection('mailSettings', dbData.mailSettings);
+      saveCollection('notificationEvents', dbData.notificationEvents);
+      
+      rebuildTransporter(dbData.mailSettings);
+      res.json({ success: true, message: 'Настройки почты сохранены' });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/settings/mail/test', async (req, res) => {
+    try {
+      const { mailSettings } = req.body;
+      await testMailConnection(mailSettings);
+      res.json({ success: true, message: 'Тестовое соединение успешно установлено!' });
+    } catch (e) {
+      res.status(500).json({ error: e.message || 'Ошибка подключения' });
+    }
+  });
+
+  app.use(express.static(path.join(__dirname, '../dist')));
 const DIST_DIR = path.join(__dirname, '../dist');
 if (fs.existsSync(DIST_DIR)) {
   console.log(`📦 Serving production build from: ${DIST_DIR}`);
@@ -1722,9 +1753,8 @@ if (fs.existsSync(DIST_DIR)) {
 
 const startServer = async () => {
   await initDb();
-  initMailService();
   dbData = await getAllData();
-  initTelegramService(dbData, saveCollection);
+  initMailService(dbData, saveCollection);
   initDeadlineCron(() => dbData);
 
   // Auto-migrate plaintext passwords to bcrypt hashes on startup (1.C)

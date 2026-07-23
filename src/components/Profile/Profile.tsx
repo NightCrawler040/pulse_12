@@ -20,7 +20,6 @@ export const Profile: React.FC = () => {
   const [department, setDepartment] = useState(currentUser?.department || '');
   const [avatar, setAvatar] = useState(currentUser?.avatar || '');
   const [pin, setPin] = useState(currentUser?.pin || '1234');
-  const [telegramChatId, setTelegramChatId] = useState(currentUser?.telegramChatId || '');
   const [isUploading, setIsUploading] = useState(false);
 
   if (!currentUser) {
@@ -75,8 +74,7 @@ export const Profile: React.FC = () => {
       name: name.trim(),
       email: email.trim(),
       department: department.trim(),
-      avatar: avatar.trim() || currentUser.avatar,
-      telegramChatId: telegramChatId.trim()
+      avatar: avatar.trim() || currentUser.avatar
     };
     if (pin.trim()) {
       updates.pin = pin.trim();
@@ -311,16 +309,6 @@ export const Profile: React.FC = () => {
                 value={department}
                 onChange={e => setDepartment(e.target.value)}
                 required
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Telegram Chat ID (уведомления от бота)</label>
-              <input
-                type="text"
-                className="input-field"
-                value={telegramChatId}
-                onChange={e => setTelegramChatId(e.target.value)}
-                placeholder="ID в Telegram (например 123456789)"
               />
             </div>
             <div className="form-group">
