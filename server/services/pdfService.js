@@ -59,7 +59,7 @@ export const generateSprintPdf = ({ dbData, sprintId, targetUserId, stream }) =>
       day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
     // Выводим дату в правом верхнем углу плашки, чтобы она не перекрывала subtitle
-    doc.fontSize(9).fillColor('#cbd5e1').text(`Сформировано: ${dateStr}`, 40, 56, { align: 'right', width: doc.page.width - 95 });
+    doc.font('CyrillicRegular').fontSize(9).fillColor('#cbd5e1').text(`Сформировано: ${dateStr}`, 40, 56, { align: 'right', width: doc.page.width - 95 });
 
     doc.font('CyrillicBold').fontSize(16).fillColor('#ffffff').text(title, 55, 53, { width: doc.page.width - 250 });
     doc.font('CyrillicRegular').fontSize(11).fillColor('#94a3b8').text(subtitle, 55, 75, { width: doc.page.width - 110 });
