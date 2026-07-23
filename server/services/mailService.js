@@ -51,14 +51,17 @@ export function rebuildTransporter(newConfig = null) {
     host: mailConfig.host,
     port: parseInt(mailConfig.port, 10) || 25,
     secure: mailConfig.ssl === true || mailConfig.ssl === 'true',
-    auth: {
-      user: mailConfig.user,
-      pass: mailConfig.password
-    },
     tls: {
       rejectUnauthorized: false
     }
   };
+
+  if (mailConfig.user || mailConfig.password) {
+    opts.auth = {
+      user: mailConfig.user || '',
+      pass: mailConfig.password || ''
+    };
+  }
 
   if (mailConfig.startTls === true || mailConfig.startTls === 'true') {
     opts.tls.ciphers = 'SSLv3';
@@ -74,14 +77,17 @@ export async function testMailConnection(testConfig) {
       host: testConfig.host,
       port: parseInt(testConfig.port, 10) || 25,
       secure: testConfig.ssl === true || testConfig.ssl === 'true',
-      auth: {
-        user: testConfig.user,
-        pass: testConfig.password
-      },
       tls: {
         rejectUnauthorized: false
       }
     };
+
+    if (testConfig.user || testConfig.password) {
+      opts.auth = {
+        user: testConfig.user || '',
+        pass: testConfig.password || ''
+      };
+    }
 
     if (testConfig.startTls === true || testConfig.startTls === 'true') {
       opts.tls.ciphers = 'SSLv3';
