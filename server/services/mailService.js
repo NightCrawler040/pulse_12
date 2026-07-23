@@ -51,6 +51,8 @@ export function rebuildTransporter(newConfig = null) {
     host: mailConfig.host,
     port: parseInt(mailConfig.port, 10) || 25,
     secure: mailConfig.ssl === true || mailConfig.ssl === 'true',
+    name: 'pulse.enpf.kz',
+    ignoreTLS: !(mailConfig.startTls === true || mailConfig.startTls === 'true'),
     tls: {
       rejectUnauthorized: false
     }
@@ -77,6 +79,8 @@ export async function testMailConnection(testConfig) {
       host: testConfig.host,
       port: parseInt(testConfig.port, 10) || 25,
       secure: testConfig.ssl === true || testConfig.ssl === 'true',
+      name: 'pulse.enpf.kz',
+      ignoreTLS: !(testConfig.startTls === true || testConfig.startTls === 'true'),
       tls: {
         rejectUnauthorized: false
       }
