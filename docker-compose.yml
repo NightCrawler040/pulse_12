@@ -41,3 +41,10 @@ volumes:
     name: pulse12_corporate_data
   postgres_data:
     name: pulse12_postgres_data
+
+networks:
+  default:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.5.0.0/16
