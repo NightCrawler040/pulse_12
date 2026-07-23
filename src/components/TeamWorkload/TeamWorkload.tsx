@@ -82,15 +82,33 @@ export const TeamWorkload: React.FC = () => {
               onClick={() => handleSelectUser(user.id)}
             >
               {/* Card top */}
-              <div className="emp-top">
-                <img src={user.avatar} alt={user.name} className="emp-avatar" />
-                <div className="emp-info">
+              <div className="emp-top" style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                {user.avatar ? (
+                  <img src={user.avatar} alt="" className="emp-avatar" style={{ width: '48px', height: '48px', objectFit: 'cover' }} />
+                ) : (
+                  <div className="emp-avatar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e2e8f0', color: '#64748b', borderRadius: '50%', width: '48px', height: '48px', fontSize: '1.2rem', fontWeight: 600, flexShrink: 0 }}>
+                    {((user.name || user.login || '?')[0]).toUpperCase()}
+                  </div>
+                )}
+                <div className="emp-info" style={{ flexGrow: 1 }}>
                   <h3 className="emp-name">{user.name}</h3>
                   <span className="emp-role">
                     <Briefcase size={13} /> {user.role}
                   </span>
                   <span className="emp-dept">{user.department}</span>
                 </div>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.open(`/api/reports/pdf?sprintId=all&userId=${user.id}`, '_blank');
+                  }}
+                  title="Скачать персональный отчет сотрудника"
+                  style={{ background: 'rgba(59,132,246,0.1)', border: 'none', cursor: 'pointer', padding: '8px', borderRadius: '8px', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(59,132,246,0.2)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(59,132,246,0.1)'}
+                >
+                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                </button>
               </div>
 
               {/* Status Badge */}

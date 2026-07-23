@@ -175,7 +175,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, users, onCardCl
             <div className="assignee-info">
               {assignee ? (
                 <div className="avatar-small-wrapper" title={`Исполнитель: ${assignee.name || assignee.login || assignee.id} (${assignee.role || 'Сотрудник'})`}>
-                  <img src={assignee.avatar} alt={assignee.name || assignee.login || assignee.id} className="user-avatar-img" />
+                  {assignee.avatar ? (
+                    <img src={assignee.avatar} alt="" className="user-avatar-img" />
+                  ) : (
+                    <div className="user-avatar-img" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e2e8f0', color: '#64748b', borderRadius: '50%', width: '100%', height: '100%', fontSize: '0.7rem', fontWeight: 600 }}>
+                      {((assignee.name || assignee.login || '?')[0]).toUpperCase()}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <span className="unassigned-badge">Не назначен</span>

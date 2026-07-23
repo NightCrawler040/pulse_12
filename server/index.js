@@ -375,11 +375,15 @@ app.get('/api/data', (req, res) => {
 app.get('/api/reports/pdf', requireAuth, async (req, res) => {
   try {
     const sprintId = req.query.sprintId || 'all';
-    const filename = sprintId === 'all' ? 'Pulse12_Corporate_Report_All.pdf' : `Pulse12_Sprint_${sprintId}_Report.pdf`;
+    const targetUserId = req.query.userId || null;
+    let filename = sprintId === 'all' ? 'Pulse12_Corporate_Report_All.pdf' : `Pulse12_Sprint_${sprintId}_Report.pdf`;
+    if (targetUserId) {
+      filename = `Pulse12_Employee_Report_${targetUserId}.pdf`;
+    }
     const dbData = await getAllData();
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    generateSprintPdf({ dbData, sprintId, stream: res });
+    generateSprintPdf({ dbData, sprintId, targetUserId, stream: res });
   } catch (err) {
     console.error('❌ Error generating PDF report:', err);
     if (!res.headersSent) {

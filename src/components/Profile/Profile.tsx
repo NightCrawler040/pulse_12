@@ -126,7 +126,13 @@ export const Profile: React.FC = () => {
       <div className="profile-hero-card">
         <div className="profile-user-main">
           <div style={{ position: 'relative' }}>
-            <img src={currentUser.avatar} alt={currentUser.name} className="profile-avatar-large" />
+            {currentUser.avatar ? (
+              <img src={currentUser.avatar} alt="" className="profile-avatar-large" />
+            ) : (
+              <div className="profile-avatar-large" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e2e8f0', color: '#64748b', fontSize: '3rem', fontWeight: 600 }}>
+                {((currentUser.name || currentUser.login || '?')[0]).toUpperCase()}
+              </div>
+            )}
             <span
               style={{
                 position: 'absolute',
@@ -156,6 +162,14 @@ export const Profile: React.FC = () => {
         </div>
 
         <div className="profile-actions-col">
+          <button
+            className="btn-primary"
+            onClick={() => window.open(`/api/reports/pdf?sprintId=all&userId=${currentUser.id}`, '_blank')}
+            style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Скачать мой отчет
+          </button>
           <button
             className="btn-secondary"
             onClick={() => {

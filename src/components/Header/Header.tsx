@@ -377,7 +377,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewTaskModal, onOpenLoginM
                       onClick={() => handleAvatarClick(user.id)}
                       title={`${user.name} (${user.role} — ${user.department})`}
                     >
-                      <img src={user.avatar} alt={user.name} className="user-avatar-img" />
+                      {user.avatar ? (
+                        <img src={user.avatar} alt="" className="user-avatar-img" />
+                      ) : (
+                        <div className="user-avatar-img" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e2e8f0', color: '#64748b', borderRadius: '50%', width: '100%', height: '100%', fontSize: '0.85rem', fontWeight: 600 }}>
+                          {((user.name || user.login || '?')[0]).toUpperCase()}
+                        </div>
+                      )}
                       {isSelected && <span className="avatar-check">✓</span>}
                     </div>
                   );
