@@ -1643,7 +1643,7 @@ io.on('connection', (socket) => {
       let eventType = 'taskAssigned'; // По умолчанию
       if (notif.message && notif.message.includes('Статус задачи')) eventType = 'taskStatusChanged';
       
-      const relatedTask = notif.linkTaskId ? dbData.tasks?.find(t => t.id === notif.linkTaskId) : null;
+      const relatedTask = notif.taskData || (notif.linkTaskId ? dbData.tasks?.find(t => t.id === notif.linkTaskId) : null);
       
       sendMailNotification(recipient, notif.message || notif.title, eventType, relatedTask);
     }

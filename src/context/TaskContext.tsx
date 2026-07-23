@@ -324,6 +324,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         creatorName: newTaskData.creatorName || getActor()?.name || 'Администратор',
         dueDate: newTaskData.dueDate || '',
         linkTaskId: newId,
+        taskData: newTask,
         type: 'task_assigned'
       } as any);
     } else if (newTaskData.assigneeGroupId) {
@@ -337,6 +338,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             creatorName: newTaskData.creatorName || getActor()?.name || 'Администратор',
             dueDate: newTaskData.dueDate || '',
             linkTaskId: newId,
+            taskData: newTask,
             type: 'task_assigned'
           } as any);
         });
@@ -389,6 +391,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
               title: '🔄 Изменился статус задачи',
               message: `${actor.name} перевел(а) задачу "${oldTask.title}" в статус "${newCol}"`,
               linkTaskId: id,
+              taskData: { ...oldTask, status: updates.status },
               type: 'status_changed'
             });
           }
@@ -412,6 +415,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             title: '🎯 Вам назначена задача',
             message: `${actor.name} назначил(а) вас исполнителем в задаче "${oldTask.title}" (${id})`,
             linkTaskId: id,
+            taskData: { ...oldTask, assigneeId: updates.assigneeId },
             type: 'task_assigned'
           });
         }
@@ -436,6 +440,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 title: `🎯 Новая задача для команды "${newGrp.name}"`,
                 message: `${actor.name} назначил(а) вашу команду на задачу "${oldTask.title}" (${id})`,
                 linkTaskId: id,
+                taskData: { ...oldTask, assigneeGroupId: updates.assigneeGroupId },
                 type: 'task_assigned'
               });
             }

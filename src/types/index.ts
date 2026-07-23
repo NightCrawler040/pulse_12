@@ -109,6 +109,7 @@ export interface NotificationItem {
   read: boolean;
   type: 'task_assigned' | 'status_changed' | 'comment_added' | 'general';
   linkTaskId?: string;
+  taskData?: any;
 }
 
 export type ViewMode = 'board' | 'backlog' | 'workload' | 'analytics' | 'security' | 'profile' | 'admin' | 'help';
