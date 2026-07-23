@@ -23,7 +23,7 @@ export const Analytics: React.FC = () => {
         'x-auth-user': userId
       };
 
-      const response = await fetch(`/api/reports/pdf?sprintId=${targetSprintId}&userId=${userId}`, {
+      const response = await fetch(`/api/reports/pdf?sprintId=${targetSprintId}`, {
         method: 'GET',
         headers
       });

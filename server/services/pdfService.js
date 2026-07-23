@@ -38,7 +38,7 @@ export const generateSprintPdf = ({ dbData, sprintId, targetUserId, stream }) =>
     ? (dbData.tasks || []) 
     : (dbData.tasks || []).filter(t => t.sprintId === sprintId);
 
-  let targetUsers = (dbData.users || []).filter(u => u.id !== 'usr-1' && u.login?.toLowerCase() !== 'admin');
+  let targetUsers = dbData.users || [];
   
   if (targetUserId) {
     targetUsers = targetUsers.filter(u => u.id === targetUserId);
@@ -47,6 +47,8 @@ export const generateSprintPdf = ({ dbData, sprintId, targetUserId, stream }) =>
       doc.end();
       return;
     }
+  } else {
+    targetUsers = targetUsers.filter(u => u.id !== 'usr-1' && u.login?.toLowerCase() !== 'admin');
   }
 
   // Вспомогательная функция для рисования заголовка страницы
