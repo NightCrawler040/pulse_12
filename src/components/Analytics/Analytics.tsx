@@ -6,6 +6,7 @@ import './Analytics.css';
 export const Analytics: React.FC = () => {
   const { tasks, users, groups, activeSprintId, filters } = useTaskContext();
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [selectedPdfUserId, setSelectedPdfUserId] = useState('all');
   const employeeUsers = users.filter(u => u.id !== 'usr-1' && u.login?.toLowerCase() !== 'admin');
   const targetSprintId = (filters && filters.sprintId) ? filters.sprintId : activeSprintId;
 
@@ -23,7 +24,11 @@ export const Analytics: React.FC = () => {
         'x-auth-user': userId
       };
 
-      const response = await fetch(`/api/reports/pdf?sprintId=${targetSprintId}`, {
+      const fetchUrl = selectedPdfUserId === 'all' 
+        ? `/api/reports/pdf?sprintId=${targetSprintId}` 
+        : `/api/reports/pdf?sprintId=${targetSprintId}&userId=${selectedPdfUserId}`;
+
+      const response = await fetch(fetchUrl, {
         method: 'GET',
         headers
       });
@@ -87,23 +92,37 @@ export const Analytics: React.FC = () => {
             Метрики производительности, распределение Story Points и анализ загрузки {employeeUsers.length} сотрудников компании.
           </p>
         </div>
-        <button
-          className="btn-download-pdf"
-          onClick={handleDownloadPdf}
-          disabled={isDownloadingPdf}
-        >
-          {isDownloadingPdf ? (
-            <>
-              <Loader2 className="animate-spin" size={18} />
-              <span>Генерация PDF...</span>
-            </>
-          ) : (
-            <>
-              <Download size={18} />
-              <span>Скачать PDF-отчёт</span>
-            </>
-          )}
-        </button>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <select 
+            value={selectedPdfUserId}
+            onChange={(e) => setSelectedPdfUserId(e.target.value)}
+            style={{ padding: '10px 14px', borderRadius: '10px', background: 'rgba(255, 255, 255, 0.05)', color: 'hsl(var(--text-main))', border: '1px solid rgba(255, 255, 255, 0.1)', outline: 'none', cursor: 'pointer', fontWeight: 500, fontSize: '0.9rem' }}
+          >
+            <option value="all" style={{ background: '#1e293b' }}>Вся компания (Сводный)</option>
+            {employeeUsers.map(u => (
+              <option key={u.id} value={u.id} style={{ background: '#1e293b' }}>
+                Только: {u.name}
+              </option>
+            ))}
+          </select>
+          <button
+            className="btn-download-pdf"
+            onClick={handleDownloadPdf}
+            disabled={isDownloadingPdf}
+          >
+            {isDownloadingPdf ? (
+              <>
+                <Loader2 className="animate-spin" size={18} />
+                <span>Генерация PDF...</span>
+              </>
+            ) : (
+              <>
+                <Download size={18} />
+                <span>Скачать PDF-отчёт</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Top Cards */}
