@@ -1696,14 +1696,14 @@ io.on('connection', (socket) => {
     });
   });
 
-  app.post('/api/settings/mail', (req, res) => {
+  app.post('/api/settings/mail', async (req, res) => {
     try {
       const { mailSettings, notificationEvents } = req.body;
       dbData.mailSettings = { ...(dbData.mailSettings || {}), ...mailSettings };
       dbData.notificationEvents = { ...(dbData.notificationEvents || {}), ...notificationEvents };
       
-      saveCollection('mailSettings', dbData.mailSettings);
-      saveCollection('notificationEvents', dbData.notificationEvents);
+      await saveCollection('mailSettings', dbData.mailSettings);
+      await saveCollection('notificationEvents', dbData.notificationEvents);
       
       rebuildTransporter(dbData.mailSettings);
       res.json({ success: true, message: 'Настройки почты сохранены' });

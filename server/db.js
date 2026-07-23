@@ -74,7 +74,9 @@ const loadLocalFile = () => {
           notifications: parsed.notifications || [],
           findings: parsed.findings || initialFindings,
           api_keys: parsed.api_keys || initialApiKeys,
-          ldap_settings: parsed.ldap_settings || { ...defaultLdapSettings }
+          ldap_settings: parsed.ldap_settings || { ...defaultLdapSettings },
+          mailSettings: parsed.mailSettings || {},
+          notificationEvents: parsed.notificationEvents || {}
         };
         return;
       }
@@ -90,7 +92,9 @@ const loadLocalFile = () => {
     notifications: [],
     findings: initialFindings,
     api_keys: initialApiKeys,
-    ldap_settings: { ...defaultLdapSettings }
+    ldap_settings: { ...defaultLdapSettings },
+    mailSettings: {},
+    notificationEvents: {}
   };
   saveLocalFile();
 };
