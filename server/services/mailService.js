@@ -55,13 +55,13 @@ export function rebuildTransporter(newConfig = null) {
       user: mailConfig.user,
       pass: mailConfig.password
     },
-    tls: {}
+    tls: {
+      rejectUnauthorized: false
+    }
   };
 
   if (mailConfig.startTls === true || mailConfig.startTls === 'true') {
     opts.tls.ciphers = 'SSLv3';
-    // На многих корпоративных серверах требуется rejectUnauthorized = false при локальных сертификатах
-    opts.tls.rejectUnauthorized = false;
   }
 
   transporter = nodemailer.createTransport(opts);
@@ -78,12 +78,13 @@ export async function testMailConnection(testConfig) {
         user: testConfig.user,
         pass: testConfig.password
       },
-      tls: {}
+      tls: {
+        rejectUnauthorized: false
+      }
     };
 
     if (testConfig.startTls === true || testConfig.startTls === 'true') {
       opts.tls.ciphers = 'SSLv3';
-      opts.tls.rejectUnauthorized = false;
     }
 
     const testTransporter = nodemailer.createTransport(opts);
