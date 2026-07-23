@@ -81,6 +81,10 @@ export async function testMailConnection(testConfig) {
       secure: testConfig.ssl === true || testConfig.ssl === 'true',
       name: 'pulse.enpf.kz',
       ignoreTLS: !(testConfig.startTls === true || testConfig.startTls === 'true'),
+      logger: true,
+      debug: true,
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
       tls: {
         rejectUnauthorized: false
       }
