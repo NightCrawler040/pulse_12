@@ -162,7 +162,7 @@ export async function sendSystemAlertMail(subject, htmlContent, dbData) {
 }
 
 // Отправка персонального уведомления по задаче (смена статуса / назначение)
-export async function sendMailNotification(recipient, notifText, eventType) {
+export async function sendMailNotification(recipient, notifText, eventType, task = null) {
   // recipient - объект пользователя из базы (должен иметь поле email)
   if (!recipient || !recipient.email) return;
 
@@ -170,16 +170,66 @@ export async function sendMailNotification(recipient, notifText, eventType) {
   if (eventType === 'taskAssigned' && !notificationEvents.taskAssigned) return;
   if (eventType === 'taskStatusChanged' && !notificationEvents.taskStatusChanged) return;
 
+  let taskDetailsHtml = '';
+  if (task) {
+    const formattedDate = task.dueDate ? new Date(task.dueDate).toLocaleDateString('ru-RU') : 'Не указан';
+    
+    // Формируем список подзадач, если они есть
+    let subtasksHtml = '';
+    if (task.subtasks && task.subtasks.length > 0) {
+      const subtasksList = task.subtasks.map(st => 
+        `<li style="margin-bottom: 4px;">${st.completed ? '✅' : '⬜'} ${st.title}</li>`
+      ).join('');
+      subtasksHtml = `
+        <div style="margin-top: 15px;">
+          <strong style="color: #475569; font-size: 14px;">Подзадачи:</strong>
+          <ul style="list-style-type: none; padding-left: 0; margin-top: 8px; font-size: 14px; color: #334155;">
+            ${subtasksList}
+          </ul>
+        </div>
+      `;
+    }
+
+    taskDetailsHtml = `
+      <div style="margin-top: 20px; background-color: #f8fafc; border-radius: 6px; padding: 15px; border: 1px solid #e2e8f0;">
+        <h3 style="margin-top: 0; color: #1e293b; font-size: 16px;">${task.title} <span style="color: #64748b; font-size: 14px; font-weight: normal;">(${task.id})</span></h3>
+        
+        <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
+          <div style="background-color: #fff; padding: 8px 12px; border-radius: 4px; border: 1px solid #e2e8f0; font-size: 13px;">
+            <span style="color: #64748b; display: block; margin-bottom: 2px;">Статус</span>
+            <strong style="color: #0f172a;">${task.status || 'К выполнению'}</strong>
+          </div>
+          <div style="background-color: #fff; padding: 8px 12px; border-radius: 4px; border: 1px solid #e2e8f0; font-size: 13px;">
+            <span style="color: #64748b; display: block; margin-bottom: 2px;">Приоритет</span>
+            <strong style="color: #0f172a;">${task.priority || 'medium'}</strong>
+          </div>
+          <div style="background-color: #fff; padding: 8px 12px; border-radius: 4px; border: 1px solid #e2e8f0; font-size: 13px;">
+            <span style="color: #64748b; display: block; margin-bottom: 2px;">Дедлайн</span>
+            <strong style="color: #ef4444;">${formattedDate}</strong>
+          </div>
+        </div>
+
+        <strong style="color: #475569; font-size: 14px;">Описание:</strong>
+        <div style="margin-top: 8px; font-size: 14px; color: #334155; line-height: 1.6; white-space: pre-wrap;">${task.description || 'Нет описания'}</div>
+        
+        ${subtasksHtml}
+      </div>
+    `;
+  }
+
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
       <h2 style="color: #0f172a; margin-top: 0;">Уведомление Pulse 12</h2>
       <p style="color: #334155; font-size: 16px; line-height: 1.5;">${notifText}</p>
+      
+      ${taskDetailsHtml}
+      
       <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
       <p style="color: #94a3b8; font-size: 12px; margin-bottom: 0;">Вы получили это письмо, так как являетесь участником корпоративной системы управления задачами Pulse 12.</p>
     </div>
   `;
 
-  await sendMail(recipient.email, 'Новое уведомление', html);
+  await sendMail(recipient.email, 'Новое уведомление по задаче', html);
 }
 
 // Отправка уведомления о дедлайне
