@@ -281,9 +281,9 @@ export const saveCollection = async (key, dataArrayOrObj) => {
       if (key === 'ldap_settings' || key === 'mailSettings' || key === 'notificationEvents') {
         const tableName = key === 'ldap_settings' ? 'pulse_store' : (key === 'mailSettings' ? 'mail_settings' : 'notification_events');
         if (key === 'ldap_settings') {
-          await pool.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = $2', [key, JSON.stringify(toSave)]);
+          await pool.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data', [key, JSON.stringify(toSave)]);
         } else {
-          await pool.query(`INSERT INTO ${tableName} (id, data) VALUES (1, $1) ON CONFLICT (id) DO UPDATE SET data = $1`, [JSON.stringify(toSave)]);
+          await pool.query(`INSERT INTO ${tableName} (id, data) VALUES (1, $1) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data`, [JSON.stringify(toSave)]);
         }
       } else {
         const query = `
