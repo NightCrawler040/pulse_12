@@ -41,7 +41,7 @@ export function rebuildTransporter(newConfig = null) {
     mailConfig = { ...mailConfig, ...newConfig };
   }
 
-  if (!mailConfig.host || !mailConfig.user || !mailConfig.password) {
+  if (!mailConfig.host || !mailConfig.from) {
     console.log('⚠️ [MailService] SMTP не настроен. Уведомления отправляться не будут.');
     transporter = null;
     return;
