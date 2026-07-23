@@ -54,13 +54,16 @@ export const generateSprintPdf = ({ dbData, sprintId, targetUserId, stream }) =>
   // Вспомогательная функция для рисования заголовка страницы
   const drawPageHeader = (title, subtitle) => {
     doc.rect(40, 40, doc.page.width - 80, 70).fill('#1e293b');
-    doc.font('CyrillicBold').fontSize(16).fillColor('#ffffff').text(title, 55, 53);
-    doc.font('CyrillicRegular').fontSize(11).fillColor('#94a3b8').text(subtitle, 55, 75);
-
+    
     const dateStr = new Date().toLocaleDateString('ru-RU', {
       day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
-    doc.fontSize(9).fillColor('#cbd5e1').text(`Сформировано: ${dateStr}`, 40, 75, { align: 'right', width: doc.page.width - 95 });
+    // Выводим дату в правом верхнем углу плашки, чтобы она не перекрывала subtitle
+    doc.fontSize(9).fillColor('#cbd5e1').text(`Сформировано: ${dateStr}`, 40, 56, { align: 'right', width: doc.page.width - 95 });
+
+    doc.font('CyrillicBold').fontSize(16).fillColor('#ffffff').text(title, 55, 53, { width: doc.page.width - 250 });
+    doc.font('CyrillicRegular').fontSize(11).fillColor('#94a3b8').text(subtitle, 55, 75, { width: doc.page.width - 110 });
+
     doc.y = 130;
   };
 
@@ -255,12 +258,19 @@ export const generateSprintPdf = ({ dbData, sprintId, targetUserId, stream }) =>
   for (let i = range.start; i < range.start + range.count; i++) {
     doc.switchToPage(i);
     doc.font('CyrillicRegular').fontSize(8).fillColor('#64748b');
+    
+    // Временно отключаем нижний отступ, чтобы текст нумерации не спровоцировал создание пустой новой страницы
+    const oldBottom = doc.page.margins.bottom;
+    doc.page.margins.bottom = 0;
+    
     doc.text(
       `Страница ${i + 1} из ${range.count} • Сгенерировано автоматически в корпоративной системе Pulse 12`,
       40,
       doc.page.height - 35,
-      { align: 'center', width: doc.page.width - 80 }
+      { align: 'center', width: doc.page.width - 80, lineBreak: false }
     );
+    
+    doc.page.margins.bottom = oldBottom;
   }
 
   doc.end();
