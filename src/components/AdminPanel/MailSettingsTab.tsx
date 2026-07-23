@@ -14,8 +14,7 @@ export const MailSettingsTab: React.FC = () => {
     password: '',
     from: '',
     ssl: false,
-    startTls: false,
-    notificationReceivers: ''
+    startTls: false
   });
 
   const [notificationEvents, setNotificationEvents] = useState({
@@ -152,12 +151,20 @@ export const MailSettingsTab: React.FC = () => {
         </label>
       </div>
 
-      <div className="form-group" style={{ marginBottom: '40px' }}>
-        <label className="form-label">Системные администраторы (E-mail через запятую)</label>
-        <p style={{ fontSize: '0.85rem', color: 'hsl(var(--text-secondary))', marginBottom: '8px' }}>
-          Указанные пользователи будут получать критические системные уведомления.
+      <div style={{ padding: '15px', background: 'hsl(var(--bg-secondary))', borderRadius: '8px', marginBottom: '40px', borderLeft: '4px solid #3b82f6' }}>
+        <h4 style={{ margin: '0 0 10px 0', color: 'hsl(var(--text-primary))' }}>ℹ️ Подсказка по настройке</h4>
+        <p style={{ margin: '0 0 5px 0', fontSize: '0.9rem', color: 'hsl(var(--text-secondary))' }}>
+          • <strong>Хост:</strong> Адрес вашего почтового сервера (например, <code>postfix</code>, <code>mail.enpf.kz</code>, <code>smtp.yandex.ru</code>).
         </p>
-        <input type="text" className="form-input" name="notificationReceivers" value={mailSettings.notificationReceivers} onChange={handleChange} placeholder="admin1@enpf.kz, admin2@enpf.kz" />
+        <p style={{ margin: '0 0 5px 0', fontSize: '0.9rem', color: 'hsl(var(--text-secondary))' }}>
+          • <strong>Логин и Пароль:</strong> Данные аккаунта, от имени которого будут отправляться письма. Если у вас корпоративный сервер (как postfix) без авторизации внутри сети, оставьте их пустыми.
+        </p>
+        <p style={{ margin: '0 0 5px 0', fontSize: '0.9rem', color: 'hsl(var(--text-secondary))' }}>
+          • <strong>От кого:</strong> Почта, которая будет отображаться у получателя (например <code>pulse@enpf.kz</code>).
+        </p>
+        <p style={{ margin: 0, fontSize: '0.9rem', color: 'hsl(var(--text-secondary))' }}>
+          • <strong>Получатели:</strong> Система автоматически находит почты всех администраторов в базе для системных писем, и почты исполнителей для уведомлений по задачам. Вручную никого вбивать не нужно!
+        </p>
       </div>
 
       <h3 style={{ borderTop: '1px solid hsl(var(--border-color))', paddingTop: '30px', marginBottom: '20px' }}>

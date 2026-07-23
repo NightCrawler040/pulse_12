@@ -120,15 +120,28 @@ export async function sendMail(to, subject, htmlContent) {
   }
 }
 
-// Рассылка по списку из настроек (администраторам)
-export async function sendSystemAlertMail(subject, htmlContent) {
+// Рассылка системных уведомлений (администраторам)
+export async function sendSystemAlertMail(subject, htmlContent, dbData) {
   if (!notificationEvents.tokenExpiration) return; // Если выключено
 
-  const receivers = mailConfig.notificationReceivers;
-  if (!receivers) return;
+  // Автоматически находим всех администраторов в базе
+  const admins = (dbData?.users || []).filter(u => 
+    u.id === 'usr-1' || 
+    u.roleType === 'admin' || 
+    u.login?.toLowerCase() === 'admin'
+  );
 
-  const emailList = receivers.split(',').map(e => e.trim()).filter(Boolean);
-  for (const email of emailList) {
+  const emailList = admins.map(a => a.email).filter(Boolean);
+  
+  if (emailList.length === 0) {
+    console.log('⚠️ [MailService] Нет администраторов с указанной почтой для системного алерта.');
+    return;
+  }
+
+  // Убираем дубликаты
+  const uniqueEmails = [...new Set(emailList)];
+
+  for (const email of uniqueEmails) {
     await sendMail(email, subject, htmlContent);
   }
 }
