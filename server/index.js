@@ -264,7 +264,7 @@ const requireAuth = async (req, res, next) => {
 
   const authHeader = req.headers['authorization'] || '';
   const tokenHeader = req.headers['x-api-token'] || (authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '');
-  if (tokenHeader && req.method !== 'GET') {
+  if (tokenHeader) {
     const validToken = generateAuthToken(user);
     // Защита от Timing Attack (CWE-208) через постоянное время сравнения
     let isMatch = false;
@@ -278,8 +278,8 @@ const requireAuth = async (req, res, next) => {
     if (!isMatch) {
       return res.status(401).json({ error: 'Недействительный криптографический токен безопасности API' });
     }
-  } else if (req.method !== 'GET') {
-    return res.status(401).json({ error: 'Для изменения данных требуется токен безопасности API (x-api-token)' });
+  } else {
+    return res.status(401).json({ error: 'Для доступа требуется токен безопасности API (x-api-token)' });
   }
 
   req.currentUser = user;
@@ -409,15 +409,26 @@ app.post('/api/login', loginRateLimiter, async (req, res) => {
     console.error('⚠️ [Login] Ошибка обновления dbData перед входом:', err.message);
   }
 
-  let user = dbData.users.find(u => {
-    if (u.isActive === false) return false;
-    const matchLogin = (u.login && String(u.login).trim().toLowerCase() === cleanLogin.toLowerCase()) || 
-                       (u.email && String(u.email).trim().toLowerCase() === cleanLogin.toLowerCase()) ||
-                       (u.name && String(u.name).trim().toLowerCase() === cleanLogin.toLowerCase()) ||
-                       (u.id === cleanLogin);
-    if (!matchLogin) return false;
-    return verifyPasswordOrPin(passOrPin, u.password) || verifyPasswordOrPin(passOrPin, u.pin);
+  const existingUser = dbData.users.find(u => {
+    return (u.login && String(u.login).trim().toLowerCase() === cleanLogin.toLowerCase()) || 
+           (u.email && String(u.email).trim().toLowerCase() === cleanLogin.toLowerCase()) ||
+           (u.name && String(u.name).trim().toLowerCase() === cleanLogin.toLowerCase()) ||
+           (u.id === cleanLogin);
   });
+
+  // Account Lockout Check
+  if (existingUser && existingUser.lockedUntil && new Date(existingUser.lockedUntil) > new Date()) {
+    // Artificial delay to prevent timing attacks
+    await new Promise(r => setTimeout(r, 1000));
+    return res.status(401).json({ success: false, error: 'Аккаунт временно заблокирован из-за множества попыток. Подождите 15 минут.' });
+  }
+
+  let user = null;
+  if (existingUser && existingUser.isActive !== false) {
+    if (verifyPasswordOrPin(passOrPin, existingUser.password) || verifyPasswordOrPin(passOrPin, existingUser.pin)) {
+      user = existingUser;
+    }
+  }
 
   // Если локальный вход не удался, проверяем LDAP аутентификацию (при наличии настроенного сервера)
   if (!user && dbData.ldap_settings && dbData.ldap_settings.serverUrl) {
@@ -471,10 +482,28 @@ app.post('/api/login', loginRateLimiter, async (req, res) => {
   }
 
   if (user) {
+    if (user.failedLoginAttempts || user.lockedUntil) {
+      user.failedLoginAttempts = 0;
+      user.lockedUntil = null;
+      await saveCollection('users', dbData.users);
+    }
     const { password: _, pin: __, ...safeUser } = user;
     const token = generateAuthToken(user);
     res.json({ success: true, user: safeUser, token });
   } else {
+    // Tarpitting: Artificial delay for failed logins (1 second)
+    await new Promise(r => setTimeout(r, 1000));
+    
+    // Increment failed attempts if user exists
+    if (existingUser) {
+      existingUser.failedLoginAttempts = (existingUser.failedLoginAttempts || 0) + 1;
+      if (existingUser.failedLoginAttempts >= 5) {
+        existingUser.lockedUntil = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+        console.warn(`🚨 [Security] Account locked due to brute-force: ${existingUser.login || existingUser.id}`);
+      }
+      await saveCollection('users', dbData.users);
+    }
+
     res.status(401).json({ success: false, error: 'Неверный логин или пароль' });
   }
 });
@@ -537,8 +566,8 @@ app.delete('/api/tasks/:id', requireAuth, (req, res) => {
   res.json({ success: true });
 });
 
-// Create user (with bcrypt hashing) (1.C)
-app.post('/api/users', requireAuth, (req, res) => {
+// Create new user (with bcrypt hashing) (1.C)
+app.post('/api/users', requireAdmin, (req, res) => {
   const userData = req.body;
   const trimmedEmail = (userData.email || '').trim().toLowerCase();
   const trimmedLogin = (userData.login || trimmedEmail.split('@')[0] || '').trim().toLowerCase();
@@ -578,6 +607,17 @@ app.post('/api/users', requireAuth, (req, res) => {
 app.put('/api/users/:id', requireAuth, (req, res) => {
   const { id } = req.params;
   const updates = { ...req.body };
+
+  // Security checks: IDOR and Mass Assignment / Privilege Escalation protection
+  if (req.currentUser?.roleType !== 'admin' && req.currentUser?.id !== id) {
+    return res.status(403).json({ error: 'Отказано в доступе: вы можете редактировать только свой профиль' });
+  }
+  
+  if (req.currentUser?.roleType !== 'admin') {
+    delete updates.role;
+    delete updates.roleType;
+    delete updates.isActive;
+  }
 
   if (updates.email || updates.login) {
     const trimmedEmail = (updates.email || '').trim().toLowerCase();
@@ -1691,14 +1731,14 @@ io.on('connection', (socket) => {
 
 // --- STATIC FRONTEND SERVING FOR PRODUCTION (vSphere VM / Docker) ---
   // Настройки почты (SMTP)
-  app.get('/api/settings/mail', (req, res) => {
+  app.get('/api/settings/mail', requireAdmin, (req, res) => {
     res.json({
       mailSettings: dbData.mailSettings || {},
       notificationEvents: dbData.notificationEvents || {}
     });
   });
 
-  app.post('/api/settings/mail', async (req, res) => {
+  app.post('/api/settings/mail', requireAdmin, async (req, res) => {
     try {
       const { mailSettings, notificationEvents } = req.body;
       dbData.mailSettings = { ...(dbData.mailSettings || {}), ...mailSettings };
@@ -1714,7 +1754,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  app.post('/api/settings/mail/test', async (req, res) => {
+  app.post('/api/settings/mail/test', requireAdmin, async (req, res) => {
     try {
       const { mailSettings } = req.body;
       await testMailConnection(mailSettings);
