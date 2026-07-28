@@ -14,6 +14,7 @@ import compression from 'compression';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { testLdapConnection, fetchLdapUsers, syncLdapUsersAndTasks, importSelectedLdapUsers, authenticateLdapUser } from './services/ldapService.js';
+import { startImapService } from './services/imapService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1730,24 +1731,33 @@ io.on('connection', (socket) => {
 });
 
 // --- STATIC FRONTEND SERVING FOR PRODUCTION (vSphere VM / Docker) ---
-  // Настройки почты (SMTP)
+  // Настройки почты (SMTP и IMAP)
   app.get('/api/settings/mail', requireAdmin, (req, res) => {
     res.json({
       mailSettings: dbData.mailSettings || {},
+      imapSettings: dbData.imapSettings || {},
       notificationEvents: dbData.notificationEvents || {}
     });
   });
 
   app.post('/api/settings/mail', requireAdmin, async (req, res) => {
     try {
-      const { mailSettings, notificationEvents } = req.body;
+      const { mailSettings, imapSettings, notificationEvents } = req.body;
       dbData.mailSettings = { ...(dbData.mailSettings || {}), ...mailSettings };
+      dbData.imapSettings = { ...(dbData.imapSettings || {}), ...imapSettings };
       dbData.notificationEvents = { ...(dbData.notificationEvents || {}), ...notificationEvents };
       
       await saveCollection('mailSettings', dbData.mailSettings);
+      await saveCollection('imapSettings', dbData.imapSettings);
       await saveCollection('notificationEvents', dbData.notificationEvents);
       
       rebuildTransporter(dbData.mailSettings);
+      
+      // Перезапускаем IMAP сервис при изменении настроек
+      if (global.restartImapService) {
+        global.restartImapService(dbData.imapSettings);
+      }
+
       res.json({ success: true, message: 'Настройки почты сохранены' });
     } catch (e) {
       res.status(500).json({ error: e.message });
@@ -1805,6 +1815,9 @@ const startServer = async () => {
     dbData.users = hashed;
     await saveCollection('users', dbData.users);
   }
+
+  // Запуск службы приема писем
+  startImapService(dbData.imapSettings, dbData, broadcastUpdate);
 
   console.log(`✅ Инициализированы данные системы (${isPostgresMode() ? 'PostgreSQL' : 'Файловый режим'}): ${dbData.tasks.length} задач, ${dbData.users.length} сотрудников.`);
 

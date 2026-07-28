@@ -17,6 +17,15 @@ export const MailSettingsTab: React.FC = () => {
     startTls: false
   });
 
+  const [imapSettings, setImapSettings] = useState({
+    enabled: false,
+    host: '',
+    port: 993,
+    user: '',
+    password: '',
+    tls: true
+  });
+
   const [notificationEvents, setNotificationEvents] = useState({
     taskAssigned: true,
     taskStatusChanged: true,
@@ -33,6 +42,7 @@ export const MailSettingsTab: React.FC = () => {
       const res = await fetch('/api/settings/mail');
       const data = await res.json();
       if (data.mailSettings) setMailSettings(prev => ({ ...prev, ...data.mailSettings }));
+      if (data.imapSettings) setImapSettings(prev => ({ ...prev, ...data.imapSettings }));
       if (data.notificationEvents) setNotificationEvents(prev => ({ ...prev, ...data.notificationEvents }));
     } catch (err) {
       console.error('Failed to load mail settings', err);
@@ -44,6 +54,14 @@ export const MailSettingsTab: React.FC = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setMailSettings(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleImapChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setImapSettings(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
@@ -64,7 +82,7 @@ export const MailSettingsTab: React.FC = () => {
       const res = await fetch('/api/settings/mail', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mailSettings, notificationEvents })
+        body: JSON.stringify({ mailSettings, imapSettings, notificationEvents })
       });
       const data = await res.json();
       if (data.success) {
@@ -165,6 +183,51 @@ export const MailSettingsTab: React.FC = () => {
         <p style={{ margin: 0, fontSize: '0.9rem', color: 'hsl(var(--text-secondary))' }}>
           • <strong>Получатели:</strong> Система автоматически находит почты всех администраторов в базе для системных писем, и почты исполнителей для уведомлений по задачам. Вручную никого вбивать не нужно!
         </p>
+      </div>
+
+      <h3 style={{ borderTop: '1px solid hsl(var(--border-color))', paddingTop: '30px', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
+        <Mail size={22} className="text-blue" />
+        Настройки приема почты (IMAP / Парсинг задач)
+      </h3>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '30px' }}>
+        <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 600 }}>
+            <input type="checkbox" name="enabled" checked={imapSettings.enabled} onChange={handleImapChange} style={{ width: '18px', height: '18px' }} />
+            Включить автоматический парсинг входящей почты (Email-to-Task)
+          </label>
+        </div>
+
+        {imapSettings.enabled && (
+          <>
+            <div className="form-group">
+              <label className="form-label">IMAP Сервер</label>
+              <input type="text" className="form-input" name="host" value={imapSettings.host} onChange={handleImapChange} placeholder="например: imap.yandex.ru" />
+            </div>
+            
+            <div className="form-group">
+              <label className="form-label">Порт</label>
+              <input type="number" className="form-input" name="port" value={imapSettings.port} onChange={handleImapChange} placeholder="993" />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Логин (Почтовый ящик)</label>
+              <input type="email" className="form-input" name="user" value={imapSettings.user} onChange={handleImapChange} placeholder="pulse_analytics@company.kz" />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Пароль (Или App Password)</label>
+              <input type="password" className="form-input" name="password" value={imapSettings.password} onChange={handleImapChange} placeholder="••••••••" />
+            </div>
+
+            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input type="checkbox" name="tls" checked={imapSettings.tls} onChange={handleImapChange} style={{ width: '18px', height: '18px' }} />
+                <span>Использовать TLS (SSL)</span>
+              </label>
+            </div>
+          </>
+        )}
       </div>
 
       <h3 style={{ borderTop: '1px solid hsl(var(--border-color))', paddingTop: '30px', marginBottom: '20px' }}>
