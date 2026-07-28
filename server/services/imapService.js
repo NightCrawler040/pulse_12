@@ -217,7 +217,7 @@ export const startImapService = async (settings, dbData, broadcastUpdate) => {
       for await (let msg of client.fetch(searchOptions, { source: true, uid: true, headers: ['message-id'] })) {
         await processEmail(msg, msg.uid);
         // Отмечаем как прочитанное, чтобы не читать снова при рестарте
-        await client.messageFlagsAdd(msg.uid, ['\\Seen']);
+        await client.messageFlagsAdd(msg.uid, ['\\Seen'], { uid: true });
       }
 
       // 2. Включаем подписку на новые письма (IMAP IDLE)
@@ -226,7 +226,7 @@ export const startImapService = async (settings, dbData, broadcastUpdate) => {
         // Берем самое последнее письмо
         for await (let msg of client.fetch(data.count, { source: true, uid: true, headers: ['message-id'] })) {
            await processEmail(msg, msg.uid);
-           await client.messageFlagsAdd(msg.uid, ['\\Seen']);
+           await client.messageFlagsAdd(msg.uid, ['\\Seen'], { uid: true });
         }
       });
       

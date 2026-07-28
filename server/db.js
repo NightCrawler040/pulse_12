@@ -196,7 +196,9 @@ export const initDb = async () => {
         api_keys: allPgData.api_keys || [],
         ldap_settings: allPgData.ldap_settings || { ...defaultLdapSettings },
         mailSettings: allPgData.mailSettings || {},
-        notificationEvents: allPgData.notificationEvents || {}
+        notificationEvents: allPgData.notificationEvents || {},
+        imapSettings: allPgData.imapSettings || {},
+        processedEmails: allPgData.processedEmails || []
       };
       saveLocalFile();
     }
@@ -226,7 +228,9 @@ export const initDb = async () => {
             api_keys: allPgData.api_keys || [],
             ldap_settings: allPgData.ldap_settings || { ...defaultLdapSettings },
             mailSettings: allPgData.mailSettings || {},
-            notificationEvents: allPgData.notificationEvents || {}
+            notificationEvents: allPgData.notificationEvents || {},
+            imapSettings: allPgData.imapSettings || {},
+            processedEmails: allPgData.processedEmails || []
           };
           saveLocalFile();
         }
@@ -329,7 +333,8 @@ export const getAllData = async () => {
         ldap_settings: { ...defaultLdapSettings },
         mailSettings: resMail.rows.length > 0 ? resMail.rows[0].data : {},
         notificationEvents: resNotif.rows.length > 0 ? resNotif.rows[0].data : {},
-        imapSettings: {}
+        imapSettings: {},
+        processedEmails: []
       };
       res.rows.forEach(row => {
         if (result[row.key] !== undefined) {
