@@ -75,7 +75,7 @@ const processEmail = async (message, uid) => {
     }
 
     // 4. Фильтрация контента (Поиск IP-адресов и DNS)
-    const bodyText = parsedMail.text || '';
+    const bodyText = String(parsedMail.text || '') + ' ' + String(parsedMail.html || '') + ' ' + String(parsedMail.textAsHtml || '');
     const foundIps = bodyText.match(IP_REGEX) || [];
     const foundDomains = bodyText.match(DNS_DOMAIN_REGEX) || [];
     const foundDnsQueries = bodyText.match(DNS_QUERY_REGEX) || [];
@@ -83,7 +83,7 @@ const processEmail = async (message, uid) => {
     const allIndicators = [...new Set([...foundIps, ...foundDomains, ...foundDnsQueries])];
 
     if (allIndicators.length === 0) {
-      console.log(`[IMAP] В письме от ${senderEmail} не найдено IP-адресов или DNS-запросов. Игнорируем (не задача).`);
+      console.log(`[IMAP] В письме от ${senderEmail} не найдено IP-адресов или DNS-запросов. Игнорируем (не задача). Текст: ${bodyText.substring(0, 50)}...`);
       return;
     }
 
