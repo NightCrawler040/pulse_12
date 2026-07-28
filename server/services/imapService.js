@@ -75,12 +75,22 @@ const processEmail = async (message, uid) => {
     }
 
     // 4. Фильтрация контента (Поиск IP-адресов и DNS)
-    const bodyText = String(parsedMail.text || '') + ' ' + String(parsedMail.html || '') + ' ' + String(parsedMail.textAsHtml || '');
+    // Убираем все HTML-теги из сырого кода, чтобы регулярки не находили служебные домены (типа w3.org или schemas.microsoft.com)
+    const rawHtml = String(parsedMail.html || '') + ' ' + String(parsedMail.textAsHtml || '');
+    const cleanHtmlText = sanitizeHtml(rawHtml, { allowedTags: [], allowedAttributes: {} });
+    const bodyText = String(parsedMail.text || '') + ' ' + cleanHtmlText;
+
     const foundIps = bodyText.match(IP_REGEX) || [];
     const foundDomains = bodyText.match(DNS_DOMAIN_REGEX) || [];
     const foundDnsQueries = bodyText.match(DNS_QUERY_REGEX) || [];
     
-    const allIndicators = [...new Set([...foundIps, ...foundDomains, ...foundDnsQueries])];
+    // Исключаем домен отправителя (например enpf.kz), чтобы не спамить
+    const senderDomain = senderEmail.split('@')[1];
+    let allIndicators = [...new Set([...foundIps, ...foundDomains, ...foundDnsQueries])];
+    
+    if (senderDomain) {
+       allIndicators = allIndicators.filter(ind => !ind.toLowerCase().includes(senderDomain));
+    }
 
     if (allIndicators.length === 0) {
       console.log(`[IMAP] В письме от ${senderEmail} не найдено IP-адресов или DNS-запросов. Игнорируем (не задача). Текст: ${bodyText.substring(0, 50)}...`);
