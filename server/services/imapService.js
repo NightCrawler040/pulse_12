@@ -43,8 +43,11 @@ const findSender = (mail) => {
  */
 const processEmail = async (message, uid) => {
   try {
-    // 1. Защита от дубликатов (проверка Message-ID)
-    const messageId = message.headers.get('message-id');
+    // 1. Парсинг содержимого (RFC822)
+    const parsedMail = await simpleParser(message.source);
+
+    // 2. Защита от дубликатов (проверка Message-ID)
+    const messageId = parsedMail.messageId;
     if (messageId) {
       if (!currentDbData.processedEmails) currentDbData.processedEmails = [];
       if (currentDbData.processedEmails.includes(messageId)) {
@@ -52,9 +55,6 @@ const processEmail = async (message, uid) => {
         return;
       }
     }
-
-    // 2. Парсинг содержимого (RFC822)
-    const parsedMail = await simpleParser(message.source);
     
     // 3. Поиск пользователя в БД Pulse 12 по email отправителя
     const senderEmail = findSender(parsedMail);
