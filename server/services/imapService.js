@@ -192,6 +192,9 @@ export const startImapService = async (settings, dbData, broadcastUpdate) => {
     host: settings.host,
     port: parseInt(settings.port, 10) || 993,
     secure: settings.tls !== false,
+    tls: {
+      rejectUnauthorized: false
+    },
     auth: {
       user: settings.user,
       pass: settings.password
