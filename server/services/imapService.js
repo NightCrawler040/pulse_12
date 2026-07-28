@@ -101,10 +101,13 @@ const processEmail = async (message, uid) => {
         fs.mkdirSync(UPLOADS_DIR, { recursive: true });
       }
       fs.writeFileSync(filePath, content, 'utf-8');
+      const stats = fs.statSync(filePath);
       attachments.push({
         id: `att-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-        name: filename,
-        url: `/uploads/${safeName}`
+        filename: filename,
+        url: `/uploads/${safeName}`,
+        size: stats.size,
+        uploadedAt: new Date().toISOString()
       });
     };
 
