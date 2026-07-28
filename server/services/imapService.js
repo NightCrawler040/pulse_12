@@ -127,7 +127,7 @@ const processEmail = async (message, uid) => {
       assigneeId: pulseUser.id, // Назначаем на того, кто переслал
       creatorId: pulseUser.id,
       createdAt: new Date().toISOString(),
-      sprintId: 'backlog',
+      sprintId: 'unassigned', // В Jira-clone используется 'unassigned' для Бэклога
       attachments: attachments
     };
 
