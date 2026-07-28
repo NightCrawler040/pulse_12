@@ -205,6 +205,18 @@ export const startImapService = async (settings, dbData, broadcastUpdate) => {
     logger: false // отключить спам в консоль
   });
 
+  // Предотвращаем падение всего сервера Node.js при обрыве сокета (Socket timeout)
+  client.on('error', err => {
+    console.error('❌ [IMAP] Ошибка соединения (возможно таймаут):', err.message);
+  });
+
+  client.on('close', () => {
+    console.log('⚠️ [IMAP] Соединение закрыто. Попытка переподключения через 15 секунд...');
+    setTimeout(() => {
+      initImapService(settings, currentDbData, currentBroadcast);
+    }, 15000);
+  });
+
   try {
     await client.connect();
     console.log(`✅ [IMAP] Успешно подключено к ящику ${settings.user}`);
