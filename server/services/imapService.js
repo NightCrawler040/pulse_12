@@ -9,6 +9,8 @@ let currentBroadcast = null;
 
 // Регулярные выражения для парсинга
 const IP_REGEX = /\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b/g;
+const DNS_DOMAIN_REGEX = /\b(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+(?:com|net|org|kz|ru|info|biz|gov)\b/gi;
+const DNS_QUERY_REGEX = /\b(?:NS|A|AAAA|MX|CNAME|TXT)\s+record\b/gi;
 
 /**
  * Очистка префиксов пересылки из темы письма
@@ -65,12 +67,16 @@ const processEmail = async (message, uid) => {
       return;
     }
 
-    // 4. Фильтрация контента (Поиск IP-адресов)
+    // 4. Фильтрация контента (Поиск IP-адресов и DNS)
     const bodyText = parsedMail.text || '';
-    const foundIps = bodyText.match(IP_REGEX);
+    const foundIps = bodyText.match(IP_REGEX) || [];
+    const foundDomains = bodyText.match(DNS_DOMAIN_REGEX) || [];
+    const foundDnsQueries = bodyText.match(DNS_QUERY_REGEX) || [];
+    
+    const allIndicators = [...new Set([...foundIps, ...foundDomains, ...foundDnsQueries])];
 
-    if (!foundIps || foundIps.length === 0) {
-      console.log(`[IMAP] В письме от ${senderEmail} не найдено IP-адресов. Игнорируем (не задача).`);
+    if (allIndicators.length === 0) {
+      console.log(`[IMAP] В письме от ${senderEmail} не найдено IP-адресов или DNS-запросов. Игнорируем (не задача).`);
       return;
     }
 
@@ -83,7 +89,7 @@ const processEmail = async (message, uid) => {
     const newTask = {
       id: `task-${Date.now()}`,
       title: cleanSubject(parsedMail.subject),
-      description: `${cleanBody}<br/><br/><strong>Найденные IP-адреса:</strong> ${[...new Set(foundIps)].join(', ')}`,
+      description: `${cleanBody}<br/><br/><strong>Найденные индикаторы (IP/DNS):</strong> ${allIndicators.join(', ')}`,
       status: 'to-do',
       priority: 'high', // Письма с алертами обычно важные
       assigneeId: pulseUser.id, // Назначаем на того, кто переслал
