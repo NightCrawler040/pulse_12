@@ -326,7 +326,10 @@ export const getAllData = async () => {
         notifications: [],
         findings: [],
         api_keys: [],
-        ldap_settings: { ...defaultLdapSettings }
+        ldap_settings: { ...defaultLdapSettings },
+        mailSettings: resMail.rows.length > 0 ? resMail.rows[0].data : {},
+        notificationEvents: resNotif.rows.length > 0 ? resNotif.rows[0].data : {},
+        imapSettings: {}
       };
       res.rows.forEach(row => {
         if (result[row.key] !== undefined) {
