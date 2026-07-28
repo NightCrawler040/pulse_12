@@ -1817,7 +1817,10 @@ const startServer = async () => {
   }
 
   // Запуск службы приема писем
-  startImapService(dbData.imapSettings, dbData, broadcastUpdate);
+  global.restartImapService = (settings) => {
+    startImapService(settings, dbData, broadcastUpdate);
+  };
+  global.restartImapService(dbData.imapSettings);
 
   console.log(`✅ Инициализированы данные системы (${isPostgresMode() ? 'PostgreSQL' : 'Файловый режим'}): ${dbData.tasks.length} задач, ${dbData.users.length} сотрудников.`);
 

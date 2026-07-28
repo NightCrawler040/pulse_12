@@ -2,6 +2,13 @@ import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import sanitizeHtml from 'sanitize-html';
 import { saveCollection } from '../db.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const UPLOADS_DIR = path.join(__dirname, '..', 'data', 'uploads');
 
 let client = null;
 let currentDbData = null;
@@ -85,18 +92,43 @@ const processEmail = async (message, uid) => {
       allowedTags: sanitizeHtml.defaults.allowedTags.concat([ 'img' ])
     });
 
-    // 6. Создание задачи
+    // 6. Формирование вложений (TXT файлы для IP и DNS)
+    const attachments = [];
+    const createAttachment = (filename, content) => {
+      const safeName = `${Date.now()}_${filename}`;
+      const filePath = path.join(UPLOADS_DIR, safeName);
+      if (!fs.existsSync(UPLOADS_DIR)) {
+        fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+      }
+      fs.writeFileSync(filePath, content, 'utf-8');
+      attachments.push({
+        id: `att-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        name: filename,
+        url: `/uploads/${safeName}`
+      });
+    };
+
+    if (foundIps.length > 0) {
+      createAttachment('IP_Addresses.txt', [...new Set(foundIps)].join('\n'));
+    }
+    
+    const otherDns = [...new Set([...foundDomains, ...foundDnsQueries])];
+    if (otherDns.length > 0) {
+      createAttachment('DNS_Records.txt', otherDns.join('\n'));
+    }
+
+    // 7. Создание задачи
     const newTask = {
       id: `task-${Date.now()}`,
       title: cleanSubject(parsedMail.subject),
-      description: `${cleanBody}<br/><br/><strong>Найденные индикаторы (IP/DNS):</strong> ${allIndicators.join(', ')}`,
+      description: `${cleanBody}<br/><br/><strong>Найденные индикаторы (IP/DNS) сохранены в прикрепленных файлах.</strong>`,
       status: 'to-do',
       priority: 'high', // Письма с алертами обычно важные
       assigneeId: pulseUser.id, // Назначаем на того, кто переслал
       creatorId: pulseUser.id,
       createdAt: new Date().toISOString(),
       sprintId: 'backlog',
-      attachments: []
+      attachments: attachments
     };
 
     // 7. Сохранение и рассылка уведомлений
