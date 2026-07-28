@@ -41,8 +41,8 @@ export const MailSettingsTab: React.FC = () => {
     try {
       const res = await fetch('/api/settings/mail', {
         headers: {
-          'X-User-Id': localStorage.getItem('userId') || '',
-          'X-Auth-Token': localStorage.getItem('token') || ''
+          'x-auth-user': localStorage.getItem('userId') || '',
+          'x-api-token': localStorage.getItem('token') || ''
         }
       });
       const data = await res.json();
@@ -88,8 +88,8 @@ export const MailSettingsTab: React.FC = () => {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'X-User-Id': localStorage.getItem('userId') || '',
-          'X-Auth-Token': localStorage.getItem('token') || ''
+          'x-auth-user': localStorage.getItem('userId') || '',
+          'x-api-token': localStorage.getItem('token') || ''
         },
         body: JSON.stringify({ mailSettings, imapSettings, notificationEvents })
       });
@@ -114,8 +114,8 @@ export const MailSettingsTab: React.FC = () => {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'X-User-Id': localStorage.getItem('userId') || '',
-          'X-Auth-Token': localStorage.getItem('token') || ''
+          'x-auth-user': localStorage.getItem('userId') || '',
+          'x-api-token': localStorage.getItem('token') || ''
         },
         body: JSON.stringify({ mailSettings })
       });
