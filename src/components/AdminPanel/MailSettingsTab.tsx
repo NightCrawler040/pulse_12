@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, Check, AlertTriangle, Loader2 } from 'lucide-react';
+import { apiService } from '../../services/api';
 
 export const MailSettingsTab: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -39,13 +40,7 @@ export const MailSettingsTab: React.FC = () => {
 
   const fetchSettings = async () => {
     try {
-      const res = await fetch('/api/settings/mail', {
-        headers: {
-          'x-auth-user': localStorage.getItem('userId') || '',
-          'x-api-token': localStorage.getItem('token') || ''
-        }
-      });
-      const data = await res.json();
+      const data = await apiService.get<any>('/api/settings/mail');
       if (data.mailSettings) setMailSettings(prev => ({ ...prev, ...data.mailSettings }));
       if (data.imapSettings) setImapSettings(prev => ({ ...prev, ...data.imapSettings }));
       if (data.notificationEvents) setNotificationEvents(prev => ({ ...prev, ...data.notificationEvents }));
@@ -84,16 +79,7 @@ export const MailSettingsTab: React.FC = () => {
     setSaving(true);
     setMessage(null);
     try {
-      const res = await fetch('/api/settings/mail', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-auth-user': localStorage.getItem('userId') || '',
-          'x-api-token': localStorage.getItem('token') || ''
-        },
-        body: JSON.stringify({ mailSettings, imapSettings, notificationEvents })
-      });
-      const data = await res.json();
+      const data = await apiService.post<any>('/api/settings/mail', { mailSettings, imapSettings, notificationEvents });
       if (data.success) {
         setMessage({ text: 'Настройки успешно сохранены', type: 'success' });
       } else {
@@ -110,16 +96,7 @@ export const MailSettingsTab: React.FC = () => {
     setTesting(true);
     setMessage(null);
     try {
-      const res = await fetch('/api/settings/mail/test', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-auth-user': localStorage.getItem('userId') || '',
-          'x-api-token': localStorage.getItem('token') || ''
-        },
-        body: JSON.stringify({ mailSettings })
-      });
-      const data = await res.json();
+      const data = await apiService.post<any>('/api/settings/mail/test', { mailSettings });
       if (data.success) {
         setMessage({ text: 'Тестовое соединение успешно!', type: 'success' });
       } else {
