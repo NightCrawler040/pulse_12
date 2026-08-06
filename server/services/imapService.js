@@ -302,7 +302,7 @@ export const startImapService = async (settings, dbData, broadcastUpdate) => {
   client.on('close', () => {
     console.log('⚠️ [IMAP] Соединение закрыто. Попытка переподключения через 15 секунд...');
     setTimeout(() => {
-      initImapService(settings, currentDbData, currentBroadcast);
+      startImapService(settings, currentDbData, currentBroadcast);
     }, 15000);
   });
 
