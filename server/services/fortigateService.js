@@ -25,6 +25,7 @@ const triggerFortigateWebhook = async (url, token, ip, addressGroup) => {
     };
 
     const response = await axios.post(url, payload, {
+      timeout: 10000,
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
