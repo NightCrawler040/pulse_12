@@ -2,6 +2,7 @@ import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import sanitizeHtml from 'sanitize-html';
 import { saveCollection } from '../db.js';
+import { banIpAddress } from './fortigateService.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -18,6 +19,8 @@ let currentBroadcast = null;
 const IP_REGEX = /\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b/g;
 const DNS_DOMAIN_REGEX = /\b(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+(?:com|net|org|kz|ru|info|biz|gov)\b/gi;
 const DNS_QUERY_REGEX = /\b(?:NS|A|AAAA|MX|CNAME|TXT)\s+record\b/gi;
+const EMAIL_REGEX = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/gi;
+const DATE_REGEX = /\b(\d{2})\.(\d{2})\.(\d{4})\b/g;
 
 /**
  * Очистка префиксов пересылки из темы письма
@@ -31,7 +34,6 @@ const cleanSubject = (subject) => {
  * Поиск оригинального отправителя (кто нажал "Переслать")
  */
 const findSender = (mail) => {
-  // mail.from.value - это массив объектов { address, name }
   if (mail.from && mail.from.value && mail.from.value.length > 0) {
     return mail.from.value[0].address.toLowerCase();
   }
@@ -43,10 +45,8 @@ const findSender = (mail) => {
  */
 const processEmail = async (message, uid) => {
   try {
-    // 1. Парсинг содержимого (RFC822)
     const parsedMail = await simpleParser(message.source);
 
-    // 2. Защита от дубликатов (проверка Message-ID)
     const messageId = parsedMail.messageId;
     if (messageId) {
       if (!currentDbData.processedEmails) currentDbData.processedEmails = [];
@@ -56,10 +56,8 @@ const processEmail = async (message, uid) => {
       }
     }
     
-    // 3. Поиск пользователя в БД Pulse 12 по email отправителя
     const senderEmail = findSender(parsedMail);
     if (!senderEmail) {
-      console.log(`[IMAP] Отправитель не найден. Пропуск.`);
       return;
     }
     
@@ -70,39 +68,37 @@ const processEmail = async (message, uid) => {
     );
 
     if (!pulseUser) {
-      console.log(`[IMAP] Отправитель ${senderEmail} не найден в базе Pulse 12. Пропуск.`);
       return;
     }
 
-    // 4. Фильтрация контента (Поиск IP-адресов и DNS)
-    // Убираем все HTML-теги из сырого кода, чтобы регулярки не находили служебные домены (типа w3.org или schemas.microsoft.com)
-    const rawHtml = String(parsedMail.html || '') + ' ' + String(parsedMail.textAsHtml || '');
+    let rawHtml = String(parsedMail.html || '') + ' ' + String(parsedMail.textAsHtml || '');
+    
+    // Defanging: убираем скобки вокруг точек и hXXp, которые часто используют CERT
+    rawHtml = rawHtml.replace(/\[\.\]/g, '.').replace(/hxxp/gi, 'http');
+
     const cleanHtmlText = sanitizeHtml(rawHtml, { allowedTags: [], allowedAttributes: {} });
-    const bodyText = String(parsedMail.text || '') + ' ' + cleanHtmlText;
+    const bodyText = String(parsedMail.text || '').replace(/\[\.\]/g, '.').replace(/hxxp/gi, 'http') + ' ' + cleanHtmlText;
 
     const foundIps = bodyText.match(IP_REGEX) || [];
     const foundDomains = bodyText.match(DNS_DOMAIN_REGEX) || [];
     const foundDnsQueries = bodyText.match(DNS_QUERY_REGEX) || [];
+    const foundEmails = bodyText.match(EMAIL_REGEX) || [];
     
-    // Исключаем домен отправителя (например enpf.kz), чтобы не спамить
     const senderDomain = senderEmail.split('@')[1];
-    let allIndicators = [...new Set([...foundIps, ...foundDomains, ...foundDnsQueries])];
+    let allIndicators = [...new Set([...foundIps, ...foundDomains, ...foundDnsQueries, ...foundEmails])];
     
     if (senderDomain) {
        allIndicators = allIndicators.filter(ind => !ind.toLowerCase().includes(senderDomain));
     }
 
     if (allIndicators.length === 0) {
-      console.log(`[IMAP] В письме от ${senderEmail} не найдено IP-адресов или DNS-запросов. Игнорируем (не задача). Текст: ${bodyText.substring(0, 50)}...`);
       return;
     }
 
-    // 5. Очистка текста
     const cleanBody = sanitizeHtml(parsedMail.html || parsedMail.textAsHtml || `<p>${bodyText}</p>`, {
       allowedTags: sanitizeHtml.defaults.allowedTags.concat([ 'img' ])
     });
 
-    // 6. Формирование вложений (TXT файлы для IP и DNS)
     const attachments = [];
     const createAttachment = (filename, content) => {
       const safeName = `${Date.now()}_${filename}`;
@@ -121,30 +117,113 @@ const processEmail = async (message, uid) => {
       });
     };
 
-    if (foundIps.length > 0) {
-      createAttachment('IP_Addresses.txt', [...new Set(foundIps)].join('\n'));
+    const uniqueIps = [...new Set(foundIps)].filter(ind => !senderDomain || !ind.toLowerCase().includes(senderDomain));
+
+    if (uniqueIps.length > 0) {
+      createAttachment('IP_Addresses.txt', uniqueIps.join('\n'));
     }
     
-    const otherDns = [...new Set([...foundDomains, ...foundDnsQueries])];
+    const otherDns = [...new Set([...foundDomains, ...foundDnsQueries])].filter(ind => !senderDomain || !ind.toLowerCase().includes(senderDomain));
     if (otherDns.length > 0) {
       createAttachment('DNS_Records.txt', otherDns.join('\n'));
     }
 
-    // 7. Создание задачи
+    const uniqueEmails = [...new Set(foundEmails)].filter(ind => !senderDomain || !ind.toLowerCase().includes(senderDomain) && ind.toLowerCase() !== senderEmail);
+    if (uniqueEmails.length > 0) {
+      createAttachment('Email_Addresses.txt', uniqueEmails.join('\n'));
+    }
+
+    // Проверяем срок действия (например, 'бессрочно' в бюллетенях KZ-CERT)
+    const isPermanent = /бессрочно/i.test(bodyText);
+    
+    // Ищем конкретные даты до какого числа (DD.MM.YYYY)
+    let parsedExpirationDate = null;
+    const foundDates = bodyText.match(DATE_REGEX) || [];
+    if (foundDates.length > 0) {
+      // Берем самую позднюю дату из найденных в письме
+      const timestamps = foundDates.map(d => {
+        const [day, month, year] = d.split('.');
+        return new Date(`${year}-${month}-${day}T00:00:00Z`).getTime();
+      }).filter(t => !isNaN(t));
+      if (timestamps.length > 0) {
+        const maxTime = Math.max(...timestamps);
+        if (maxTime > Date.now()) {
+          parsedExpirationDate = maxTime;
+        }
+      }
+    }
+
+    let fortigateBanStatus = '';
+
+    // --- Интеграция с FortiGate (Auto-Ban) ---
+    if (uniqueIps.length > 0 && currentDbData.fortigateSettings?.enabled && currentDbData.fortigateSettings?.autoBanEnabled) {
+      let bannedCount = 0;
+      const oldBannedLength = currentDbData.bannedIps ? currentDbData.bannedIps.length : 0;
+      
+      for (const ip of uniqueIps) {
+        const success = await banIpAddress(currentDbData.fortigateSettings, ip);
+        if (success) {
+          bannedCount++;
+          // Сохраняем в bannedIps с таймером 3 месяца или бессрочно или до конкретной даты
+          const banDuration = currentDbData.fortigateSettings.banDurationDays || 90;
+          let expiresAt = Date.now() + (banDuration * 24 * 60 * 60 * 1000);
+          
+          if (isPermanent) {
+            expiresAt = Date.now() + 100 * 365 * 24 * 60 * 60 * 1000;
+          } else if (parsedExpirationDate) {
+            expiresAt = parsedExpirationDate;
+          }
+          
+          if (!currentDbData.bannedIps) currentDbData.bannedIps = [];
+          currentDbData.bannedIps = currentDbData.bannedIps.filter(b => b.ip !== ip);
+          currentDbData.bannedIps.push({ ip, bannedAt: Date.now(), expiresAt, isPermanent });
+        }
+      }
+      
+      
+      if (bannedCount > 0) {
+        fortigateBanStatus = `<br/><br/><strong>[SOAR Auto-Ban]</strong> ${bannedCount} IP-адресов автоматически заблокированы на FortiGate!`;
+        await saveCollection('bannedIps', currentDbData.bannedIps);
+        
+        // Проверка лимитов группы FortiGate (например, 500 адресов)
+        const newBannedLength = currentDbData.bannedIps.length;
+        const threshold = 500;
+        if (Math.floor(oldBannedLength / threshold) < Math.floor(newBannedLength / threshold)) {
+          // Создаем отдельную задачу-алерт для админов
+          const alertTask = {
+            id: `task-${Date.now()}-alert`,
+            title: `⚠️ ВНИМАНИЕ: Группа FortiGate достигла лимита (${newBannedLength} адресов)`,
+            description: `Группа адресов на FortiGate (${currentDbData.fortigateSettings.addressGroup || 'Pulse_Banned_IPs'}) превысила порог в ${newBannedLength} записей.\n\nВозможно, достигнут хард-лимит FortiOS на количество объектов в одной группе. Рекомендуется создать вторую группу и изменить название целевой группы в настройках интеграции Pulse 12.`,
+            status: 'todo',
+            priority: 'high',
+            department: 'Кибербезопасность',
+            assigneeId: pulseUser.id,
+            authorId: 'system',
+            createdAt: new Date().toISOString()
+          };
+          if (!currentDbData.tasks) currentDbData.tasks = [];
+          currentDbData.tasks.push(alertTask);
+          await saveCollection('tasks', currentDbData.tasks);
+          if (currentBroadcast) {
+            currentBroadcast('newTask', alertTask);
+          }
+        }
+      }
+    }
+
     const newTask = {
       id: `task-${Date.now()}`,
       title: cleanSubject(parsedMail.subject),
-      description: `${cleanBody}<br/><br/><strong>Найденные индикаторы (IP/DNS) сохранены в прикрепленных файлах.</strong>`,
+      description: `${cleanBody}<br/><br/><strong>Найденные индикаторы (IP/DNS) сохранены в прикрепленных файлах.</strong>${fortigateBanStatus}`,
       status: 'to-do',
-      priority: 'high', // Письма с алертами обычно важные
-      assigneeId: pulseUser.id, // Назначаем на того, кто переслал
+      priority: 'high',
+      assigneeId: pulseUser.id,
       creatorId: pulseUser.id,
       createdAt: new Date().toISOString(),
-      sprintId: 'unassigned', // В Jira-clone используется 'unassigned' для Бэклога
+      sprintId: 'unassigned',
       attachments: attachments
     };
 
-    // 7. Сохранение и рассылка уведомлений
     if (!currentDbData.tasks) currentDbData.tasks = [];
     currentDbData.tasks.push(newTask);
     await saveCollection('tasks', currentDbData.tasks);

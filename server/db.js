@@ -46,6 +46,16 @@ const defaultLdapSettings = {
   domainName: ''
 };
 
+const defaultFortigateSettings = {
+  enabled: true,
+  autoBanEnabled: true,
+  banUrl: 'https://172.31.69.30:10443/api/v2/monitor/system/automation-stitch/webhook/Pulse12%20API',
+  unbanUrl: '',
+  apiToken: '5sj1c9Ns79s419x5856xyrn4x8dwcd',
+  banDurationDays: 90,
+  addressGroup: 'Pulse_Banned_IPs'
+};
+
 // Локальное файловое хранилище (для Fallback-режима без Docker/Postgres)
 let localDbData = {
   tasks: [],
@@ -57,6 +67,8 @@ let localDbData = {
   api_keys: [],
   ldap_settings: { ...defaultLdapSettings },
   mailSettings: {},
+  fortigateSettings: { ...defaultFortigateSettings },
+  bannedIps: [],
   notificationEvents: {}
 };
 
@@ -76,6 +88,8 @@ const loadLocalFile = () => {
           api_keys: parsed.api_keys || initialApiKeys,
           ldap_settings: parsed.ldap_settings || { ...defaultLdapSettings },
           mailSettings: parsed.mailSettings || {},
+          fortigateSettings: parsed.fortigateSettings || { ...defaultFortigateSettings },
+          bannedIps: parsed.bannedIps || [],
           notificationEvents: parsed.notificationEvents || {}
         };
         return;
@@ -94,6 +108,8 @@ const loadLocalFile = () => {
     api_keys: initialApiKeys,
     ldap_settings: { ...defaultLdapSettings },
     mailSettings: {},
+    fortigateSettings: { ...defaultFortigateSettings },
+    bannedIps: [],
     notificationEvents: {}
   };
   saveLocalFile();
@@ -242,7 +258,7 @@ export const initDb = async () => {
 };
 
 /**
- * Получить коллекцию по ключу ('tasks', 'users', 'sprints', 'groups', 'notifications', 'ldap_settings', 'mailSettings', 'notificationEvents')
+ * Получить коллекцию по ключу ('tasks', 'users', 'sprints', 'groups', 'notifications', 'ldap_settings', 'mailSettings', 'notificationEvents', 'fortigateSettings', 'bannedIps')
  */
 export const getCollection = async (key) => {
   if (isPgConnected) {
@@ -256,14 +272,14 @@ export const getCollection = async (key) => {
       if (res.rows.length > 0) {
         return res.rows[0].data;
       }
-      return key === 'ldap_settings' ? { ...defaultLdapSettings } : (key === 'mailSettings' ? {} : (key === 'notificationEvents' ? {} : []));
+      return key === 'ldap_settings' ? { ...defaultLdapSettings } : (key === 'mailSettings' || key === 'notificationEvents' || key === 'fortigateSettings' ? {} : (key === 'bannedIps' ? [] : []));
     } catch (err) {
       console.error(`❌ Ошибка PostgreSQL при получении коллекции "${key}":`, err.message);
       isPgConnected = false;
-      return localDbData[key] || (key === 'ldap_settings' ? { ...defaultLdapSettings } : {});
+      return localDbData[key] || (key === 'ldap_settings' ? { ...defaultLdapSettings } : (key === 'fortigateSettings' ? { ...defaultFortigateSettings } : (key === 'bannedIps' ? [] : {})));
     }
   } else {
-    return localDbData[key] || (key === 'ldap_settings' ? { ...defaultLdapSettings } : {});
+    return localDbData[key] || (key === 'ldap_settings' ? { ...defaultLdapSettings } : (key === 'fortigateSettings' ? { ...defaultFortigateSettings } : (key === 'bannedIps' ? [] : {})));
   }
 };
 
@@ -282,9 +298,9 @@ export const saveCollection = async (key, dataArrayOrObj) => {
   }
   if (isPgConnected) {
     try {
-      if (key === 'ldap_settings' || key === 'mailSettings' || key === 'notificationEvents') {
-        const tableName = key === 'ldap_settings' ? 'pulse_store' : (key === 'mailSettings' ? 'mail_settings' : 'notification_events');
-        if (key === 'ldap_settings') {
+      if (key === 'ldap_settings' || key === 'mailSettings' || key === 'notificationEvents' || key === 'fortigateSettings') {
+        const tableName = key === 'ldap_settings' || key === 'fortigateSettings' ? 'pulse_store' : (key === 'mailSettings' ? 'mail_settings' : 'notification_events');
+        if (key === 'ldap_settings' || key === 'fortigateSettings') {
           await pool.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data', [key, JSON.stringify(toSave)]);
         } else {
           await pool.query(`INSERT INTO ${tableName} (id, data) VALUES (1, $1) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data`, [JSON.stringify(toSave)]);
@@ -333,6 +349,8 @@ export const getAllData = async () => {
         ldap_settings: { ...defaultLdapSettings },
         mailSettings: resMail.rows.length > 0 ? resMail.rows[0].data : {},
         notificationEvents: resNotif.rows.length > 0 ? resNotif.rows[0].data : {},
+        fortigateSettings: { ...defaultFortigateSettings },
+        bannedIps: [],
         imapSettings: {},
         processedEmails: []
       };

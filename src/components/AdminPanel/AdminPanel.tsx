@@ -5,6 +5,7 @@ import type { User, Group } from '../../types';
 import { apiService } from '../../services/api';
 import { LdapSettingsTab } from './LdapSettingsTab';
 import { MailSettingsTab } from './MailSettingsTab';
+import { FortigateSettingsTab } from './FortigateSettingsTab';
 import './AdminPanel.css';
 
 export const AdminPanel: React.FC = () => {
@@ -13,7 +14,7 @@ export const AdminPanel: React.FC = () => {
   const isProtectedAdmin = (u: User) => u.id === 'usr-1' || u.login?.toLowerCase() === 'admin';
   const employeeUsers = users.filter(u => !isProtectedAdmin(u));
 
-  const [activeTab, setActiveTab] = useState<'users' | 'groups' | 'integrations' | 'ldap' | 'mail'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'groups' | 'integrations' | 'ldap' | 'mail' | 'fortigate'>('users');
   const [newKeyName, setNewKeyName] = useState('');
   const [newKeySource, setNewKeySource] = useState<'derscanner' | 'siem' | 'custom'>('derscanner');
   const [newKeyAllowedDepts, setNewKeyAllowedDepts] = useState<string[]>(['all']);
@@ -313,13 +314,19 @@ export const AdminPanel: React.FC = () => {
               className={`admin-tab-btn ${activeTab === 'ldap' ? 'active' : ''}`}
               onClick={() => setActiveTab('ldap')}
             >
-              LDAP / AD
+              🏢 LDAP / AD
             </button>
             <button 
               className={`admin-tab-btn ${activeTab === 'mail' ? 'active' : ''}`}
               onClick={() => setActiveTab('mail')}
             >
-              Почта и Оповещения
+              ✉️ Почта (IMAP)
+            </button>
+            <button 
+              className={`admin-tab-btn ${activeTab === 'fortigate' ? 'active' : ''}`}
+              onClick={() => setActiveTab('fortigate')}
+            >
+              🛡️ FortiGate (SOAR)
             </button>
           </div>
         </div>
@@ -795,6 +802,10 @@ export const AdminPanel: React.FC = () => {
 
       {activeTab === 'mail' && (
         <MailSettingsTab />
+      )}
+
+      {activeTab === 'fortigate' && (
+        <FortigateSettingsTab />
       )}
 
       {/* Add / Edit USER Modal */}

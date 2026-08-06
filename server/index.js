@@ -883,6 +883,35 @@ app.post('/api/import', requireAdmin, (req, res) => {
   }
 });
 
+// --- FORTIGATE API ENDPOINTS ---
+app.get('/api/fortigate/settings', requireAuth, (req, res) => {
+  const settings = dbData.fortigateSettings || {};
+  res.json({
+    ...settings,
+    apiToken: settings.apiToken ? '********' : ''
+  });
+});
+
+app.post('/api/fortigate/settings', requireAuth, async (req, res) => {
+  if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin') {
+    return res.status(403).json({ error: 'Доступ запрещен' });
+  }
+  const updates = req.body || {};
+  const current = dbData.fortigateSettings || {};
+  
+  const isMaskedOrEmpty = updates.apiToken === '********' || updates.apiToken === '••••••••' || (/^[•\*]+$/.test(updates.apiToken || '')) || (!updates.apiToken && current.apiToken);
+  const apiToken = isMaskedOrEmpty ? current.apiToken : updates.apiToken;
+
+  dbData.fortigateSettings = {
+    ...current,
+    ...updates,
+    apiToken
+  };
+  await saveCollection('fortigateSettings', dbData.fortigateSettings);
+  res.json({ success: true, settings: { ...dbData.fortigateSettings, apiToken: dbData.fortigateSettings.apiToken ? '********' : '' } });
+});
+
+
 // --- LDAP / ACTIVE DIRECTORY API ENDPOINTS ---
 app.get('/api/ldap/settings', requireAuth, (req, res) => {
   const settings = dbData.ldap_settings || {};
