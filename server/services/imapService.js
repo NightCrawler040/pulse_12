@@ -68,6 +68,7 @@ const processEmail = async (message, uid) => {
     );
 
     if (!pulseUser) {
+      console.log(`[IMAP] Пропуск письма от ${senderEmail}: пользователь не найден в базе Pulse 12 (защита от спама).`);
       return;
     }
 
@@ -92,6 +93,7 @@ const processEmail = async (message, uid) => {
     }
 
     if (allIndicators.length === 0) {
+      console.log(`[IMAP] Пропуск письма от ${senderEmail}: не найдено валидных индикаторов компрометации (IP/DNS).`);
       return;
     }
 
@@ -257,11 +259,15 @@ export const stopImapService = async () => {
   if (client) {
     try {
       console.log('[IMAP] Остановка сервиса...');
-      await client.logout();
-      client = null;
+      if (client.usable) {
+        await client.logout();
+      } else {
+        client.close();
+      }
     } catch (err) {
-      console.error('[IMAP] Ошибка при отключении:', err);
+      // Игнорируем ошибки при принудительном закрытии
     }
+    client = null;
   }
 };
 
@@ -310,25 +316,42 @@ export const startImapService = async (settings, dbData, broadcastUpdate) => {
     await client.connect();
     console.log(`✅ [IMAP] Успешно подключено к ящику ${settings.user}`);
 
-    // Подключаемся к папке Входящие
     let lock = await client.getMailboxLock('INBOX');
-    try {
-      // 1. Проверяем новые (непрочитанные) письма, которые могли прийти пока сервер был выключен
-      const searchOptions = { seen: false };
-      for await (let msg of client.fetch(searchOptions, { source: true, uid: true, headers: ['message-id'] })) {
-        await processEmail(msg, msg.uid);
-        // Отмечаем как прочитанное, чтобы не читать снова при рестарте
-        await client.messageFlagsAdd(msg.uid, ['\\Seen'], { uid: true });
+    
+    // Функция для проверки непрочитанных писем
+    const checkUnread = async () => {
+      try {
+        const searchOptions = { seen: false };
+        for await (let msg of client.fetch(searchOptions, { source: true, uid: true, headers: ['message-id'] })) {
+          await processEmail(msg, msg.uid);
+          await client.messageFlagsAdd(msg.uid, ['\\Seen'], { uid: true });
+        }
+      } catch (e) {
+        console.error('❌ [IMAP] Ошибка при проверке почты:', e.message);
       }
+    };
+
+    try {
+      // 1. Проверяем сразу при запуске
+      await checkUnread();
 
       // 2. Включаем подписку на новые письма (IMAP IDLE)
       client.on('exists', async (data) => {
         console.log(`[IMAP] Поступили новые письма (Всего в ящике: ${data.count})`);
-        // Берем самое последнее письмо
-        for await (let msg of client.fetch(data.count, { source: true, uid: true, headers: ['message-id'] })) {
-           await processEmail(msg, msg.uid);
-           await client.messageFlagsAdd(msg.uid, ['\\Seen'], { uid: true });
+        await checkUnread();
+      });
+
+      // 3. Запускаем резервный таймер (каждые 60 секунд), так как корпоративный Exchange часто рвет IMAP IDLE
+      const fetchInterval = setInterval(async () => {
+        if (client && client.usable) {
+          await checkUnread();
+        } else {
+          clearInterval(fetchInterval);
         }
+      }, 60000);
+
+      client.on('close', () => {
+        clearInterval(fetchInterval);
       });
       
     } catch (err) {
