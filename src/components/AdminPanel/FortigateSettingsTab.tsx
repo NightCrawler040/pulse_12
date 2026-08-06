@@ -22,8 +22,10 @@ export const FortigateSettingsTab: React.FC = () => {
 
   const fetchSettings = async () => {
     try {
-      const data = await apiService.get('/api/fortigate/settings');
-      setSettings(data);
+      const data: any = await apiService.get('/api/fortigate/settings');
+      if (data) {
+        setSettings(data);
+      }
     } catch (err) {
       console.error('Ошибка загрузки настроек FortiGate', err);
       setMessage({ text: 'Не удалось загрузить настройки', type: 'error' });
@@ -37,8 +39,10 @@ export const FortigateSettingsTab: React.FC = () => {
     setSaving(true);
     setMessage(null);
     try {
-      const res = await apiService.post('/api/fortigate/settings', settings);
-      setSettings(res.settings);
+      const res: any = await apiService.post('/api/fortigate/settings', settings);
+      if (res && res.settings) {
+        setSettings(res.settings);
+      }
       setMessage({ text: 'Настройки успешно сохранены', type: 'success' });
     } catch (err) {
       console.error('Ошибка сохранения', err);
