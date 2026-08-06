@@ -16,6 +16,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - pulse_net
 
   pulse12-server:
     image: ${IMAGE_TAG:-pulse12-corporate:latest}
@@ -35,16 +37,17 @@ services:
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
     volumes:
       - pulse12_data:/app/server/data
+    networks:
+      - pulse_net
+
+networks:
+  pulse_net:
+    ipam:
+      config:
+        - subnet: 10.12.0.0/16
 
 volumes:
   pulse12_data:
     name: pulse12_corporate_data
   postgres_data:
     name: pulse12_postgres_data
-
-networks:
-  default:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 10.5.0.0/16
