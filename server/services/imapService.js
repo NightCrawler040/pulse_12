@@ -6,6 +6,7 @@ import { banIpAddress } from './fortigateService.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import crypto from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -178,7 +179,54 @@ const processEmail = async (message, uid) => {
 
     const allUniqueHashes = [...uniqueMd5, ...uniqueSha1, ...uniqueSha256];
     if (allUniqueHashes.length > 0) {
+      // 1. Создаем TXT-файл на всякий случай
       createAttachment('KATA_Hashes.txt', allUniqueHashes.join('\n'));
+      
+      // 2. Генерируем OpenIOC XML формат для кнопки "Импортировать" в KATA
+      const nowIso = new Date().toISOString().split('.')[0] + 'Z';
+      const rootId = crypto.randomUUID();
+      const indicatorId = crypto.randomUUID();
+      
+      let indicatorItemsXml = '';
+      
+      uniqueMd5.forEach(hash => {
+        indicatorItemsXml += `
+      <IndicatorItem id="${crypto.randomUUID()}" condition="is">
+        <Context document="FileItem" search="FileItem/Md5sum" type="mir"/>
+        <Content type="md5">${hash}</Content>
+      </IndicatorItem>`;
+      });
+      
+      uniqueSha1.forEach(hash => {
+        indicatorItemsXml += `
+      <IndicatorItem id="${crypto.randomUUID()}" condition="is">
+        <Context document="FileItem" search="FileItem/Sha1sum" type="mir"/>
+        <Content type="sha1">${hash}</Content>
+      </IndicatorItem>`;
+      });
+      
+      uniqueSha256.forEach(hash => {
+        indicatorItemsXml += `
+      <IndicatorItem id="${crypto.randomUUID()}" condition="is">
+        <Context document="FileItem" search="FileItem/Sha256sum" type="mir"/>
+        <Content type="sha256">${hash}</Content>
+      </IndicatorItem>`;
+      });
+
+      const openIocXml = `<?xml version="1.0" encoding="UTF-8"?>
+<ioc xmlns="http://schemas.mandiant.com/2010/ioc" id="${rootId}" last-modified="${nowIso}">
+  <short_description>Pulse12 Auto-Generated IoC for KATA</short_description>
+  <description>Auto-extracted hashes from KZ-CERT bulletin or alert</description>
+  <authored_by>Pulse12 SOAR</authored_by>
+  <authored_date>${nowIso}</authored_date>
+  <definition>
+    <Indicator operator="OR" id="${indicatorId}">
+${indicatorItemsXml}
+    </Indicator>
+  </definition>
+</ioc>`;
+
+      createAttachment('KATA_Indicators.ioc', openIocXml);
     }
 
 
