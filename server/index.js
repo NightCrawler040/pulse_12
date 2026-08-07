@@ -137,6 +137,7 @@ let dbData = {
   notifications: [],
   findings: [],
   api_keys: [],
+  kataHashes: [],
   ldap_settings: null
 };
 
@@ -189,6 +190,7 @@ const getSanitizedDbData = () => ({
   notifications: Array.isArray(dbData.notifications) ? dbData.notifications : [],
   findings: Array.isArray(dbData.findings) ? dbData.findings : [],
   api_keys: Array.isArray(dbData.api_keys) ? dbData.api_keys : [],
+  kataHashes: Array.isArray(dbData.kataHashes) ? dbData.kataHashes : [],
   ldap_settings: sanitizeLdapSettings(dbData.ldap_settings),
   users: sanitizeUsers(dbData.users)
 });
@@ -332,6 +334,17 @@ const apiRateLimiter = (req, res, next) => {
 };
 
 app.use('/api', apiRateLimiter);
+
+// --- KATA THREAT INTELLIGENCE FEED ENDPOINT ---
+app.get('/api/feeds/kata-hashes.txt', (req, res) => {
+  if (!dbData.kataHashes || !Array.isArray(dbData.kataHashes) || dbData.kataHashes.length === 0) {
+    res.setHeader('Content-Type', 'text/plain');
+    return res.send('');
+  }
+  const allHashes = dbData.kataHashes.map(item => item.hash);
+  res.setHeader('Content-Type', 'text/plain');
+  res.send(allHashes.join('\n'));
+});
 
 // Get all data securely: verify user token; return only basic user profiles for unauthenticated login page load
 app.get('/api/data', (req, res) => {

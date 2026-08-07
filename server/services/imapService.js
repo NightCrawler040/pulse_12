@@ -22,6 +22,12 @@ const DNS_QUERY_REGEX = /\b(?:NS|A|AAAA|MX|CNAME|TXT)\s+record\b/gi;
 const EMAIL_REGEX = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/gi;
 const DATE_REGEX = /\b(\d{2})\.(\d{2})\.(\d{4})\b/g;
 
+// Регулярные выражения для хэшей KATA
+const MD5_REGEX = /\b[a-fA-F0-9]{32}\b/g;
+const SHA1_REGEX = /\b[a-fA-F0-9]{40}\b/g;
+const SHA256_REGEX = /\b[a-fA-F0-9]{64}\b/g;
+
+
 /**
  * Очистка префиксов пересылки из темы письма
  */
@@ -85,15 +91,19 @@ const processEmail = async (message, uid) => {
     const foundDnsQueries = bodyText.match(DNS_QUERY_REGEX) || [];
     const foundEmails = bodyText.match(EMAIL_REGEX) || [];
     
+    const foundMd5 = bodyText.match(MD5_REGEX) || [];
+    const foundSha1 = bodyText.match(SHA1_REGEX) || [];
+    const foundSha256 = bodyText.match(SHA256_REGEX) || [];
+    
     const senderDomain = senderEmail.split('@')[1];
-    let allIndicators = [...new Set([...foundIps, ...foundDomains, ...foundDnsQueries, ...foundEmails])];
+    let allIndicators = [...new Set([...foundIps, ...foundDomains, ...foundDnsQueries, ...foundEmails, ...foundMd5, ...foundSha1, ...foundSha256])];
     
     if (senderDomain) {
        allIndicators = allIndicators.filter(ind => !ind.toLowerCase().includes(senderDomain));
     }
 
     if (allIndicators.length === 0) {
-      console.log(`[IMAP] Пропуск письма от ${senderEmail}: не найдено валидных индикаторов компрометации (IP/DNS).`);
+      console.log(`[IMAP] Пропуск письма от ${senderEmail}: не найдено валидных индикаторов компрометации (IP/DNS/Hashes).`);
       return;
     }
 
@@ -134,6 +144,43 @@ const processEmail = async (message, uid) => {
     if (uniqueEmails.length > 0) {
       createAttachment('Email_Addresses.txt', uniqueEmails.join('\n'));
     }
+
+    // --- Обработка и сохранение хэшей для KATA ---
+    const uniqueMd5 = [...new Set(foundMd5)];
+    const uniqueSha1 = [...new Set(foundSha1)];
+    const uniqueSha256 = [...new Set(foundSha256)];
+    
+    if (!currentDbData.kataHashes) currentDbData.kataHashes = [];
+    let addedHashesCount = 0;
+    
+    const addHashes = (hashes, type) => {
+      for (const h of hashes) {
+        const lowerHash = h.toLowerCase();
+        if (!currentDbData.kataHashes.find(item => item.hash === lowerHash)) {
+          currentDbData.kataHashes.push({
+            hash: lowerHash,
+            type: type,
+            addedAt: Date.now(),
+            source: 'KZ-CERT'
+          });
+          addedHashesCount++;
+        }
+      }
+    };
+    
+    addHashes(uniqueMd5, 'MD5');
+    addHashes(uniqueSha1, 'SHA-1');
+    addHashes(uniqueSha256, 'SHA-256');
+
+    if (addedHashesCount > 0) {
+      await saveCollection('kataHashes', currentDbData.kataHashes);
+    }
+
+    const allUniqueHashes = [...uniqueMd5, ...uniqueSha1, ...uniqueSha256];
+    if (allUniqueHashes.length > 0) {
+      createAttachment('KATA_Hashes.txt', allUniqueHashes.join('\n'));
+    }
+
 
     // Проверяем срок действия (например, 'бессрочно' в бюллетенях KZ-CERT)
     const isPermanent = /бессрочно/i.test(bodyText);
