@@ -245,7 +245,7 @@
   width: 900px;
   max-width: 120vw;
   height: auto;
-  opacity: 0.03;
+  opacity: 0.15; /* Increased opacity so it's visible */
   z-index: 0;
   pointer-events: none;
   animation: spider-float 25s ease-in-out infinite;
@@ -267,7 +267,7 @@
 /* Light Theme Overrides */
 [data-theme="light"] .cyber-spider-bg {
   filter: invert(0);
-  opacity: 0.05;
+  opacity: 0.15;
 }
 
 [data-theme="light"] .welcome-container.cyber-theme {

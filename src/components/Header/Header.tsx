@@ -106,7 +106,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewTaskModal, onOpenLoginM
 
   return (
     <header className={`header-container glass-panel ${isCompact ? 'compact' : ''}`}>
-      {/* Top row: Brand, View Tabs, Actions */}
+      <div className="header-glow-wrapper"></div>
       <div className="header-top">
         <div className="brand-section">
           <div className="brand-logo">
