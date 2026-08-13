@@ -15,47 +15,23 @@
   margin-bottom: 60px;
 }
 
-.welcome-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-radius: 30px;
-  background: rgba(99, 102, 241, 0.15);
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  color: #818cf8;
-  font-size: 0.85rem;
-  font-weight: 600;
-  margin-bottom: 24px;
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2);
-}
 
-.badge-icon {
-  color: #6366f1;
-  animation: pulse 2s infinite;
-}
 
 .welcome-title {
   font-size: 3.5rem;
-  font-weight: 800;
-  line-height: 1.15;
-  color: #fff;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text-main, #ffffff);
   margin-bottom: 24px;
-  letter-spacing: -0.02em;
-}
-
-.gradient-text {
-  background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.03em;
 }
 
 .welcome-subtitle {
-  font-size: 1.15rem;
-  line-height: 1.6;
+  font-size: 1.1rem;
+  line-height: 1.5;
   color: var(--text-secondary, #94a3b8);
-  margin-bottom: 36px;
-  max-width: 680px;
+  margin-bottom: 40px;
+  max-width: 600px;
   margin-left: auto;
   margin-right: auto;
 }
@@ -71,22 +47,22 @@
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  padding: 16px 36px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  padding: 14px 32px;
+  border-radius: 8px;
+  background: #2563eb;
   color: #fff;
   font-size: 1.1rem;
-  font-weight: 700;
+  font-weight: 600;
   border: none;
   cursor: pointer;
-  box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+  transition: background-color 0.2s ease, transform 0.1s ease;
 }
 
 .btn-welcome-primary:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 15px 35px rgba(99, 102, 241, 0.6);
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  background: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 15px rgba(37, 99, 235, 0.3);
 }
 
 .welcome-server-status {
@@ -116,18 +92,18 @@
 .welcome-feature-card {
   background: var(--card-bg, #1e2230);
   border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
-  border-radius: 20px;
+  border-radius: 12px;
   padding: 32px;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
 .welcome-feature-card:hover {
-  transform: translateY(-5px);
-  border-color: rgba(99, 102, 241, 0.4);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
 .feature-icon-wrapper {

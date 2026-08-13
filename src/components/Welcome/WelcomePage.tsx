@@ -14,10 +14,8 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onOpenLogin }) => {
   return (
     <div className="welcome-container animate-fade-in">
       <div className="welcome-hero">
-        <div className="welcome-badge">🏢 Корпоративная платформа Pulse 12</div>
-
         <h1 className="welcome-title">
-          Управление задачами и командами <br />в изолированной LAN-сети
+          Управление задачами и командами в изолированной LAN-сети
         </h1>
 
         <p className="welcome-subtitle">

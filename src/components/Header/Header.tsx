@@ -10,9 +10,7 @@ import {
   Search, 
   Plus, 
   Sun, 
-  Moon, 
-  Download, 
-  Upload, 
+  Moon,
   Filter, 
   X,
   Sparkles,
@@ -41,9 +39,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewTaskModal, onOpenLoginM
     setTheme, 
     users, 
     filters, 
-    setFilters, 
-    exportData, 
-    importData,
+    setFilters,
     sprints,
     activeSprintId,
     setActiveSprintId,
@@ -84,25 +80,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewTaskModal, onOpenLoginM
       ...prev,
       assigneeId: prev.assigneeId === userId ? null : userId
     }));
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const content = event.target?.result as string;
-        if (content) {
-          const success = importData(content);
-          if (success) {
-            alert('Данные успешно импортированы!');
-          } else {
-            alert('Ошибка импорта: неверный формат файла JSON.');
-          }
-        }
-      };
-      reader.readAsText(file);
-    }
   };
 
   const activeFindingsCount = findings.filter(f => f.status === 'new' || f.status === 'analyzing').length;
@@ -282,30 +259,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewTaskModal, onOpenLoginM
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
 
-          {/* Backup menu buttons */}
-          <div className="backup-actions">
-            <button 
-              className="icon-btn" 
-              onClick={exportData} 
-              title="Экспорт базы данных в JSON"
-            >
-              <Download size={18} />
-            </button>
-            <button 
-              className="icon-btn" 
-              onClick={() => fileInputRef.current?.click()} 
-              title="Импорт JSON базы данных"
-            >
-              <Upload size={18} />
-            </button>
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              style={{ display: 'none' }} 
-              accept=".json" 
-              onChange={handleFileChange} 
-            />
-          </div>
         </div>
       </div>
 
