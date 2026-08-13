@@ -56,7 +56,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewTaskModal, onOpenLoginM
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifBtnRef = useRef<HTMLButtonElement>(null);
   const [isCompact, setIsCompact] = useState<boolean>(() => localStorage.getItem('pulse12_header_compact') === 'true');
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const unreadCount = notifications.filter(n => {
     if (n.read || !currentUser) return false;
