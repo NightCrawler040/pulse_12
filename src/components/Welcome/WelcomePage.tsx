@@ -40,8 +40,17 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onOpenLogin }) => {
 
   return (
     <div className="welcome-container cyber-theme">
-      {/* Spider Watermark Background */}
-      <img src={spiderLogo} alt="" className="cyber-spider-bg" />
+      {/* Floating Small Spiders */}
+      <div className="spider-particles">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <img 
+            key={i}
+            src={spiderLogo} 
+            alt="" 
+            className={`cyber-spider-bg particle-${i + 1}`} 
+          />
+        ))}
+      </div>
 
       <div className="welcome-split-layout">
         

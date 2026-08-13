@@ -236,38 +236,53 @@
   }
 }
 
-/* Spider Logo Background */
-.cyber-spider-bg {
+/* Floating Spider Particles */
+.spider-particles {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 900px;
-  max-width: 120vw;
-  height: auto;
-  opacity: 0.15; /* Increased opacity so it's visible */
+  inset: 0;
+  overflow: hidden;
   z-index: 0;
   pointer-events: none;
-  animation: spider-float 25s ease-in-out infinite;
-  filter: invert(1);
 }
 
-@keyframes spider-float {
-  0%, 100% {
-    transform: translate(-50%, -50%) rotate(0deg) scale(1);
-  }
-  33% {
-    transform: translate(-48%, -52%) rotate(2deg) scale(1.03);
-  }
-  66% {
-    transform: translate(-52%, -48%) rotate(-2deg) scale(0.97);
-  }
+.cyber-spider-bg {
+  position: absolute;
+  width: 60px;
+  height: auto;
+  opacity: 0.25;
+  /* Remove clipartmax checkerboard in dark theme */
+  filter: invert(1) contrast(500%);
+  mix-blend-mode: screen;
 }
 
 /* Light Theme Overrides */
 [data-theme="light"] .cyber-spider-bg {
-  filter: invert(0);
+  /* Remove clipartmax checkerboard in light theme */
+  filter: contrast(500%);
+  mix-blend-mode: multiply;
   opacity: 0.15;
+}
+
+/* Individual particle positions and animations */
+.particle-1 { top: 15%; left: 10%; animation: float-spider 18s infinite ease-in-out; }
+.particle-2 { top: 25%; right: 15%; animation: float-spider 24s infinite ease-in-out reverse; }
+.particle-3 { bottom: 20%; left: 20%; animation: float-spider 20s infinite ease-in-out; }
+.particle-4 { bottom: 30%; right: 10%; animation: float-spider 28s infinite ease-in-out reverse; }
+.particle-5 { top: 50%; left: 8%; animation: float-spider 22s infinite ease-in-out; }
+.particle-6 { bottom: 50%; right: 5%; animation: float-spider 26s infinite ease-in-out reverse; }
+.particle-7 { top: 70%; left: 45%; animation: float-spider 25s infinite ease-in-out; }
+.particle-8 { bottom: 10%; right: 45%; animation: float-spider 19s infinite ease-in-out reverse; }
+
+@keyframes float-spider {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  33% {
+    transform: translateY(-40px) rotate(20deg);
+  }
+  66% {
+    transform: translateY(30px) rotate(-15deg);
+  }
 }
 
 [data-theme="light"] .welcome-container.cyber-theme {

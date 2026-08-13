@@ -23,22 +23,25 @@
 }
 
 @keyframes cyber-border-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
 .header-glow-wrapper::before {
   content: '';
   position: absolute;
-  inset: -50%;
+  top: 50%;
+  left: 50%;
+  width: 300vw;
+  height: 300vw;
   background: conic-gradient(
     transparent,
-    transparent 30%,
+    transparent 45%,
     #00ff41 50%,
-    transparent 70%,
+    transparent 55%,
     transparent
   );
-  animation: cyber-border-spin 4s linear infinite;
+  animation: cyber-border-spin 5s linear infinite;
 }
 
 .header-glow-wrapper::after {
