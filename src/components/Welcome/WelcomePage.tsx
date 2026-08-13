@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LogIn, Terminal, Activity, Lock, Cpu, Server } from 'lucide-react';
 import { useTaskContext } from '../../context/TaskContext';
+import spiderLogo from '../../assets/spider-logo.png';
 import './WelcomePage.css';
 
 interface WelcomePageProps {
@@ -39,6 +40,9 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onOpenLogin }) => {
 
   return (
     <div className="welcome-container cyber-theme">
+      {/* Spider Watermark Background */}
+      <img src={spiderLogo} alt="" className="cyber-spider-bg" />
+
       <div className="welcome-split-layout">
         
         {/* Left Side: Typography & CTA */}

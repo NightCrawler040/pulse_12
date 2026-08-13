@@ -8,6 +8,45 @@
   position: sticky;
   top: 12px;
   z-index: 100;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+}
+
+@keyframes cyber-border-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.header-container::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: calc(var(--radius-lg) + 1px);
+  background: conic-gradient(
+    transparent,
+    transparent 30%,
+    #00ff41 50%,
+    transparent 70%,
+    transparent
+  );
+  animation: cyber-border-spin 4s linear infinite;
+  z-index: -2;
+}
+
+.header-container::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-lg);
+  background: var(--bg-glass);
+  backdrop-filter: blur(16px);
+  z-index: -1;
+}
+
+.header-top, .header-bottom {
+  position: relative;
+  z-index: 1;
 }
 
 .header-top {

@@ -7,6 +7,8 @@
   padding: 40px 20px;
   color: #e2e8f0;
   font-family: 'Inter', system-ui, sans-serif;
+  position: relative;
+  overflow: hidden;
 }
 
 .welcome-split-layout {
@@ -17,6 +19,8 @@
   width: 100%;
   max-width: 1100px;
   gap: 60px;
+  position: relative;
+  z-index: 1;
 }
 
 /* LEFT SIDE: Typography */
@@ -230,4 +234,74 @@
   .welcome-title.cyber-title {
     font-size: 3rem;
   }
+}
+
+/* Spider Logo Background */
+.cyber-spider-bg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 900px;
+  max-width: 120vw;
+  height: auto;
+  opacity: 0.03;
+  z-index: 0;
+  pointer-events: none;
+  animation: spider-float 25s ease-in-out infinite;
+  filter: invert(1);
+}
+
+@keyframes spider-float {
+  0%, 100% {
+    transform: translate(-50%, -50%) rotate(0deg) scale(1);
+  }
+  33% {
+    transform: translate(-48%, -52%) rotate(2deg) scale(1.03);
+  }
+  66% {
+    transform: translate(-52%, -48%) rotate(-2deg) scale(0.97);
+  }
+}
+
+/* Light Theme Overrides */
+[data-theme="light"] .cyber-spider-bg {
+  filter: invert(0);
+  opacity: 0.05;
+}
+
+[data-theme="light"] .welcome-container.cyber-theme {
+  color: #0f172a;
+}
+
+[data-theme="light"] .welcome-title.cyber-title {
+  color: #0f172a;
+}
+
+[data-theme="light"] .welcome-subtitle.cyber-subtitle {
+  color: #475569;
+}
+
+[data-theme="light"] .cyber-eyebrow {
+  color: #16a34a;
+  background: rgba(22, 163, 74, 0.1);
+  border-left-color: #16a34a;
+}
+
+[data-theme="light"] .blink-dot {
+  background-color: #16a34a;
+}
+
+[data-theme="light"] .accent-text {
+  color: #16a34a;
+}
+
+[data-theme="light"] .btn-cyber-primary {
+  color: #16a34a;
+  border-color: #16a34a;
+}
+
+[data-theme="light"] .btn-cyber-primary:hover {
+  background: #16a34a;
+  color: #ffffff;
 }
