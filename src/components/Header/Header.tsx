@@ -14,6 +14,7 @@ import {
   Filter, 
   X,
   Sparkles,
+  Activity,
   User as UserIcon,
   Settings,
   Key,
@@ -110,8 +111,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewTaskModal, onOpenLoginM
       <div className="header-top">
         <div className="brand-section">
           <div className="brand-logo">
-            <Sparkles className="logo-icon" size={24} />
-            <span className="logo-text">Pulse<span className="logo-highlight">12</span></span>
+            <Activity size={22} className="logo-icon" />
+            <span>Pulse</span>
           </div>
           <span className="brand-subtitle">Corporate Task Tracker</span>
         </div>

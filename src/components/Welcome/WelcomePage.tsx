@@ -18,7 +18,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onOpenLogin }) => {
   
   useEffect(() => {
     const lines = [
-      '> INITIALIZING PULSE-12 KERNEL...',
+      '> INITIALIZING PULSE KERNEL...',
       '> SECURE CONNECTION ESTABLISHED',
       '> LOADING ENCRYPTED MODULES...',
       '> RBAC PROTOCOLS ACTIVE',
@@ -62,7 +62,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onOpenLogin }) => {
           <h1 className="welcome-title cyber-title">
             КООРДИНАЦИЯ.<br />
             БЕЗОПАСНОСТЬ.<br />
-            <span className="accent-text">PULSE 12</span>
+            <span className="accent-text">PULSE</span>
           </h1>
           <p className="welcome-subtitle cyber-subtitle">
             Закрытый портал управления проектами и инцидентами. Никакого визуального шума — только чистый функционал и полный контроль над процессами.
