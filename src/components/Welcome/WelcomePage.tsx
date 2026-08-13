@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LogIn, Terminal, Activity, Lock, Cpu, Server } from 'lucide-react';
 import { useTaskContext } from '../../context/TaskContext';
-import spiderLogo from '../../assets/spider-logo.png';
+import spiderLogo from '../../assets/spider-logo-clean.png';
 import './WelcomePage.css';
 
 interface WelcomePageProps {

@@ -249,17 +249,13 @@
   position: absolute;
   width: 60px;
   height: auto;
-  opacity: 0.25;
-  /* Remove clipartmax checkerboard in dark theme */
-  filter: invert(1) contrast(500%);
-  mix-blend-mode: screen;
+  opacity: 0.15;
+  filter: invert(1);
 }
 
 /* Light Theme Overrides */
 [data-theme="light"] .cyber-spider-bg {
-  /* Remove clipartmax checkerboard in light theme */
-  filter: contrast(500%);
-  mix-blend-mode: multiply;
+  filter: invert(0);
   opacity: 0.15;
 }
 
