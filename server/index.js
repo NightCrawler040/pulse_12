@@ -15,6 +15,7 @@ import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { testLdapConnection, fetchLdapUsers, syncLdapUsersAndTasks, importSelectedLdapUsers, authenticateLdapUser } from './services/ldapService.js';
 import { startImapService } from './services/imapService.js';
+import { banIpAddress, unbanIpAddress } from './services/fortigateService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -922,6 +923,31 @@ app.post('/api/fortigate/settings', requireAuth, async (req, res) => {
   };
   await saveCollection('fortigateSettings', dbData.fortigateSettings);
   res.json({ success: true, settings: { ...dbData.fortigateSettings, apiToken: dbData.fortigateSettings.apiToken ? '********' : '' } });
+});
+
+app.post('/api/fortigate/test', requireAuth, async (req, res) => {
+  if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin') {
+    return res.status(403).json({ error: 'Доступ запрещен' });
+  }
+  const current = dbData.fortigateSettings || {};
+  if (!current.enabled || !current.banUrl || !current.apiToken) {
+    return res.status(400).json({ success: false, error: 'Интеграция выключена или не настроены URL/токен.' });
+  }
+  try {
+    const testIp = '1.1.1.1'; // IP-адрес для теста
+    const success = await banIpAddress(current, testIp);
+    if (success) {
+      // Пытаемся сразу разбанить, чтобы не засорять FortiGate
+      if (current.unbanUrl) {
+        await unbanIpAddress(current, testIp);
+      }
+      res.json({ success: true, message: 'Тестовый запрос успешно отправлен и принят FortiGate.' });
+    } else {
+      res.status(500).json({ success: false, error: 'FortiGate вернул ошибку или недоступен. Проверьте логи сервера Pulse.' });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 

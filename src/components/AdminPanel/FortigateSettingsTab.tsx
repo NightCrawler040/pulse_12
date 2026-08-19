@@ -15,6 +15,24 @@ export const FortigateSettingsTab: React.FC = () => {
   });
 
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
+
+  const handleTestConnection = async () => {
+    setIsTesting(true);
+    setMessage(null);
+    try {
+      const res: any = await apiService.post('/api/fortigate/test', {});
+      if (res.success) {
+        setMessage({ text: res.message || 'Тест успешен! IP 1.1.1.1 был забанен и разбанен.', type: 'success' });
+      } else {
+        setMessage({ text: res.error || 'Ошибка при тестировании Webhook.', type: 'error' });
+      }
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Сетевая ошибка при запросе к серверу.', type: 'error' });
+    } finally {
+      setIsTesting(false);
+    }
+  };
 
   useEffect(() => {
     fetchSettings();
@@ -246,7 +264,25 @@ export const FortigateSettingsTab: React.FC = () => {
             </span>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px', gap: '10px' }}>
+            <button 
+              type="button" 
+              onClick={handleTestConnection}
+              disabled={isTesting || !settings.enabled}
+              style={{
+                background: 'hsl(var(--bg-secondary))',
+                color: 'hsl(var(--text-primary))',
+                border: '1px solid hsl(var(--border-color))',
+                padding: '10px 24px',
+                borderRadius: '6px',
+                fontWeight: 500,
+                cursor: (isTesting || !settings.enabled) ? 'not-allowed' : 'pointer',
+                opacity: (isTesting || !settings.enabled) ? 0.7 : 1,
+                transition: 'opacity 0.2s'
+              }}
+            >
+              {isTesting ? 'Проверка...' : 'Тест Webhook (1.1.1.1)'}
+            </button>
             <button 
               type="submit" 
               disabled={saving}
