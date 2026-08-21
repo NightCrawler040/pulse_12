@@ -9,7 +9,7 @@ export const mockUsers: User[] = [
     email: 'a.gromov@corp.lan',
     login: 'admin',
     password: 'admin',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    avatar: '',
     roleType: 'admin',
     pin: 'admin',
     isActive: true
@@ -23,7 +23,7 @@ export const mockUsers: User[] = [
     roleType: 'member',
     department: 'Engineering',
     email: 'n.ghani@corp.lan',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    avatar: '',
     pin: 'user123',
     isActive: true
   },
@@ -36,7 +36,7 @@ export const mockUsers: User[] = [
     roleType: 'member',
     department: 'Engineering',
     email: 'e.meiramov@corp.lan',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+    avatar: '',
     pin: 'user123',
     isActive: true
   },
@@ -49,7 +49,7 @@ export const mockUsers: User[] = [
     roleType: 'member',
     department: 'Engineering',
     email: 'a.nasyrov@corp.lan',
-    avatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150&auto=format&fit=crop&q=80',
+    avatar: '',
     pin: 'user123',
     isActive: true
   },
@@ -62,7 +62,7 @@ export const mockUsers: User[] = [
     roleType: 'member',
     department: 'Product & Agile',
     email: 'm.nadyrov@corp.lan',
-    avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
+    avatar: '',
     pin: 'user123',
     isActive: true
   },
@@ -75,7 +75,7 @@ export const mockUsers: User[] = [
     roleType: 'member',
     department: 'Quality Assurance',
     email: 'n.baubekov@corp.lan',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
+    avatar: '',
     pin: 'user123',
     isActive: true
   },
@@ -88,7 +88,7 @@ export const mockUsers: User[] = [
     roleType: 'member',
     department: 'Design Team',
     email: 'r.ismailov@corp.lan',
-    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
+    avatar: '',
     pin: 'user123',
     isActive: true
   },
@@ -101,7 +101,7 @@ export const mockUsers: User[] = [
     roleType: 'member',
     department: 'Engineering',
     email: 'm.loskutov@corp.lan',
-    avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80',
+    avatar: '',
     pin: 'user123',
     isActive: true
   },
@@ -114,7 +114,7 @@ export const mockUsers: User[] = [
     roleType: 'member',
     department: 'Engineering',
     email: 'm.nemirovsky@corp.lan',
-    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
+    avatar: '',
     pin: 'user123',
     isActive: true
   },
@@ -127,7 +127,7 @@ export const mockUsers: User[] = [
     roleType: 'member',
     department: 'Product & Agile',
     email: 'b.kairatov@corp.lan',
-    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+    avatar: '',
     pin: 'user123',
     isActive: true
   },
@@ -140,7 +140,7 @@ export const mockUsers: User[] = [
     roleType: 'member',
     department: 'Product & Agile',
     email: 'r.nurmanov@corp.lan',
-    avatar: 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=150&auto=format&fit=crop&q=80',
+    avatar: '',
     pin: 'user123',
     isActive: true
   }
