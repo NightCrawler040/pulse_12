@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useTaskContext } from '../../context/TaskContext';
 import { useAuth } from '../../context/AuthContext';
-import { Search, Plus, Filter, X, Key, Bell } from 'lucide-react';
+import { Search, Plus, X, Key, Bell } from 'lucide-react';
 import { NotificationPopover } from '../Notifications/NotificationPopover';
 import './TopBar.css';
 
@@ -16,9 +16,6 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenNewTaskModal, onOpenLoginM
     users, 
     filters, 
     setFilters,
-    sprints,
-    activeSprintId,
-    setActiveSprintId,
     isServerConnected,
     onlineUserIds,
     setIsNetworkModalOpen,
@@ -26,9 +23,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenNewTaskModal, onOpenLoginM
   } = useTaskContext();
   
   const { currentUser } = useAuth();
-  const employeeUsersCount = users.filter(u => u.id !== 'usr-1' && u.login?.toLowerCase() !== 'admin').length;
 
-  const [showFilters, setShowFilters] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -47,8 +42,6 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenNewTaskModal, onOpenLoginM
       assigneeId: prev.assigneeId === userId ? null : userId
     }));
   };
-
-  const activeSprint = sprints.find(s => s.id === activeSprintId);
 
   return (
     <div className="topbar-container glass-panel">
