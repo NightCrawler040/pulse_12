@@ -36,23 +36,8 @@ jobs:
           path: dist/
           retention-days: 7
 
-  docker-package:
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker Image
-        run: |
-          docker build -t pulse12-flowspace:latest .
-          echo "✅ Docker image successfully built!"
-
   deploy-to-vsphere:
-    needs: docker-package
+    needs: build-and-test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     # Раскомментируйте блок со steps ниже, когда настроите секреты в GitHub (Settings -> Secrets -> Actions):
