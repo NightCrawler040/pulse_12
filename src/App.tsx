@@ -95,9 +95,9 @@ const AppContent: React.FC = () => {
         <div className="modal-overlay" style={{ zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}>
           <div className="modal-card" style={{ maxWidth: '440px', textAlign: 'center', padding: '32px 28px', border: '1px solid #f59e0b', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
             <div style={{ fontSize: '3rem', marginBottom: '16px' }}>??</div>
-            <h3 style={{ fontSize: '1.4rem', color: '#f59e0b', marginBottom: '12px' }}>Сессия истекла</h3>
+            <h3 style={{ fontSize: '1.4rem', color: '#f59e0b', marginBottom: '12px' }}>РЎРµСЃСЃРёСЏ РёСЃС‚РµРєР»Р°</h3>
             <p style={{ color: 'hsl(var(--text-secondary))', fontSize: '0.95rem', lineHeight: '1.6', marginBottom: '24px' }}>
-              В целях безопасности ваша сессия завершена.
+              Р’ С†РµР»СЏС… Р±РµР·РѕРїР°СЃРЅРѕСЃС‚Рё РІР°С€Р° СЃРµСЃСЃРёСЏ Р·Р°РІРµСЂС€РµРЅР°.
             </p>
             <button
               className="btn-primary"
@@ -107,7 +107,7 @@ const AppContent: React.FC = () => {
                 setIsLoginModalOpen(true);
               }}
             >
-              Войти заново
+              Р’РѕР№С‚Рё Р·Р°РЅРѕРІРѕ
             </button>
           </div>
         </div>
