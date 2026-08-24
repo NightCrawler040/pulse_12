@@ -13,7 +13,6 @@ import {
   Moon,
   Filter, 
   X,
-  Sparkles,
   Activity,
   User as UserIcon,
   Settings,
