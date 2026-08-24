@@ -42,16 +42,16 @@ jobs:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     # Раскомментируйте блок со steps ниже, когда настроите секреты в GitHub (Settings -> Secrets -> Actions):
     # VSPHERE_SERVER_IP, VSPHERE_SSH_USER, VSPHERE_SSH_PRIVATE_KEY
+    env:
+      VSPHERE_SERVER_IP: ${{ secrets.VSPHERE_SERVER_IP }}
+      VSPHERE_SSH_USER: ${{ secrets.VSPHERE_SSH_USER }}
+      VSPHERE_SSH_PRIVATE_KEY: ${{ secrets.VSPHERE_SSH_PRIVATE_KEY }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Deploy to Ubuntu vSphere VM via SSH
-        if: ${{ secrets.VSPHERE_SERVER_IP != '' && secrets.VSPHERE_SSH_PRIVATE_KEY != '' }}
-        env:
-          VSPHERE_SERVER_IP: ${{ secrets.VSPHERE_SERVER_IP }}
-          VSPHERE_SSH_USER: ${{ secrets.VSPHERE_SSH_USER }}
-          VSPHERE_SSH_PRIVATE_KEY: ${{ secrets.VSPHERE_SSH_PRIVATE_KEY }}
+        if: ${{ env.VSPHERE_SERVER_IP != '' && env.VSPHERE_SSH_PRIVATE_KEY != '' }}
         run: |
           mkdir -p ~/.ssh
           echo "$VSPHERE_SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
@@ -68,5 +68,5 @@ jobs:
           ssh -i ~/.ssh/id_rsa $VSPHERE_SSH_USER@$VSPHERE_SERVER_IP "cd /opt/pulse12 && docker compose down && docker compose up -d --build && docker compose ps"
           echo "✅ Успешно развернуто на виртуальной машине Ubuntu vSphere!"
       - name: Skip Deploy notification
-        if: ${{ secrets.VSPHERE_SERVER_IP == '' }}
+        if: ${{ env.VSPHERE_SERVER_IP == '' }}
         run: echo "ℹ️ Для автоматического деплоя на vSphere добавьте секреты VSPHERE_SERVER_IP, VSPHERE_SSH_USER и VSPHERE_SSH_PRIVATE_KEY в настройки GitHub репозитория."
