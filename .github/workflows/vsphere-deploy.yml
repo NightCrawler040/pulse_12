@@ -1,11 +1,11 @@
-name: Pulse12 CI/CD & vSphere Deploy
+name: Pulse12 CI/CD
 
 on:
   push:
     branches: [ "main", "master" ]
   pull_request:
     branches: [ "main", "master" ]
-  workflow_dispatch: # Позволяет запускать деплой вручную из вкладки Actions
+  workflow_dispatch:
 
 jobs:
   build-and-test:
@@ -28,45 +28,3 @@ jobs:
 
       - name: Build production bundle
         run: npm run build
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: pulse12-dist
-          path: dist/
-          retention-days: 7
-
-  deploy-to-vsphere:
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-    # Раскомментируйте блок со steps ниже, когда настроите секреты в GitHub (Settings -> Secrets -> Actions):
-    # VSPHERE_SERVER_IP, VSPHERE_SSH_USER, VSPHERE_SSH_PRIVATE_KEY
-    env:
-      VSPHERE_SERVER_IP: ${{ secrets.VSPHERE_SERVER_IP }}
-      VSPHERE_SSH_USER: ${{ secrets.VSPHERE_SSH_USER }}
-      VSPHERE_SSH_PRIVATE_KEY: ${{ secrets.VSPHERE_SSH_PRIVATE_KEY }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Deploy to Ubuntu vSphere VM via SSH
-        if: ${{ env.VSPHERE_SERVER_IP != '' && env.VSPHERE_SSH_PRIVATE_KEY != '' }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$VSPHERE_SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H $VSPHERE_SERVER_IP >> ~/.ssh/known_hosts 2>/dev/null || true
-          
-          echo "🌐 Подключение к серверу $VSPHERE_SERVER_IP..."
-          ssh $VSPHERE_SSH_USER@$VSPHERE_SERVER_IP "mkdir -p /opt/pulse12"
-          
-          # Копируем проект на сервер vSphere
-          rsync -avz -e "ssh -i ~/.ssh/id_rsa" --exclude 'node_modules' --exclude '.git' ./ $VSPHERE_SSH_USER@$VSPHERE_SERVER_IP:/opt/pulse12/
-          
-          # Перезапускаем контейнеры
-          ssh -i ~/.ssh/id_rsa $VSPHERE_SSH_USER@$VSPHERE_SERVER_IP "cd /opt/pulse12 && docker compose down && docker compose up -d --build && docker compose ps"
-          echo "✅ Успешно развернуто на виртуальной машине Ubuntu vSphere!"
-      - name: Skip Deploy notification
-        if: ${{ env.VSPHERE_SERVER_IP == '' }}
-        run: echo "ℹ️ Для автоматического деплоя на vSphere добавьте секреты VSPHERE_SERVER_IP, VSPHERE_SSH_USER и VSPHERE_SSH_PRIVATE_KEY в настройки GitHub репозитория."
