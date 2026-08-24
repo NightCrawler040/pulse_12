@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { TaskProvider, useTaskContext } from './context/TaskContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { Header } from './components/Header/Header';
+import { Sidebar } from './components/Sidebar/Sidebar';
+import { TopBar } from './components/TopBar/TopBar';
 import { KanbanBoard } from './components/KanbanBoard/KanbanBoard';
 import { Backlog } from './components/Backlog/Backlog';
 import { TeamWorkload } from './components/TeamWorkload/TeamWorkload';
@@ -49,49 +50,54 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="app-main-wrapper">
-      <Header 
-        onOpenNewTaskModal={() => handleOpenNewModal('todo')} 
-        onOpenLoginModal={() => setIsLoginModalOpen(true)}
-      />
-
-      <main className="main-content-area">
-        {!isLoggedIn ? (
-          <WelcomePage onOpenLogin={() => setIsLoginModalOpen(true)} />
-        ) : (
-          <>
-            {viewMode === 'board' && (
-              <KanbanBoard onOpenNewTaskModalWithStatus={(st) => handleOpenNewModal(st)} />
-            )}
-            {viewMode === 'backlog' && (
-              <Backlog onOpenNewTaskModal={(spId) => handleOpenNewModal('todo', spId)} />
-            )}
-            {viewMode === 'workload' && (
-              <TeamWorkload />
-            )}
-            {viewMode === 'analytics' && (
-              <Analytics />
-            )}
-            {viewMode === 'profile' && (
-              <Profile />
-            )}
-            {viewMode === 'admin' && (
-              <AdminPanel />
-            )}
-            {viewMode === 'security' && (
-              <SecurityCenter />
-            )}
-          </>
+      {isLoggedIn && <Sidebar />}
+      
+      <div className="app-content-wrapper">
+        {isLoggedIn && (
+          <TopBar 
+            onOpenNewTaskModal={() => handleOpenNewModal('todo')} 
+            onOpenLoginModal={() => setIsLoginModalOpen(true)}
+          />
         )}
-      </main>
 
-      {/* Session Expired Modal */}
+        <main className="main-content-area">
+          {!isLoggedIn ? (
+            <WelcomePage onOpenLogin={() => setIsLoginModalOpen(true)} />
+          ) : (
+            <>
+              {viewMode === 'board' && (
+                <KanbanBoard onOpenNewTaskModalWithStatus={(st) => handleOpenNewModal(st)} />
+              )}
+              {viewMode === 'backlog' && (
+                <Backlog onOpenNewTaskModal={(spId) => handleOpenNewModal('todo', spId)} />
+              )}
+              {viewMode === 'workload' && (
+                <TeamWorkload />
+              )}
+              {viewMode === 'analytics' && (
+                <Analytics />
+              )}
+              {viewMode === 'profile' && (
+                <Profile />
+              )}
+              {viewMode === 'admin' && (
+                <AdminPanel />
+              )}
+              {viewMode === 'security' && (
+                <SecurityCenter />
+              )}
+            </>
+          )}
+        </main>
+      </div>
+
       {sessionExpired && (
         <div className="modal-overlay" style={{ zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}>
           <div className="modal-card" style={{ maxWidth: '440px', textAlign: 'center', padding: '32px 28px', border: '1px solid #f59e0b', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '16px' }}>⏳</div>
-            <h3 style={{ fontSize: '1.4rem', color: '#f59e0b', marginBottom: '12px' }}>Сеанс завершен из-за неактивности</h3>
+            <div style={{ fontSize: '3rem', marginBottom: '16px' }}>??</div>
+            <h3 style={{ fontSize: '1.4rem', color: '#f59e0b', marginBottom: '12px' }}>������ �������</h3>
             <p style={{ color: 'hsl(var(--text-secondary))', fontSize: '0.95rem', lineHeight: '1.6', marginBottom: '24px' }}>
-              В целях безопасности вашей корпоративной учетной записи сеанс был автоматически прекращен после 15 минут неактивности. Пожалуйста, войдите в систему повторно.
+              � ����� ������������ ���� ������ ���������.
             </p>
             <button
               className="btn-primary"
@@ -101,13 +107,12 @@ const AppContent: React.FC = () => {
                 setIsLoginModalOpen(true);
               }}
             >
-              🔐 Войти снова
+              ����� ������
             </button>
           </div>
         </div>
       )}
 
-      {/* Task Modal for creating or editing */}
       <TaskModal
         taskId={activeTaskModalId}
         isOpenNew={isNewModalOpen}
@@ -116,16 +121,12 @@ const AppContent: React.FC = () => {
         onClose={handleCloseModal}
       />
 
-      {/* Login Modal */}
       <LoginModal
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
       />
 
-      {/* Network Configuration & Online Users Modal */}
       <NetworkModal />
-
-      {/* Interactive User Manual Modal */}
       <UserManualModal />
     </div>
   );

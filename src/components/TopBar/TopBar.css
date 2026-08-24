@@ -1,0 +1,153 @@
+.topbar-container {
+  width: 100%;
+  border-bottom: 1px solid var(--border-color);
+  background: hsl(var(--bg-main));
+  padding: 12px 24px;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.topbar-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  width: 250px;
+  transition: all 0.2s;
+}
+
+.search-bar:focus-within {
+  border-color: hsl(var(--primary));
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.search-icon {
+  color: hsl(var(--text-muted));
+  margin-right: 8px;
+}
+
+.search-input {
+  background: transparent;
+  border: none;
+  color: hsl(var(--text-primary));
+  outline: none;
+  font-size: 0.85rem;
+  width: 100%;
+}
+
+.clear-search-btn {
+  color: hsl(var(--text-muted));
+}
+
+.clear-search-btn:hover {
+  color: hsl(var(--text-primary));
+}
+
+.avatar-row {
+  display: flex;
+  align-items: center;
+  gap: -8px;
+}
+
+.avatar-wrapper {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid hsl(var(--bg-main));
+  cursor: pointer;
+  margin-left: -8px;
+  transition: transform 0.2s;
+}
+
+.avatar-wrapper:first-child {
+  margin-left: 0;
+}
+
+.avatar-wrapper:hover {
+  transform: translateY(-2px);
+  z-index: 10;
+}
+
+.user-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.fallback-avatar {
+  background: #334155;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.server-status-btn {
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  border-radius: 20px;
+}
+
+.profile-btn {
+  padding: 4px 12px 4px 4px;
+}
+
+.profile-img {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--text-secondary));
+  background: transparent;
+  border: 1px solid transparent;
+}
+
+.icon-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: hsl(var(--text-primary));
+}
+
+.notif-badge-pill {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 10px;
+}
