@@ -160,11 +160,15 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, users, onCardCl
           {(task.dueDate || task.creatorName) && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
               {task.creatorName && (
-                <span title={`Автор задачи: ${task.creatorName}`}>👤 От: {task.creatorName}</span>
+                <span title={`Создатель задачи: ${task.creatorName}`}>
+                  От: {
+                    task.creatorName.split(' ').map((p, i) => i === 0 ? p : p[0].toUpperCase() + '.').join(' ')
+                  }
+                </span>
               )}
               {task.dueDate && (
                 <span style={{ color: '#f59e0b', fontWeight: 600 }} title="Срок выполнения">
-                  ⏰ {task.dueDate}
+                  До {task.dueDate}
                 </span>
               )}
             </div>

@@ -123,7 +123,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenNewTaskModal, onOpenLoginM
                 ) : (
                   <div className="profile-img fallback-avatar">{currentUser.name[0]}</div>
                 )}
-                <span>{currentUser.name.split(' ')[0]}</span>
+                <span>{currentUser.name.split(' ').map((p, i) => i === 0 ? p : p[0].toUpperCase() + '.').join(' ')}</span>
               </>
             ) : (
               <>
