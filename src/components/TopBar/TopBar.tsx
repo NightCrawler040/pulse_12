@@ -54,7 +54,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenNewTaskModal, onOpenLoginM
                 <Search size={16} className="search-icon" />
                 <input
                   type="text"
-                  placeholder="Search tasks..."
+                  placeholder="Поиск задач..."
                   value={filters.search}
                   onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
                   className="search-input"
@@ -98,7 +98,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenNewTaskModal, onOpenLoginM
             onClick={handleServerUrlChange}
           >
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: isServerConnected ? '#22c55e' : '#ef4444', display: 'inline-block' }} />
-            {isServerConnected ? `LAN (${onlineUserIds.length})` : 'Offline'}
+            {isServerConnected ? `LAN (${onlineUserIds.length})` : 'Отключен'}
           </button>
 
           {currentUser && (
@@ -127,7 +127,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenNewTaskModal, onOpenLoginM
             ) : (
               <>
                 <Key size={16} style={{ color: 'var(--primary)' }} />
-                <span>Login</span>
+                <span>Вход</span>
               </>
             )}
           </button>
@@ -135,7 +135,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenNewTaskModal, onOpenLoginM
           {currentUser && (
             <button className="btn-primary" onClick={onOpenNewTaskModal}>
               <Plus size={18} />
-              <span>New Task</span>
+              <span>Создать</span>
             </button>
           )}
         </div>

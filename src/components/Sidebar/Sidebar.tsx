@@ -25,22 +25,22 @@ export const Sidebar: React.FC = () => {
   const activeFindingsCount = findings.filter(f => f.status === 'new' || f.status === 'analyzing').length;
 
   const navItems: { mode: ViewMode; label: string; icon: React.ReactNode; badge?: string }[] = [
-    { mode: 'board', label: 'Kanban', icon: <LayoutDashboard size={18} /> },
-    { mode: 'backlog', label: 'Backlog', icon: <ListTodo size={18} /> },
-    { mode: 'workload', label: 'Team', icon: <Users size={18} />, badge: String(employeeUsersCount) },
-    { mode: 'analytics', label: 'Analytics', icon: <BarChart3 size={18} /> },
+    { mode: 'board', label: 'Доска', icon: <LayoutDashboard size={18} /> },
+    { mode: 'backlog', label: 'Бэклог', icon: <ListTodo size={18} /> },
+    { mode: 'workload', label: 'Команда', icon: <Users size={18} />, badge: String(employeeUsersCount) },
+    { mode: 'analytics', label: 'Аналитика', icon: <BarChart3 size={18} /> },
     { 
       mode: 'security', 
-      label: 'Security', 
+      label: 'Безопасность', 
       icon: <ShieldAlert size={18} style={{ color: activeFindingsCount > 0 ? '#ef4444' : 'inherit' }} />, 
       badge: activeFindingsCount > 0 ? String(activeFindingsCount) : undefined 
     },
-    { mode: 'profile', label: 'Profile', icon: <UserIcon size={18} /> },
-    { mode: 'help', label: 'Help', icon: <HelpCircle size={18} /> },
+    { mode: 'profile', label: 'Профиль', icon: <UserIcon size={18} /> },
+    { mode: 'help', label: 'Помощь', icon: <HelpCircle size={18} /> },
   ];
 
   if (isAdmin) {
-    navItems.push({ mode: 'admin', label: 'Admin', icon: <Settings size={18} /> });
+    navItems.push({ mode: 'admin', label: 'Админ', icon: <Settings size={18} /> });
   }
 
   return (
@@ -72,7 +72,7 @@ export const Sidebar: React.FC = () => {
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         >
           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          <span className="nav-label">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+          <span className="nav-label">{theme === 'dark' ? 'Светлая тема' : 'Темная тема'}</span>
         </button>
       </div>
     </aside>
