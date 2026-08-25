@@ -13,13 +13,24 @@ import {
   ShieldAlert,
   Activity,
   Sun,
-  Moon
+  Moon,
+  ChevronLeft
 } from 'lucide-react';
 import './Sidebar.css';
 
 export const Sidebar: React.FC = () => {
   const { viewMode, setViewMode, theme, setTheme, users, findings } = useTaskContext();
   const { currentUser, isAdmin } = useAuth();
+  const [isCollapsed, setIsCollapsed] = React.useState(() => {
+    const saved = localStorage.getItem('pulse_sidebar_collapsed');
+    return saved === 'true';
+  });
+
+  const handleToggleCollapse = () => {
+    const newValue = !isCollapsed;
+    setIsCollapsed(newValue);
+    localStorage.setItem('pulse_sidebar_collapsed', String(newValue));
+  };
   
   const employeeUsersCount = users.filter(u => u.id !== 'usr-1' && u.login?.toLowerCase() !== 'admin').length;
   const activeFindingsCount = findings.filter(f => f.status === 'new' || f.status === 'analyzing').length;
@@ -44,7 +55,11 @@ export const Sidebar: React.FC = () => {
   }
 
   return (
-    <aside className="sidebar-container">
+    <aside className={`sidebar-container ${isCollapsed ? 'collapsed' : ''}`}>
+      <button className="collapse-btn" onClick={handleToggleCollapse} title={isCollapsed ? "Развернуть меню" : "Свернуть меню"}>
+        <ChevronLeft size={14} />
+      </button>
+
       <div className="sidebar-brand">
         <Activity size={24} className="logo-icon" />
         <span>Pulse</span>

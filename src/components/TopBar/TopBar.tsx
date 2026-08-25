@@ -13,6 +13,7 @@ interface TopBarProps {
 export const TopBar: React.FC<TopBarProps> = ({ onOpenNewTaskModal, onOpenLoginModal }) => {
   const { 
     viewMode, 
+    setViewMode,
     users, 
     filters, 
     setFilters,
@@ -113,7 +114,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenNewTaskModal, onOpenLoginM
 
           <button
             className="btn-secondary profile-btn"
-            onClick={() => currentUser ? null : onOpenLoginModal()}
+            onClick={() => currentUser ? setViewMode('profile') : onOpenLoginModal()}
           >
             {currentUser ? (
               <>
