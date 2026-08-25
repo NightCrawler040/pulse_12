@@ -29,17 +29,19 @@ export const Backlog: React.FC<BacklogProps> = ({ onOpenNewTaskModal }) => {
 
   const displayTasks = React.useMemo(() => {
     return filteredTasks.filter(task => {
-      if (filters.myTasksOnly && currentUser && !isAdmin) {
-        const isAssignee = task.assigneeId === currentUser.id;
-        const inGroup = task.assigneeGroupId && groups ? groups.some(g => g.id === task.assigneeGroupId && g.memberIds?.includes(currentUser.id)) : false;
-        const isCommenter = task.comments ? task.comments.some(c => c.userId === currentUser.id) : false;
-        if (!isAssignee && !inGroup && !isCommenter) {
-          return false;
+      const shouldFilterByMe = (!isAdmin && currentUser) || (isAdmin && currentUser && filters.myTasksOnly);
+        if (shouldFilterByMe) {
+          const isAssignee = task.assigneeId === currentUser.id;
+          const inGroup = task.assigneeGroupId && groups ? groups.some(g => g.id === task.assigneeGroupId && g.memberIds?.includes(currentUser.id)) : false;
+          const isCommenter = task.comments ? task.comments.some(c => c.userId === currentUser.id) : false;
+          const isCreator = task.creatorId === currentUser.id;
+          if (!isAssignee && !inGroup && !isCommenter && !isCreator) {
+            return false;
+          }
         }
-      }
       return true;
     });
-  }, [filteredTasks, filters.myTasksOnly, currentUser, groups]);
+  }, [filteredTasks, filters.myTasksOnly, currentUser, groups, isAdmin]);
 
   const [collapsedSprints, setCollapsedSprints] = useState<Record<string, boolean>>({});
 

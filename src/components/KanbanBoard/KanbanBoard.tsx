@@ -27,7 +27,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
     groups
   } = useTaskContext();
 
-  const { currentUser } = useAuth();
+  const { currentUser, isAdmin } = useAuth();
 
   const currentSprint = React.useMemo(() => {
     if (activeSprintId !== 'all') {
@@ -54,17 +54,19 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
 
   const displayTasks = React.useMemo(() => {
     return filteredTasks.filter(task => {
-      if (filters.myTasksOnly && currentUser) {
-        const isAssignee = task.assigneeId === currentUser.id;
-        const inGroup = task.assigneeGroupId && groups ? groups.some(g => g.id === task.assigneeGroupId && g.memberIds?.includes(currentUser.id)) : false;
-        const isCommenter = task.comments ? task.comments.some(c => c.userId === currentUser.id) : false;
-        if (!isAssignee && !inGroup && !isCommenter) {
-          return false;
+      const shouldFilterByMe = (!isAdmin && currentUser) || (isAdmin && currentUser && filters.myTasksOnly);
+        if (shouldFilterByMe) {
+          const isAssignee = task.assigneeId === currentUser.id;
+          const inGroup = task.assigneeGroupId && groups ? groups.some(g => g.id === task.assigneeGroupId && g.memberIds?.includes(currentUser.id)) : false;
+          const isCommenter = task.comments ? task.comments.some(c => c.userId === currentUser.id) : false;
+          const isCreator = task.creatorId === currentUser.id;
+          if (!isAssignee && !inGroup && !isCommenter && !isCreator) {
+            return false;
+          }
         }
-      }
       return true;
     });
-  }, [filteredTasks, filters.myTasksOnly, currentUser, groups]);
+  }, [filteredTasks, filters.myTasksOnly, currentUser, groups, isAdmin]);
 
   const handleDragEnd = (result: DropResult) => {
     const { destination, source, draggableId } = result;
@@ -140,9 +142,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
             <option value="low">🔵 Низкий</option>
           </select>
 
-          <button
-            className="btn-secondary"
-            onClick={() => setFilters(prev => ({ ...prev, myTasksOnly: !prev.myTasksOnly }))}
+          {isAdmin && (
+            <button
+              className="btn-secondary"
+              onClick={() => setFilters(prev => ({ ...prev, myTasksOnly: !prev.myTasksOnly }))}
             title="Показать только задачи, где вы назначены"
             style={{
               background: filters.myTasksOnly ? 'hsl(var(--primary))' : 'hsl(var(--bg-secondary))',
@@ -159,7 +162,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
             }}
           >
             <span>{filters.myTasksOnly ? 'Только мои' : 'Все задачи'}</span>
-          </button>
+            </button>
+          )}
         </div>
 
         <div className="board-toolbar-right">
