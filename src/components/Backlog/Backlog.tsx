@@ -247,15 +247,20 @@ export const Backlog: React.FC<BacklogProps> = ({ onOpenNewTaskModal }) => {
                           </select>
                         </td>
                         <td className="cell-assignee">
-                          {assignee ? (
-                            <div className="assignee-cell">
-                              <img src={assignee.avatar} alt={assignee.name || assignee.login} className="mini-avatar" />
-                              <span className="assignee-name-sm">{assignee.name || assignee.login || assignee.id}</span>
-                            </div>
-                          ) : (
-                            <span className="unassigned-sm">Не назначен</span>
-                          )}
-                        </td>
+                            {assignee ? (
+                              <div className="assignee-cell">
+                                <img src={assignee.avatar} alt={assignee.name || assignee.login} className="mini-avatar" />
+                                <span className="assignee-name-sm">{assignee.name || assignee.login || assignee.id}</span>
+                              </div>
+                            ) : task.assigneeGroupId && groups.find(g => g.id === task.assigneeGroupId) ? (
+                              <div className="assignee-cell">
+                                <div className="mini-avatar" style={{ backgroundColor: groups.find(g => g.id === task.assigneeGroupId)?.color || '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px' }}>👥</div>
+                                <span className="assignee-name-sm">{groups.find(g => g.id === task.assigneeGroupId)?.name}</span>
+                              </div>
+                            ) : (
+                              <span className="unassigned-sm">Не назначен</span>
+                            )}
+                          </td>
                         <td className="cell-sprint" onClick={e => e.stopPropagation()}>
                           <select
                             value={task.sprintId || ''}
