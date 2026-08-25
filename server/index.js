@@ -928,6 +928,42 @@ app.post('/api/fortigate/settings', requireAuth, async (req, res) => {
 app.post('/api/fortigate/test', requireAuth, async (req, res) => {
   if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin') {
     return res.status(403).json({ error: 'Доступ запрещен' });
+
+  app.get('/api/fortigate/banned-ips', requireAuth, (req, res) => {
+    if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin') {
+      return res.status(403).json({ error: 'Доступ закрыт' });
+    }
+    res.json({ success: true, bannedIps: dbData.bannedIps || [] });
+  });
+
+  app.post('/api/fortigate/unban', requireAuth, async (req, res) => {
+    if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin') {
+      return res.status(403).json({ error: 'Доступ закрыт' });
+    }
+    const { ip } = req.body;
+    if (!ip) return res.status(400).json({ success: false, error: 'IP адрес не указан' });
+
+    const settings = dbData.fortigateSettings || {};
+    try {
+      let success = true;
+      if (settings.enabled && settings.unbanUrl) {
+        success = await unbanIpAddress(settings, ip);
+      }
+      
+      if (success) {
+        if (dbData.bannedIps) {
+          dbData.bannedIps = dbData.bannedIps.filter(b => b.ip !== ip);
+          await saveCollection('bannedIps', dbData.bannedIps);
+        }
+        res.json({ success: true, message: `IP ${ip} успешно разблокирован` });
+      } else {
+        res.status(500).json({ success: false, error: 'FortiGate вернул ошибку при попытке разблокировки' });
+      }
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   }
   const current = dbData.fortigateSettings || {};
   if (!current.enabled || !current.banUrl || !current.apiToken) {

@@ -16,6 +16,7 @@ export const FortigateSettingsTab: React.FC = () => {
 
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [isTesting, setIsTesting] = useState(false);
+  const [bannedIps, setBannedIps] = useState<any[]>([]);
 
   const handleTestConnection = async () => {
     setIsTesting(true);
@@ -49,6 +50,21 @@ export const FortigateSettingsTab: React.FC = () => {
       setMessage({ text: 'Не удалось загрузить настройки', type: 'error' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  
+  const handleUnban = async (ip: string) => {
+    try {
+      const res: any = await apiService.post('/api/fortigate/unban', { ip });
+      if (res.success) {
+        setBannedIps(prev => prev.filter(b => b.ip !== ip));
+        setMessage({ text: `IP ${ip} успешно разблокирован`, type: 'success' });
+      } else {
+        setMessage({ text: res.error || 'Ошибка разблокировки', type: 'error' });
+      }
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Сбой при разблокировке', type: 'error' });
     }
   };
 
@@ -302,6 +318,47 @@ export const FortigateSettingsTab: React.FC = () => {
             </button>
           </div>
         </form>
+
+      {/* Banned IPs Section */}
+      <div className="admin-card" style={{ marginTop: '24px' }}>
+        <h3 className="admin-card-title">Заблокированные IP адреса</h3>
+        {bannedIps.length === 0 ? (
+          <p style={{ color: 'var(--text-secondary)' }}>Нет заблокированных IP адресов.</p>
+        ) : (
+          <div className="table-responsive">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>IP адрес</th>
+                  <th>Дата блокировки</th>
+                  <th>Истекает</th>
+                  <th style={{ width: '100px', textAlign: 'right' }}>Действия</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bannedIps.map(b => (
+                  <tr key={b.ip}>
+                    <td><span className="badge badge-error">{b.ip}</span></td>
+                    <td>{new Date(b.bannedAt).toLocaleString()}</td>
+                    <td>{b.expiresAt ? new Date(b.expiresAt).toLocaleString() : 'Навсегда'}</td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button 
+                        type="button"
+                        className="btn-secondary" 
+                        style={{ fontSize: '0.8rem', padding: '4px 8px' }}
+                        onClick={() => handleUnban(b.ip)}
+                      >
+                        Разблокировать
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       </div>
     </div>
   );
