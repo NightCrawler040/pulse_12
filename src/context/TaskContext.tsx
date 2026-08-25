@@ -79,12 +79,12 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        return parsed.tasks || mockTasks;
+        return parsed.tasks || [];
       } catch (e) {
         console.error('Error loading tasks from localStorage', e);
       }
     }
-    return mockTasks;
+    return [];
   });
 
   const deduplicateUsers = (list: User[]): User[] => {
@@ -107,10 +107,10 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Error loading users from localStorage', e);
       }
     }
-    return deduplicateUsers(mockUsers);
+    return [];
   });
   const [columns] = useState<Column[]>(mockColumns);
-  const [sprints, setSprints] = useState<Sprint[]>(mockSprints);
+  const [sprints, setSprints] = useState<Sprint[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [onlineUserIds, setOnlineUserIds] = useState<string[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
