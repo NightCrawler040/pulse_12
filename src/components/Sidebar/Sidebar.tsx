@@ -44,7 +44,7 @@ export const Sidebar: React.FC = () => {
   }
 
   return (
-    <aside className="sidebar-container glass-panel">
+    <aside className="sidebar-container">
       <div className="sidebar-brand">
         <Activity size={24} className="logo-icon" />
         <span>Pulse</span>

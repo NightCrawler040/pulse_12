@@ -30,8 +30,8 @@
 .search-bar {
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: hsl(var(--bg-secondary));
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   padding: 6px 12px;
   width: 250px;
@@ -40,7 +40,7 @@
 
 .search-bar:focus-within {
   border-color: hsl(var(--primary));
-  background: rgba(255, 255, 255, 0.06);
+  background: hsl(var(--bg-main));
 }
 
 .search-icon {
@@ -136,7 +136,7 @@
 }
 
 .icon-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: hsl(var(--bg-tertiary));
   color: hsl(var(--text-primary));
 }
 

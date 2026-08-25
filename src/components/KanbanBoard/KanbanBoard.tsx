@@ -143,11 +143,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
           <button
             className="btn-secondary"
             onClick={() => setFilters(prev => ({ ...prev, myTasksOnly: !prev.myTasksOnly }))}
-            title="Фильтр: показывать только ваши задачи и задачи, где вы участвуете"
+            title="Показать только задачи, где вы назначены"
             style={{
-              background: filters.myTasksOnly ? 'hsl(var(--primary))' : 'rgba(255,255,255,0.05)',
+              background: filters.myTasksOnly ? 'hsl(var(--primary))' : 'hsl(var(--bg-secondary))',
               color: filters.myTasksOnly ? '#fff' : 'inherit',
-              borderColor: filters.myTasksOnly ? 'hsl(var(--primary))' : 'rgba(255,255,255,0.1)',
+              borderColor: filters.myTasksOnly ? 'hsl(var(--primary))' : 'var(--border-color)',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
@@ -158,7 +158,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
               cursor: 'pointer'
             }}
           >
-            <span>{filters.myTasksOnly ? '👤 Мои задачи и участие' : '👥 Все задачи'}</span>
+            <span>{filters.myTasksOnly ? 'Только мои' : 'Все задачи'}</span>
           </button>
         </div>
 
@@ -176,8 +176,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
 
       {currentSprint && sprintStats && (
         <div style={{
-          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(147, 51, 234, 0.12) 100%)',
-          border: '1px solid rgba(59, 130, 246, 0.3)',
+          background: 'hsl(var(--bg-secondary))',
+          border: '1px solid var(--border-color)',
           borderRadius: '12px',
           padding: '16px 20px',
           margin: '0 0 20px 0',
@@ -186,7 +186,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: '16px',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
+          boxShadow: 'var(--shadow-sm)'
         }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: '1 1 300px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>

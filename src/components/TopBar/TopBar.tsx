@@ -44,7 +44,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenNewTaskModal, onOpenLoginM
   };
 
   return (
-    <div className="topbar-container glass-panel">
+    <div className="topbar-container">
       <div className="topbar-main">
         {/* Left Side: Context Specific tools */}
         <div className="topbar-left">

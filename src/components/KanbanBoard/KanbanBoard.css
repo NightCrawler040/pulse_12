@@ -10,11 +10,8 @@
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 20px;
-  padding: 12px 18px;
-  background: hsl(var(--bg-card));
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 12px 0;
+  background: transparent;
   flex-wrap: wrap;
 }
 
@@ -73,10 +70,10 @@
 .kanban-column {
   display: flex;
   flex-direction: column;
-  border-radius: var(--radius-lg);
+  background: hsl(var(--bg-secondary));
+  border-radius: var(--radius-md);
   max-height: calc(100vh - 220px);
   overflow: hidden;
-  border-top: 4px solid transparent;
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 

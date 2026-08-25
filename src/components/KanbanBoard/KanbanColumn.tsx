@@ -23,7 +23,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   const totalStoryPoints = tasks.reduce((sum, t) => sum + (t.storyPoints || 0), 0);
 
   return (
-    <div className="kanban-column glass-panel">
+    <div className="kanban-column">
       {/* Column Header */}
       <div className="column-header" style={{ borderTopColor: column.color }}>
         <div className="column-title-row">
