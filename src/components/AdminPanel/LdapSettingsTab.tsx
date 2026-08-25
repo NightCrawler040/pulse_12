@@ -349,9 +349,9 @@ export const LdapSettingsTab: React.FC = () => {
               <input
                 type="password"
                 className="input-field"
-                value={settings.bindPassword || ''}
+                value={settings.bindPassword === '********' ? '' : (settings.bindPassword || '')}
                 onChange={e => setSettings(p => ({ ...p, bindPassword: e.target.value }))}
-                placeholder={settings.bindPassword === '********' ? '•••••••• (Пароль сохранен)' : ''}
+                placeholder={settings.bindPassword === '********' ? 'Сохранен (введите для изменения)' : ''}
               />
             </div>
           </div>
