@@ -9,6 +9,7 @@ interface KanbanColumnProps {
   column: Column;
   tasks: Task[];
   users: User[];
+  groups: any[];
   onCardClick: (taskId: string) => void;
   onAddTaskToColumn: (status: Column['id']) => void;
 }
@@ -17,6 +18,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   column,
   tasks,
   users,
+  groups,
   onCardClick,
   onAddTaskToColumn
 }) => {
@@ -60,6 +62,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                 task={task}
                 index={index}
                 users={users}
+                groups={groups}
                 onCardClick={onCardClick}
               />
             ))}

@@ -250,6 +250,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
                 column={col}
                 tasks={columnTasks}
                 users={users}
+                groups={groups}
                 onCardClick={(taskId) => setActiveTaskModalId(taskId)}
                 onAddTaskToColumn={(status) => onOpenNewTaskModalWithStatus(status)}
               />

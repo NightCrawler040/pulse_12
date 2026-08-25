@@ -8,11 +8,13 @@ interface TaskCardProps {
   task: Task;
   index: number;
   users: User[];
+  groups?: any[];
   onCardClick: (taskId: string) => void;
 }
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task, index, users, onCardClick }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({ task, index, users, groups, onCardClick }) => {
   const assignee = users.find(u => u.id === task.assigneeId);
+  const groupAssignee = groups?.find(g => g.id === task.assigneeGroupId);
 
   const completedSubtasks = task.subtasks.filter(s => s.completed).length;
   const totalSubtasks = task.subtasks.length;
@@ -178,7 +180,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, users, onCardCl
           <div className="card-footer">
             <div className="assignee-info">
               {assignee ? (
-                <div className="avatar-small-wrapper" title={`Исполнитель: ${assignee.name || assignee.login || assignee.id} (${assignee.role || 'Сотрудник'})`}>
+                <div className="avatar-small-wrapper" title={`Исполнитель: ${assignee.name || assignee.login || assignee.id} (${assignee.role || 'Пользователь'})`}>
                   {assignee.avatar ? (
                     <img src={assignee.avatar} alt="" className="user-avatar-img" />
                   ) : (
@@ -186,6 +188,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, users, onCardCl
                       {((assignee.name || assignee.login || '?')[0]).toUpperCase()}
                     </div>
                   )}
+                </div>
+              ) : groupAssignee ? (
+                <div className="avatar-small-wrapper" title={`Команда: ${groupAssignee.name}`}>
+                  <div className="user-avatar-img" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: groupAssignee.color || '#3b82f6', color: '#ffffff', borderRadius: '50%', width: '100%', height: '100%', fontSize: '0.8rem', fontWeight: 600 }}>
+                    👥
+                  </div>
                 </div>
               ) : (
                 <span className="unassigned-badge">Не назначен</span>
