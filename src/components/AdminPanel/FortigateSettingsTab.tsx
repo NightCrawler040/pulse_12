@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
-import { Plus, Trash2, Unlock } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 
 export const FortigateSettingsTab: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -22,9 +22,9 @@ export const FortigateSettingsTab: React.FC = () => {
   // Add Indicator Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newIndicatorIp, setNewIndicatorIp] = useState('');
-  const [newIndicatorGroup, setNewIndicatorGroup] = useState('Узел ботнет');
-  const [newIndicatorTrust, setNewIndicatorTrust] = useState('Высокая');
-  const [newIndicatorStatus, setNewIndicatorStatus] = useState('Опубликован');
+  const [newIndicatorGroup] = useState('Узел ботнет');
+  const [newIndicatorTrust] = useState('Высокая');
+  const [newIndicatorStatus] = useState('Опубликован');
   const [newIndicatorValidFrom, setNewIndicatorValidFrom] = useState(() => new Date().toISOString().split('T')[0]);
   const [newIndicatorValidTo, setNewIndicatorValidTo] = useState(() => {
     const date = new Date();
@@ -67,7 +67,7 @@ export const FortigateSettingsTab: React.FC = () => {
     try {
       const payload = { ...settings };
       if (payload.apiToken === '********' || !payload.apiToken) {
-        delete payload.apiToken;
+        delete (payload as any).apiToken;
       }
       const res: any = await apiService.post('/api/fortigate/settings', payload);
       setSettings(res.settings);
