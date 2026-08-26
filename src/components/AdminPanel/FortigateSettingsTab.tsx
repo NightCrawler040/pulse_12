@@ -21,6 +21,8 @@ export const FortigateSettingsTab: React.FC = () => {
 
   // Add Indicator Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [newIndicatorIp, setNewIndicatorIp] = useState('');
   const [newIndicatorGroup] = useState('Узел ботнет');
   const [newIndicatorTrust] = useState('Высокая');
@@ -389,9 +391,9 @@ export const FortigateSettingsTab: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {bannedIps.map((b, i) => (
+                {paginatedIps.map((b, i) => (
                   <tr key={b.ip}>
-                    <td style={{ color: 'var(--text-secondary)' }}>{i + 1}</td>
+                    <td style={{ color: 'var(--text-secondary)' }}>{(currentPage - 1) * itemsPerPage + i + 1}</td>
                     <td>IP адрес</td>
                     <td><span className="badge badge-error">{b.ip}</span></td>
                     <td>{b.group || 'Узел ботнет'}</td>
