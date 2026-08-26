@@ -152,6 +152,9 @@ export const FortigateSettingsTab: React.FC = () => {
 
   if (loading) return <div>Загрузка настроек...</div>;
 
+  const totalPages = Math.ceil(bannedIps.length / itemsPerPage);
+  const paginatedIps = bannedIps.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
     <div className="admin-tab-content fade-in">
       <div style={{ maxWidth: '800px', margin: '0 auto' }}>
@@ -391,7 +394,7 @@ export const FortigateSettingsTab: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {paginatedIps.map((b, i) => (
+                {paginatedIps.map((b: any, i: number) => (
                   <tr key={b.ip}>
                     <td style={{ color: 'var(--text-secondary)' }}>{(currentPage - 1) * itemsPerPage + i + 1}</td>
                     <td>IP адрес</td>
