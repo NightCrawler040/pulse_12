@@ -296,7 +296,7 @@ export const AdminPanel: React.FC = () => {
               className={`admin-tab-btn ${activeTab === 'users' ? 'active' : ''}`}
               onClick={() => setActiveTab('users')}
             >
-              👥 Сотрудники ({employeeUsers.length} / 15)
+              👥 Сотрудники ({employeeUsers.length})
             </button>
             <button
               className={`admin-tab-btn ${activeTab === 'groups' ? 'active' : ''}`}
