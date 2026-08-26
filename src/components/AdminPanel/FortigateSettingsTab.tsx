@@ -418,6 +418,31 @@ export const FortigateSettingsTab: React.FC = () => {
                 ))}
               </tbody>
             </table>
+            {totalPages > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', padding: '0 8px' }}>
+                <span style={{ fontSize: '0.9rem', color: 'hsl(var(--text-secondary))' }}>
+                  Показано {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, bannedIps.length)} из {bannedIps.length}
+                </span>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button 
+                    className="btn-secondary" 
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    style={{ padding: '4px 12px', fontSize: '0.9rem' }}
+                  >
+                    Назад
+                  </button>
+                  <button 
+                    className="btn-secondary" 
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    style={{ padding: '4px 12px', fontSize: '0.9rem' }}
+                  >
+                    Вперед
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
