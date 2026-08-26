@@ -414,7 +414,10 @@ export const startImapService = async (settings, dbData, broadcastUpdate) => {
     let lock = await client.getMailboxLock('INBOX');
     
     // Функция для проверки непрочитанных писем
+    let isProcessing = false;
     const checkUnread = async () => {
+      if (isProcessing) return;
+      isProcessing = true;
       try {
         const searchOptions = { seen: false };
         for await (let msg of client.fetch(searchOptions, { source: true, uid: true, headers: ['message-id'] })) {
@@ -422,7 +425,9 @@ export const startImapService = async (settings, dbData, broadcastUpdate) => {
           await client.messageFlagsAdd(msg.uid, ['\\Seen'], { uid: true });
         }
       } catch (e) {
-        console.error('❌ [IMAP] Ошибка при проверке почты:', e.message);
+        console.error('⚠️ [IMAP] Ошибка в процессе чтения:', e.message);
+      } finally {
+        isProcessing = false;
       }
     };
 
