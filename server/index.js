@@ -928,6 +928,26 @@ app.post('/api/fortigate/settings', requireAuth, async (req, res) => {
 app.post('/api/fortigate/test', requireAuth, async (req, res) => {
   if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin') {
     return res.status(403).json({ error: 'Нет доступа' });
+  }
+  const current = dbData.fortigateSettings || {};
+  if (!current.enabled || !current.banUrl || !current.apiToken) {
+    return res.status(400).json({ success: false, error: 'Интеграция не настроена или нет URL/токена.' });
+  }
+  try {
+    const testIp = '1.1.1.1';
+    const success = await banIpAddress(current, testIp);
+    if (success) {
+      if (current.unbanUrl) {
+        await unbanIpAddress(current, testIp);
+      }
+      res.json({ success: true, message: 'Тестовый IP заблокирован и разблокирован в FortiGate.' });
+    } else {
+      res.status(500).json({ success: false, error: 'FortiGate вернул ошибку при блокировке.' });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 app.get('/api/fortigate/banned-ips', requireAuth, (req, res) => {
     if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin') {
@@ -1005,31 +1025,8 @@ app.get('/api/fortigate/banned-ips', requireAuth, (req, res) => {
     }
   });
 
-  }
-  const current = dbData.fortigateSettings || {};
-  if (!current.enabled || !current.banUrl || !current.apiToken) {
-    return res.status(400).json({ success: false, error: 'Интеграция выключена или не настроены URL/токен.' });
-  }
-  try {
-    const testIp = '1.1.1.1'; // IP-адрес для теста
-    const success = await banIpAddress(current, testIp);
-    if (success) {
-      // Пытаемся сразу разбанить, чтобы не засорять FortiGate
-      if (current.unbanUrl) {
-        await unbanIpAddress(current, testIp);
-      }
-      res.json({ success: true, message: 'Тестовый запрос успешно отправлен и принят FortiGate.' });
-    } else {
-      res.status(500).json({ success: false, error: 'FortiGate вернул ошибку или недоступен. Проверьте логи сервера Pulse.' });
-    }
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-
-// --- LDAP / ACTIVE DIRECTORY API ENDPOINTS ---
-app.get('/api/ldap/settings', requireAuth, (req, res) => {
+  // --- LDAP API ENDPOINTS ---
+  app.get('/api/ldap/settings', requireAuth, (req, res) => {
   const settings = dbData.ldap_settings || {};
   res.json(sanitizeLdapSettings(settings));
 });
