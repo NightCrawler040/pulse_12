@@ -936,6 +936,47 @@ app.post('/api/fortigate/test', requireAuth, async (req, res) => {
     res.json({ success: true, bannedIps: dbData.bannedIps || [] });
   });
 
+  
+  app.post('/api/fortigate/ban', requireAuth, async (req, res) => {
+    if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin') {
+      return res.status(403).json({ error: 'Нет прав' });
+    }
+    const { ip, expiresAt, isPermanent } = req.body;
+    if (!ip) return res.status(400).json({ success: false, error: 'IP адрес не указан' });
+
+    const settings = dbData.fortigateSettings || {};
+    try {
+      let success = true;
+      if (settings.enabled && settings.banUrl) {
+        success = await banIpAddress(settings, ip);
+      }
+      
+      if (success) {
+        if (!dbData.bannedIps) dbData.bannedIps = [];
+        // Remove if already exists
+        dbData.bannedIps = dbData.bannedIps.filter(b => b.ip !== ip);
+        
+        let finalExpiresAt = expiresAt;
+        if (isPermanent) {
+           finalExpiresAt = Date.now() + 100 * 365 * 24 * 60 * 60 * 1000;
+        } else if (!finalExpiresAt) {
+           const banDuration = settings.banDurationDays || 90;
+           finalExpiresAt = Date.now() + (banDuration * 24 * 60 * 60 * 1000);
+        }
+
+        const newBan = { ip, bannedAt: Date.now(), expiresAt: finalExpiresAt, isPermanent: !!isPermanent };
+        dbData.bannedIps.push(newBan);
+        await saveCollection('bannedIps', dbData.bannedIps);
+        
+        res.json({ success: true, message: `IP ${ip} успешно заблокирован`, banRecord: newBan });
+      } else {
+        res.status(500).json({ success: false, error: 'FortiGate вернул ошибку при блокировке' });
+      }
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   app.post('/api/fortigate/unban', requireAuth, async (req, res) => {
     if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin') {
       return res.status(403).json({ error: 'Доступ закрыт' });

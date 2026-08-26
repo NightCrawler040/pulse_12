@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
+import { Plus, Trash2, Unlock } from 'lucide-react';
 
 export const FortigateSettingsTab: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -18,20 +19,32 @@ export const FortigateSettingsTab: React.FC = () => {
   const [isTesting, setIsTesting] = useState(false);
   const [bannedIps, setBannedIps] = useState<any[]>([]);
 
-  const handleTestConnection = async () => {
-    setIsTesting(true);
-    setMessage(null);
+  // Add Indicator Modal State
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newIndicatorIp, setNewIndicatorIp] = useState('');
+  const [newIndicatorGroup, setNewIndicatorGroup] = useState('Узел ботнет');
+  const [newIndicatorTrust, setNewIndicatorTrust] = useState('Высокая');
+  const [newIndicatorStatus, setNewIndicatorStatus] = useState('Опубликован');
+  const [newIndicatorValidFrom, setNewIndicatorValidFrom] = useState(() => new Date().toISOString().split('T')[0]);
+  const [newIndicatorValidTo, setNewIndicatorValidTo] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 90); // default 90 days
+    return date.toISOString().split('T')[0];
+  });
+  const [isAdding, setIsAdding] = useState(false);
+
+  const fetchSettings = async () => {
     try {
-      const res: any = await apiService.post('/api/fortigate/test', {});
-      if (res.success) {
-        setMessage({ text: res.message || 'Тест успешен! IP 1.1.1.1 был забанен и разбанен.', type: 'success' });
-      } else {
-        setMessage({ text: res.error || 'Ошибка при тестировании Webhook.', type: 'error' });
+      const res: any = await apiService.get('/api/fortigate/settings');
+      setSettings(res);
+      const bannedRes: any = await apiService.get('/api/fortigate/banned-ips');
+      if (bannedRes.success) {
+        setBannedIps(bannedRes.bannedIps);
       }
-    } catch (err: any) {
-      setMessage({ text: err.message || 'Сетевая ошибка при запросе к серверу.', type: 'error' });
+    } catch (err) {
+      console.error(err);
     } finally {
-      setIsTesting(false);
+      setLoading(false);
     }
   };
 
@@ -39,22 +52,52 @@ export const FortigateSettingsTab: React.FC = () => {
     fetchSettings();
   }, []);
 
-  const fetchSettings = async () => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setSettings(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setMessage(null);
     try {
-      const data: any = await apiService.get('/api/fortigate/settings');
-      if (data) {
-        setSettings(data);
+      const payload = { ...settings };
+      if (payload.apiToken === '********' || !payload.apiToken) {
+        delete payload.apiToken;
       }
-    } catch (err) {
-      console.error('Ошибка загрузки настроек FortiGate', err);
-      setMessage({ text: 'Не удалось загрузить настройки', type: 'error' });
+      const res: any = await apiService.post('/api/fortigate/settings', payload);
+      setSettings(res.settings);
+      setMessage({ text: 'Настройки успешно сохранены', type: 'success' });
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Ошибка при сохранении', type: 'error' });
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  
+  const handleTestConnection = async () => {
+    setIsTesting(true);
+    setMessage(null);
+    try {
+      const res: any = await apiService.post('/api/fortigate/test', {});
+      if (res.success) {
+        setMessage({ text: res.message || 'Тест успешен! (Ban + Unban сработали)', type: 'success' });
+      } else {
+        setMessage({ text: res.error || 'Ошибка теста', type: 'error' });
+      }
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Ошибка соединения', type: 'error' });
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
   const handleUnban = async (ip: string) => {
+    if (!window.confirm(`Вы уверены, что хотите разблокировать IP ${ip}? Это отправит webhook в FortiGate.`)) return;
     try {
       const res: any = await apiService.post('/api/fortigate/unban', { ip });
       if (res.success) {
@@ -64,112 +107,107 @@ export const FortigateSettingsTab: React.FC = () => {
         setMessage({ text: res.error || 'Ошибка разблокировки', type: 'error' });
       }
     } catch (err: any) {
-      setMessage({ text: err.message || 'Сбой при разблокировке', type: 'error' });
+      setMessage({ text: err.message || 'Сетевая ошибка', type: 'error' });
     }
   };
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleAddIndicator = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
+    setIsAdding(true);
     setMessage(null);
     try {
-      const res: any = await apiService.post('/api/fortigate/settings', settings);
-      if (res && res.settings) {
-        setSettings(res.settings);
+      const validFromTime = new Date(newIndicatorValidFrom).getTime();
+      const validToTime = new Date(newIndicatorValidTo).getTime();
+      
+      const payload = {
+        ip: newIndicatorIp,
+        isPermanent: false,
+        expiresAt: validToTime,
+        validFrom: validFromTime,
+        group: newIndicatorGroup,
+        trustLevel: newIndicatorTrust,
+        indicatorStatus: newIndicatorStatus,
+      };
+
+      const res: any = await apiService.post('/api/fortigate/ban', payload);
+      if (res.success) {
+        setBannedIps(prev => {
+          const filtered = prev.filter(b => b.ip !== res.banRecord.ip);
+          return [res.banRecord, ...filtered];
+        });
+        setIsAddModalOpen(false);
+        setNewIndicatorIp('');
+        setMessage({ text: `Индикатор ${newIndicatorIp} добавлен и заблокирован`, type: 'success' });
+      } else {
+        setMessage({ text: res.error || 'Ошибка при добавлении индикатора', type: 'error' });
       }
-      setMessage({ text: 'Настройки успешно сохранены', type: 'success' });
-    } catch (err) {
-      console.error('Ошибка сохранения', err);
-      setMessage({ text: 'Ошибка при сохранении настроек', type: 'error' });
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Сетевая ошибка', type: 'error' });
     } finally {
-      setSaving(false);
+      setIsAdding(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    setSettings(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : (type === 'number' ? parseInt(value, 10) : value)
-    }));
-  };
-
-  if (loading) {
-    return <div style={{ padding: '20px' }}>Загрузка настроек...</div>;
-  }
+  if (loading) return <div>Загрузка настроек...</div>;
 
   return (
-    <div style={{ maxWidth: '800px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <div style={{
-        background: 'hsl(var(--bg-secondary))',
-        padding: '24px',
-        borderRadius: '12px',
-        border: '1px solid hsl(var(--border-color))'
-      }}>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'hsl(var(--text-primary))', marginBottom: '8px' }}>
-          Интеграция с FortiGate (SOAR)
-        </h2>
-        <p style={{ color: 'hsl(var(--text-secondary))', fontSize: '0.9rem', marginBottom: '24px', lineHeight: 1.5 }}>
-          Настройте связь с межсетевым экраном FortiGate через механизм Automation Stitches (Incoming Webhook). 
-          Это позволит системе автоматически или в ручном режиме отправлять команды на блокировку обнаруженных вредоносных IP-адресов.
-        </p>
-
+    <div className="admin-tab-content fade-in">
+      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+        <h2 style={{ marginBottom: '16px', color: 'hsl(var(--text-primary))' }}>Интеграция FortiGate (SOAR)</h2>
+        
         {message && (
           <div style={{ 
-            padding: '12px', 
-            borderRadius: '6px', 
+            padding: '12px 16px', 
             marginBottom: '20px', 
-            background: message.type === 'success' ? 'rgba(46, 204, 113, 0.1)' : 'rgba(231, 76, 60, 0.1)',
-            color: message.type === 'success' ? '#2ecc71' : '#e74c3c',
-            border: `1px solid ${message.type === 'success' ? 'rgba(46, 204, 113, 0.3)' : 'rgba(231, 76, 60, 0.3)'}`
+            borderRadius: '6px',
+            background: message.type === 'success' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+            color: message.type === 'success' ? '#22c55e' : '#ef4444',
+            border: `1px solid ${message.type === 'success' ? '#22c55e' : '#ef4444'}`
           }}>
             {message.text}
           </div>
         )}
 
-        <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: 'rgba(0,0,0,0.1)', padding: '16px', borderRadius: '8px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-              <input 
-                type="checkbox" 
-                name="enabled" 
-                checked={settings.enabled} 
-                onChange={handleChange} 
-                style={{ width: '18px', height: '18px', accentColor: 'hsl(var(--primary))' }}
-              />
-              <span style={{ fontWeight: 500 }}>Включить интеграцию с FortiGate</span>
+        <form onSubmit={handleSubmit} className="admin-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <input 
+              type="checkbox" 
+              name="enabled" 
+              id="fortigate_enabled"
+              checked={settings.enabled} 
+              onChange={handleChange}
+              style={{ width: '18px', height: '18px', accentColor: 'hsl(var(--primary))' }}
+            />
+            <label htmlFor="fortigate_enabled" style={{ fontSize: '1rem', fontWeight: 600, color: 'hsl(var(--text-primary))', cursor: 'pointer' }}>
+              Включить интеграцию SOAR FortiGate
             </label>
+          </div>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-              <input 
-                type="checkbox" 
-                name="autoBanEnabled" 
-                checked={settings.autoBanEnabled} 
-                onChange={handleChange} 
-                style={{ width: '18px', height: '18px', accentColor: 'hsl(var(--primary))' }}
-                disabled={!settings.enabled}
-              />
-              <span>
-                <span style={{ fontWeight: 500 }}>Автоматическая блокировка (SOAR)</span>
-                <br/>
-                <span style={{ fontSize: '0.8rem', color: 'hsl(var(--text-secondary))' }}>
-                  При обнаружении IP-адреса в письме, система немедленно отправит команду на блокировку.
-                </span>
-              </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: '28px', marginTop: '-8px', marginBottom: '8px' }}>
+            <input 
+              type="checkbox" 
+              name="autoBanEnabled" 
+              id="fortigate_autoban"
+              checked={settings.autoBanEnabled} 
+              onChange={handleChange}
+              disabled={!settings.enabled}
+              style={{ width: '16px', height: '16px', accentColor: 'hsl(var(--primary))' }}
+            />
+            <label htmlFor="fortigate_autoban" style={{ fontSize: '0.9rem', color: settings.enabled ? 'hsl(var(--text-primary))' : 'hsl(var(--text-secondary))', cursor: settings.enabled ? 'pointer' : 'default' }}>
+              Автоматически блокировать IP (Auto-Ban) при получении отчетов KATA/KZ-CERT
             </label>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={{ fontSize: '0.85rem', fontWeight: 500, color: 'hsl(var(--text-secondary))' }}>
-              URL Вебхука Блокировки (Trigger 1)
+              URL Вебхука Блокировки (Trigger 1 - Добавление IP)
             </label>
             <input 
               type="text" 
               name="banUrl" 
               value={settings.banUrl} 
               onChange={handleChange} 
-              placeholder="https://172.31.69.30:10443/api/v2/monitor/system/automation-stitch/webhook/Pulse12_API"
+              placeholder="https://172.31.69.30:10443/api/v2/monitor/system/automation-stitch/webhook/Pulse12_Ban"
               disabled={!settings.enabled}
               style={{
                 background: 'hsl(var(--bg-primary))',
@@ -180,11 +218,14 @@ export const FortigateSettingsTab: React.FC = () => {
                 width: '100%'
               }}
             />
+            <span style={{ fontSize: '0.75rem', color: 'hsl(var(--text-secondary))' }}>
+              Pulse 12 вызовет этот URL при парсинге фишинга или при нажатии кнопки "Заблокировать" в инциденте.
+            </span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={{ fontSize: '0.85rem', fontWeight: 500, color: 'hsl(var(--text-secondary))' }}>
-              URL Вебхука Разблокировки (Trigger 2 - Опционально)
+              URL Вебхука Разблокировки (Trigger 2 - Исключение IP)
             </label>
             <input 
               type="text" 
@@ -203,20 +244,20 @@ export const FortigateSettingsTab: React.FC = () => {
               }}
             />
             <span style={{ fontSize: '0.75rem', color: 'hsl(var(--text-secondary))' }}>
-              Используется планировщиком (Cron) для автоматического снятия блокировок по истечению таймера.
+              Используется Cron-сервисом для автоматического разбана по истечении срока действия индикатора.
             </span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={{ fontSize: '0.85rem', fontWeight: 500, color: 'hsl(var(--text-secondary))' }}>
-              API Token (Ключ администратора REST API)
+              API Token (Для авторизации REST API)
             </label>
             <input 
               type="password" 
               name="apiToken" 
               value={settings.apiToken} 
               onChange={handleChange} 
-              placeholder="Введите токен"
+              placeholder="Скрытый токен"
               disabled={!settings.enabled}
               style={{
                 background: 'hsl(var(--bg-primary))',
@@ -231,7 +272,7 @@ export const FortigateSettingsTab: React.FC = () => {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={{ fontSize: '0.85rem', fontWeight: 500, color: 'hsl(var(--text-secondary))' }}>
-              Срок блокировки по умолчанию (дней)
+              Срок действия по умолчанию (дней)
             </label>
             <input 
               type="number" 
@@ -251,13 +292,13 @@ export const FortigateSettingsTab: React.FC = () => {
               }}
             />
             <span style={{ fontSize: '0.75rem', color: 'hsl(var(--text-secondary))' }}>
-              Через указанное количество дней система попытается отправить запрос на вебхук разблокировки (если он указан).
+              Если в источнике не указана явная дата "Действительно до", срок вычисляется по этому значению.
             </span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={{ fontSize: '0.85rem', fontWeight: 500, color: 'hsl(var(--text-secondary))' }}>
-              Целевая группа (Address Group) на FortiGate
+              Имя группы (Address Group) в FortiGate
             </label>
             <input 
               type="text" 
@@ -275,9 +316,6 @@ export const FortigateSettingsTab: React.FC = () => {
                 width: '100%'
               }}
             />
-            <span style={{ fontSize: '0.75rem', color: 'hsl(var(--text-secondary))' }}>
-              Pulse 12 передаст это имя в параметре "address_group". Скрипт (Action) на FortiGate должен использовать эту переменную для добавления IP в нужную папку.
-            </span>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px', gap: '10px' }}>
@@ -319,36 +357,56 @@ export const FortigateSettingsTab: React.FC = () => {
           </div>
         </form>
 
-      {/* Banned IPs Section */}
-      <div className="admin-card" style={{ marginTop: '24px' }}>
-        <h3 className="admin-card-title">Заблокированные IP адреса</h3>
+      {/* Banned IPs / IoC Section */}
+      <div className="admin-card" style={{ marginTop: '24px', maxWidth: '100%', overflowX: 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h3 className="admin-card-title" style={{ margin: 0 }}>Таблица индикаторов компрометации (Заблокированные IP)</h3>
+          <button 
+            className="btn-primary" 
+            style={{ padding: '6px 12px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+            onClick={() => setIsAddModalOpen(true)}
+          >
+            <Plus size={16} /> Добавить индикатор
+          </button>
+        </div>
+
         {bannedIps.length === 0 ? (
-          <p style={{ color: 'var(--text-secondary)' }}>Нет заблокированных IP адресов.</p>
+          <p style={{ color: 'var(--text-secondary)' }}>Нет активных индикаторов.</p>
         ) : (
           <div className="table-responsive">
-            <table className="admin-table">
+            <table className="admin-table" style={{ minWidth: '900px', fontSize: '0.85rem' }}>
               <thead>
-                <tr>
-                  <th>IP адрес</th>
-                  <th>Дата блокировки</th>
-                  <th>Истекает</th>
-                  <th style={{ width: '100px', textAlign: 'right' }}>Действия</th>
+                <tr style={{ background: 'hsl(var(--bg-secondary))' }}>
+                  <th>#</th>
+                  <th>Тип индикатора</th>
+                  <th>Индикатор компрометации</th>
+                  <th>Группа</th>
+                  <th>Уровень доверия</th>
+                  <th>Статус</th>
+                  <th>Действительно с</th>
+                  <th>Действительно до</th>
+                  <th style={{ textAlign: 'right' }}>Действия</th>
                 </tr>
               </thead>
               <tbody>
-                {bannedIps.map(b => (
+                {bannedIps.map((b, i) => (
                   <tr key={b.ip}>
+                    <td style={{ color: 'var(--text-secondary)' }}>{i + 1}</td>
+                    <td>IP адрес</td>
                     <td><span className="badge badge-error">{b.ip}</span></td>
-                    <td>{new Date(b.bannedAt).toLocaleString()}</td>
-                    <td>{b.expiresAt ? new Date(b.expiresAt).toLocaleString() : 'Навсегда'}</td>
+                    <td>{b.group || 'Узел ботнет'}</td>
+                    <td>{b.trustLevel || 'Высокая'}</td>
+                    <td>{b.indicatorStatus || 'Опубликован'}</td>
+                    <td>{new Date(b.validFrom || b.bannedAt).toLocaleString('ru-RU')}</td>
+                    <td>{b.expiresAt ? new Date(b.expiresAt).toLocaleString('ru-RU') : 'Навсегда'}</td>
                     <td style={{ textAlign: 'right' }}>
                       <button 
                         type="button"
-                        className="btn-secondary" 
-                        style={{ fontSize: '0.8rem', padding: '4px 8px' }}
+                        title="Удалить индикатор (Разбанить)"
+                        style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
                         onClick={() => handleUnban(b.ip)}
                       >
-                        Разблокировать
+                        <Trash2 size={16} />
                       </button>
                     </td>
                   </tr>
@@ -358,6 +416,69 @@ export const FortigateSettingsTab: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Add Indicator Modal */}
+      {isAddModalOpen && (
+        <div className="admin-modal-overlay" onClick={() => !isAdding && setIsAddModalOpen(false)}>
+          <div className="admin-modal-content" onClick={e => e.stopPropagation()} style={{ width: '500px', padding: '24px' }}>
+            <h3 style={{ marginBottom: '20px', color: 'hsl(var(--text-primary))' }}>Добавить индикатор компрометации</h3>
+            <form onSubmit={handleAddIndicator} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', color: 'hsl(var(--text-secondary))' }}>IP адрес (Индикатор)</label>
+                <input 
+                  type="text" 
+                  value={newIndicatorIp} 
+                  onChange={e => setNewIndicatorIp(e.target.value)}
+                  placeholder="Например: 192.168.1.100"
+                  required
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'hsl(var(--bg-primary))', color: 'hsl(var(--text-primary))' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '16px' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', color: 'hsl(var(--text-secondary))' }}>Действительно с</label>
+                  <input 
+                    type="date" 
+                    value={newIndicatorValidFrom} 
+                    onChange={e => setNewIndicatorValidFrom(e.target.value)}
+                    required
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'hsl(var(--bg-primary))', color: 'hsl(var(--text-primary))' }}
+                  />
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', color: 'hsl(var(--text-secondary))' }}>Действительно до</label>
+                  <input 
+                    type="date" 
+                    value={newIndicatorValidTo} 
+                    onChange={e => setNewIndicatorValidTo(e.target.value)}
+                    required
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', background: 'hsl(var(--bg-primary))', color: 'hsl(var(--text-primary))' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px' }}>
+                <button 
+                  type="button" 
+                  className="btn-secondary"
+                  onClick={() => setIsAddModalOpen(false)}
+                  disabled={isAdding}
+                >
+                  Отмена
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn-primary"
+                  disabled={isAdding || !newIndicatorIp}
+                >
+                  {isAdding ? 'Добавление...' : 'Добавить и Заблокировать'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       </div>
     </div>
