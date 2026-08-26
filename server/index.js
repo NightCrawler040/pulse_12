@@ -927,9 +927,9 @@ app.post('/api/fortigate/settings', requireAuth, async (req, res) => {
 
 app.post('/api/fortigate/test', requireAuth, async (req, res) => {
   if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin') {
-    return res.status(403).json({ error: 'Доступ запрещен' });
+    return res.status(403).json({ error: 'Нет доступа' });
 
-  app.get('/api/fortigate/banned-ips', requireAuth, (req, res) => {
+app.get('/api/fortigate/banned-ips', requireAuth, (req, res) => {
     if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin') {
       return res.status(403).json({ error: 'Доступ закрыт' });
     }
