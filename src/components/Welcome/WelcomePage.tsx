@@ -15,7 +15,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onOpenLogin }) => {
 
   // Fake boot sequence effect for the terminal
   const [bootText, setBootText] = useState<string[]>([]);
-  
+
   useEffect(() => {
     const lines = [
       '> INITIALIZING PULSE KERNEL...',
@@ -25,7 +25,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onOpenLogin }) => {
       '> SYSTEM READY.'
     ];
     let currentIndex = 0;
-    
+
     const interval = setInterval(() => {
       if (currentIndex < lines.length) {
         setBootText(prev => [...prev, lines[currentIndex]]);
@@ -34,7 +34,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onOpenLogin }) => {
         clearInterval(interval);
       }
     }, 400);
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -43,17 +43,17 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onOpenLogin }) => {
       {/* Floating Small Spiders */}
       <div className="spider-particles">
         {Array.from({ length: 8 }).map((_, i) => (
-          <img 
+          <img
             key={i}
-            src={spiderLogo} 
-            alt="" 
-            className={`cyber-spider-bg particle-${i + 1}`} 
+            src={spiderLogo}
+            alt=""
+            className={`cyber-spider-bg particle-${i + 1}`}
           />
         ))}
       </div>
 
       <div className="welcome-split-layout">
-        
+
         {/* Left Side: Typography & CTA */}
         <div className="welcome-content-left">
           <div className="cyber-eyebrow">
@@ -65,9 +65,9 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onOpenLogin }) => {
             <span className="accent-text">PULSE</span>
           </h1>
           <p className="welcome-subtitle cyber-subtitle">
-            Закрытый портал управления проектами и инцидентами. Никакого визуального шума — только чистый функционал и полный контроль над процессами.
+            Закрытый портал управления проектами и инцидентами. Никакого визуального шума - только чистый функционал и полный контроль над процессами.
           </p>
-          
+
           <button className="btn-cyber-primary" onClick={onOpenLogin}>
             <LogIn size={20} className="btn-icon" />
             <span className="btn-text">ИНИЦИАЛИЗАЦИЯ ВХОДА</span>
@@ -81,7 +81,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onOpenLogin }) => {
               <Terminal size={14} />
               <span>system_status.sh</span>
             </div>
-            
+
             <div className="panel-body">
               <div className="terminal-boot">
                 {bootText.map((line, i) => (
