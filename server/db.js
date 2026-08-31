@@ -79,13 +79,13 @@ const loadLocalFile = () => {
       const parsed = JSON.parse(raw);
       if (parsed && Array.isArray(parsed.tasks)) {
         localDbData = {
-          tasks: (parsed.tasks && parsed.tasks.length > 0) ? parsed.tasks : initialTasks,
-          sprints: (parsed.sprints && parsed.sprints.length > 0) ? parsed.sprints : initialSprints,
-          users: (parsed.users && parsed.users.length >= 5) ? parsed.users : initialUsers,
-          groups: (parsed.groups && parsed.groups.length > 0) ? parsed.groups : initialGroups,
+          tasks: parsed.tasks || [],
+          sprints: parsed.sprints || [],
+          users: parsed.users || [],
+          groups: parsed.groups || [],
           notifications: parsed.notifications || [],
-          findings: parsed.findings || initialFindings,
-          api_keys: parsed.api_keys || initialApiKeys,
+          findings: parsed.findings || [],
+          api_keys: parsed.api_keys || [],
           ldap_settings: parsed.ldap_settings || { ...defaultLdapSettings },
           mailSettings: parsed.mailSettings || {},
           fortigateSettings: parsed.fortigateSettings || { ...defaultFortigateSettings },
@@ -168,33 +168,7 @@ export const initDb = async () => {
       await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['ldap_settings', JSON.stringify(defaultLdapSettings)]);
       console.log('✅ Стартовые корпоративные данные успешно загружены в PostgreSQL!');
     } else {
-      console.log(`✅ В PostgreSQL найдено ${count} коллекций данных. Проверка целостности коллекций...`);
-      const tasksRes = await client.query("SELECT data FROM pulse_store WHERE key = 'tasks'");
-      if (tasksRes.rows.length === 0 || !Array.isArray(tasksRes.rows[0].data) || tasksRes.rows[0].data.length === 0) {
-        console.log('🌱 Коллекция tasks в PostgreSQL пуста. Автовосстановление корпоративных задач...');
-        await client.query("INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data", ['tasks', JSON.stringify(initialTasks)]);
-      }
-      const usersRes = await client.query("SELECT data FROM pulse_store WHERE key = 'users'");
-      if (usersRes.rows.length === 0 || !Array.isArray(usersRes.rows[0].data) || usersRes.rows[0].data.length < 5) {
-        console.log('🌱 Коллекция users в PostgreSQL неполная. Обновление до полного штата сотрудников...');
-        await client.query("INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data", ['users', JSON.stringify(initialUsers)]);
-      }
-      const groupsRes = await client.query("SELECT data FROM pulse_store WHERE key = 'groups'");
-      if (groupsRes.rows.length === 0 || !Array.isArray(groupsRes.rows[0].data) || groupsRes.rows[0].data.length === 0) {
-        await client.query("INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data", ['groups', JSON.stringify(initialGroups)]);
-      }
-      const findingsRes = await client.query("SELECT data FROM pulse_store WHERE key = 'findings'");
-      if (findingsRes.rows.length === 0 || !Array.isArray(findingsRes.rows[0].data)) {
-        await client.query("INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data", ['findings', JSON.stringify(initialFindings)]);
-      }
-      const keysRes = await client.query("SELECT data FROM pulse_store WHERE key = 'api_keys'");
-      if (keysRes.rows.length === 0 || !Array.isArray(keysRes.rows[0].data)) {
-        await client.query("INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data", ['api_keys', JSON.stringify(initialApiKeys)]);
-      }
-      const ldapRes = await client.query("SELECT data FROM pulse_store WHERE key = 'ldap_settings'");
-      if (ldapRes.rows.length === 0 || !ldapRes.rows[0].data) {
-        await client.query("INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data", ['ldap_settings', JSON.stringify(defaultLdapSettings)]);
-      }
+      console.log(`✅ В PostgreSQL найдено ${count} коллекций данных. База уже инициализирована.`);
     }
 
     client.release();
