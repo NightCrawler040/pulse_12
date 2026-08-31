@@ -40,7 +40,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
         
         <div className="login-modal-header">
           <div>
-            <h2 className="login-modal-title">🔐 Авторизация Pulse 12</h2>
+            <h2 className="login-modal-title">🔐 Авторизация Pulse</h2>
             <p className="login-modal-subtitle">Корпоративная система управления проектами</p>
           </div>
           {onClose && (

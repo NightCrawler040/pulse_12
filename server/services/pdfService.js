@@ -264,7 +264,7 @@ export const generateSprintPdf = ({ dbData, sprintId, targetUserId, stream }) =>
     doc.page.margins.bottom = 0;
     
     doc.text(
-      `Страница ${i + 1} из ${range.count} • Сгенерировано автоматически в корпоративной системе Pulse 12`,
+      `Страница ${i + 1} из ${range.count} • Сгенерировано автоматически в корпоративной системе Pulse`,
       40,
       doc.page.height - 35,
       { align: 'center', width: doc.page.width - 80, lineBreak: false }

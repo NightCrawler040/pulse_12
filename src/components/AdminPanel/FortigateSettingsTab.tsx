@@ -224,7 +224,7 @@ export const FortigateSettingsTab: React.FC = () => {
               }}
             />
             <span style={{ fontSize: '0.75rem', color: 'hsl(var(--text-secondary))' }}>
-              Pulse 12 вызовет этот URL при парсинге фишинга или при нажатии кнопки "Заблокировать" в инциденте.
+              Pulse вызовет этот URL при парсинге фишинга или при нажатии кнопки "Заблокировать" в инциденте.
             </span>
           </div>
 

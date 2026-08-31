@@ -33,7 +33,7 @@ let socketInstance: Socket | null = null;
 export const getSocket = (): Socket => {
   if (!socketInstance) {
     const url = getServerUrl();
-    console.log(`🔌 Connecting to Pulse 12 Socket.io server at: ${url}`);
+    console.log(`🔌 Connecting to Pulse Socket.io server at: ${url}`);
     socketInstance = io(url, {
       reconnectionDelayMax: 2000,
       timeout: 5000

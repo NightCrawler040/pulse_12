@@ -1,7 +1,7 @@
 import ldap from 'ldapjs';
 
 /**
- * LDAP & Active Directory Integration Service for Pulse 12
+ * LDAP & Active Directory Integration Service for Pulse
  * Handles LDAP connection testing, synchronization, user merging by email/login, and automatic task reconciliation.
  */
 

@@ -147,7 +147,7 @@ export const initialUsers = [
 export const initialSprints = [
   {
     id: 'sprint-1',
-    name: 'Sprint 24: Core Pulse 12 Release',
+    name: 'Sprint 24: Core Pulse Release',
     startDate: '2026-07-01',
     endDate: '2026-07-14',
     goal: 'Внедрение RBAC, оптимизация 60 FPS, централизованный сервер и сетевой доступ для 12 сотрудников',
@@ -431,7 +431,7 @@ export const initialFindings = [
     title: 'SQL Injection in user authentication handler',
     description: 'Несанитизированный ввод пользователя передается напрямую в SQL-запрос при поиске учетной записи по логину. Возможна обходная авторизация.',
     severity: 'Critical',
-    project: 'Pulse 12 Core Backend',
+    project: 'Pulse Core Backend',
     cwe: 'CWE-89',
     fileLocation: 'server/db.js:142',
     status: 'new',

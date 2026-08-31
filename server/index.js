@@ -1347,7 +1347,7 @@ const handleExternalWebhook = (req, res) => {
   broadcastUpdate('findings');
 
   console.log(`🛡️ [Webhook Received] Добавлен инцидент от ${source.toUpperCase()}: "${newFinding.title}" (${newFinding.severity})`);
-  res.status(201).json({ success: true, findingId: newId, message: 'Уязвимость успешно зарегистрирована в Центре ИБ Pulse 12' });
+  res.status(201).json({ success: true, findingId: newId, message: 'Уязвимость успешно зарегистрирована в Центре ИБ Pulse' });
 };
 
 // --- JIRA REST API COMPATIBILITY GATEWAY (Для привязки аккаунта в DerScanner: Аккаунт > Доступы > Таск-менеджер / Jira) ---
@@ -1359,7 +1359,7 @@ const handleJiraServerInfo = (req, res) => {
     deploymentType: "Server",
     buildNumber: 940000,
     buildDate: "2026-07-21T00:00:00.000+0500",
-    serverTitle: "Pulse 12 Corporate Security & Jira Gateway",
+    serverTitle: "Pulse Corporate Security & Jira Gateway",
     scmInfo: "release"
   });
 };
@@ -1372,7 +1372,7 @@ const handleJiraMyself = (req, res) => {
     name: token || "admin",
     emailAddress: "admin@pulse12.local",
     avatarUrls: { "48x48": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop" },
-    displayName: "DerScanner API Account (Pulse 12)",
+    displayName: "DerScanner API Account (Pulse)",
     active: true,
     timeZone: "Asia/Almaty",
     locale: "ru_RU",
@@ -1412,7 +1412,7 @@ const getEnrichedJiraFields = (req, targetIssueTypeId = "10003") => {
     summary: { id: "summary", key: "summary", fieldId: "summary", name: "Summary", required: true, hasDefaultValue: true, defaultValue: "DerScanner Security Finding", schema: { type: "string", system: "summary" }, operations: ["set"] },
     description: { id: "description", key: "description", fieldId: "description", name: "Description", required: false, hasDefaultValue: true, defaultValue: "Уязвимость, обнаруженная сканером DerScanner", schema: { type: "string", system: "description" }, operations: ["set"] },
     issuetype: { id: "issuetype", key: "issuetype", fieldId: "issuetype", name: "Issue Type", required: true, hasDefaultValue: true, defaultValue: defaultIssueTypeObj, schema: { type: "issuetype", system: "issuetype" }, operations: [], allowedValues: [ typeMap["10001"], typeMap["10002"], typeMap["10003"] ] },
-    project: { id: "project", key: "project", fieldId: "project", name: "Project", required: true, hasDefaultValue: true, defaultValue: { self: `${req.protocol}://${req.get('host')}/rest/api/2/project/10001`, id: "10001", key: "PULSE", name: "Pulse 12 Corporate Security & Dev Project" }, schema: { type: "project", system: "project" }, operations: [], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/project/10001`, id: "10001", key: "PULSE", name: "Pulse 12 Corporate Security & Dev Project" } ] },
+    project: { id: "project", key: "project", fieldId: "project", name: "Project", required: true, hasDefaultValue: true, defaultValue: { self: `${req.protocol}://${req.get('host')}/rest/api/2/project/10001`, id: "10001", key: "PULSE", name: "Pulse Corporate Security & Dev Project" }, schema: { type: "project", system: "project" }, operations: [], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/project/10001`, id: "10001", key: "PULSE", name: "Pulse Corporate Security & Dev Project" } ] },
     priority: { id: "priority", key: "priority", fieldId: "priority", name: "Priority", required: false, hasDefaultValue: true, defaultValue: { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/2`, iconUrl: "", name: "High", id: "2" }, schema: { type: "priority", system: "priority" }, operations: ["set"], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/1`, iconUrl: "", name: "Highest", id: "1" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/2`, iconUrl: "", name: "High", id: "2" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/3`, iconUrl: "", name: "Medium", id: "3" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/4`, iconUrl: "", name: "Low", id: "4" } ] },
     assignee: { id: "assignee", key: "assignee", fieldId: "assignee", name: "Assignee", required: false, hasDefaultValue: true, defaultValue: defaultUser, schema: { type: "user", system: "assignee" }, operations: ["set"], allowedValues: usersList },
     components: { id: "components", key: "components", fieldId: "components", name: "Components", required: false, hasDefaultValue: true, defaultValue: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10004`, id: "10004", name: "General Security" } ], schema: { type: "array", items: "component", system: "components" }, operations: ["add", "set", "remove"], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10001`, id: "10001", name: "Backend SAST" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10002`, id: "10002", name: "Frontend SAST" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10003`, id: "10003", name: "DevOps Infrastructure" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10004`, id: "10004", name: "General Security" } ] },
@@ -1437,7 +1437,7 @@ const getProjectObject = (req, keyOrId = 'PULSE') => {
   const p = (dbData.projects || []).find(x => String(x.key).toUpperCase() === String(keyOrId).toUpperCase() || String(x.id) === String(keyOrId));
   const pKey = p ? (p.key || 'PULSE').toUpperCase() : 'PULSE';
   const pId = p ? String(p.id || '10001') : '10001';
-  const pName = p ? p.name : 'Pulse 12 Corporate Security & Dev Project';
+  const pName = p ? p.name : 'Pulse Corporate Security & Dev Project';
 
   return {
     expand: "description,lead,url,projectKeys,permissions,issueTypes",
@@ -1445,7 +1445,7 @@ const getProjectObject = (req, keyOrId = 'PULSE') => {
     id: pId,
     key: pKey,
     name: pName,
-    description: "Единый контур управления разработкой и информационной безопасностью Pulse 12",
+    description: "Единый контур управления разработкой и информационной безопасностью Pulse",
     projectTypeKey: "software",
     lead: { self: `${req.protocol}://${req.get('host')}/rest/api/2/user?username=admin`, key: "admin", accountId: "usr-1", accountType: "atlassian", name: "admin", displayName: "admin (Security Lead)", active: true },
     components: [
@@ -1515,7 +1515,7 @@ const handleJiraSearch = (req, res) => {
     self: `${req.protocol}://${req.get('host')}/rest/api/2/issue/${t.id}`,
     key: `PULSE-${String(t.id).replace(/\D/g, '') || Math.floor(Math.random() * 900 + 100)}`,
     fields: {
-      summary: t.title || "Pulse 12 Corporate Task",
+      summary: t.title || "Pulse Corporate Task",
       issuetype: { id: "10002", name: "Task", subtask: false },
       priority: { id: "2", name: "High" },
       status: { id: "10002", name: "In Progress" }
@@ -1665,7 +1665,7 @@ const handleJiraCreateMeta = (req, res) => {
     {
       id: "10001",
       key: "PULSE",
-      name: "Pulse 12 Corporate Security & Dev Project",
+      name: "Pulse Corporate Security & Dev Project",
       issuetypes: issueTypesList
     }
   ];
@@ -1679,7 +1679,7 @@ const handleJiraCreateMeta = (req, res) => {
         {
           id: req.query.projectIds ? String(req.query.projectIds).split(',')[0] : "10001",
           key: req.query.projectKeys ? String(req.query.projectKeys).split(',')[0].toUpperCase() : "PULSE",
-          name: "Pulse 12 Corporate Security & Dev Project",
+          name: "Pulse Corporate Security & Dev Project",
           issuetypes: issueTypesList
         }
       ];
@@ -1734,7 +1734,7 @@ const handleJiraCreateIssue = (req, res) => {
 
 // GET эндпоинты для проверки состояния вебхуков
 app.get(['/api/v1/webhooks/derscanner', '/api/webhooks/derscanner', '/api/v1/integrations/findings'], (req, res) => {
-  res.status(200).json({ status: 'ok', service: 'Pulse 12 DerScanner Webhook & Jira REST Gateway', version: '9.4.0' });
+  res.status(200).json({ status: 'ok', service: 'Pulse DerScanner Webhook & Jira REST Gateway', version: '9.4.0' });
 });
 
 app.post(['/api/v1/webhooks/derscanner', '/api/webhooks/derscanner', '/api/v1/integrations/findings'], handleExternalWebhook);
@@ -1776,7 +1776,7 @@ const handleWildcard = (req, res) => {
     if (url.includes('/issuetype')) return handleJiraIssueTypes(req, res);
     if (url.includes('/project/') || url.includes('/project?')) return handleJiraProjectDetail(req, res);
     if (url.includes('/project')) return handleJiraProjects(req, res);
-    res.status(200).json({ success: true, message: 'Pulse 12 Jira REST API Gateway response', items: [], values: [] });
+    res.status(200).json({ success: true, message: 'Pulse Jira REST API Gateway response', items: [], values: [] });
   } else {
     handleExternalWebhook(req, res);
   }
@@ -1969,7 +1969,7 @@ const startServer = async () => {
   const PORT = process.env.PORT || 3001;
   server.listen(PORT, '0.0.0.0', () => {
     console.log(`\n======================================================`);
-    console.log(`🚀 Корпоративный сервер Pulse 12 запущен на порту ${PORT}!`);
+    console.log(`🚀 Корпоративный сервер Pulse запущен на порту ${PORT}!`);
     console.log(`💻 Локальный адрес: http://localhost:${PORT}`);
     console.log(`🌐 Для подключения с других ПК укажите IP вашей vSphere машины (например, http://192.168.x.x:${PORT})`);
     console.log(`======================================================\n`);
