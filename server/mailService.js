@@ -5,7 +5,7 @@ const SMTP_HOST = process.env.SMTP_HOST || '172.31.0.153';
 const SMTP_PORT = parseInt(process.env.SMTP_PORT || '25', 10);
 const SMTP_USER = process.env.SMTP_USER || '';
 const SMTP_PASS = process.env.SMTP_PASS || '';
-const SMTP_FROM = process.env.SMTP_FROM || 'Корпоративный портал Pulse 12 <pulse-notify@enpf.kz>';
+const SMTP_FROM = process.env.SMTP_FROM || 'Корпоративный портал Pulse <pulse-notify@enpf.kz>';
 const SMTP_ENABLED = process.env.SMTP_ENABLED !== 'false';
 
 let transporter = null;
@@ -68,11 +68,11 @@ export async function sendTaskNotificationEmail(recipient, task, senderName = '�
   const mailOptions = {
     from: SMTP_FROM,
     to: recipient.email,
-    subject: `[Pulse 12] Новая задача: ${task.title}`,
+    subject: `[Pulse] Новая задача: ${task.title}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #1a1e29; color: #f1f5f9; padding: 24px; border-radius: 12px; border: 1px solid #334155;">
         <div style="border-bottom: 1px solid #334155; padding-bottom: 16px; margin-bottom: 20px;">
-          <h2 style="color: #60a5fa; margin: 0;">🏢 Корпоративная платформа Pulse 12</h2>
+          <h2 style="color: #60a5fa; margin: 0;">🏢 Корпоративная платформа Pulse</h2>
         </div>
         <p style="font-size: 16px;">Здравствуйте, <strong>${recipient.name}</strong>!</p>
         <p style="font-size: 15px; color: #cbd5e1;">На вас назначена новая задача от сотрудника <strong>${senderName}</strong>:</p>
@@ -84,7 +84,7 @@ export async function sendTaskNotificationEmail(recipient, task, senderName = '�
           </div>
         </div>
         <p style="font-size: 13px; color: #64748b; margin-top: 24px;">
-          Для просмотра задачи перейдите на корпоративный портал Pulse 12.
+          Для просмотра задачи перейдите на корпоративный портал Pulse.
         </p>
       </div>
     `

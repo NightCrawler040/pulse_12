@@ -75,7 +75,7 @@ const processEmail = async (message, uid) => {
     );
 
     if (!pulseUser) {
-      console.log(`[IMAP] Пропуск письма от ${senderEmail}: пользователь не найден в базе Pulse 12 (защита от спама).`);
+      console.log(`[IMAP] Пропуск письма от ${senderEmail}: пользователь не найден в базе Pulse (защита от спама).`);
       return;
     }
 
@@ -290,7 +290,7 @@ ${indicatorItemsXml}
           const alertTask = {
             id: `task-${Date.now()}-alert`,
             title: `⚠️ ВНИМАНИЕ: Группа FortiGate достигла лимита (${newBannedLength} адресов)`,
-            description: `Группа адресов на FortiGate (${currentDbData.fortigateSettings.addressGroup || 'Pulse_Banned_IPs'}) превысила порог в ${newBannedLength} записей.\n\nВозможно, достигнут хард-лимит FortiOS на количество объектов в одной группе. Рекомендуется создать вторую группу и изменить название целевой группы в настройках интеграции Pulse 12.`,
+            description: `Группа адресов на FortiGate (${currentDbData.fortigateSettings.addressGroup || 'Pulse_Banned_IPs'}) превысила порог в ${newBannedLength} записей.\n\nВозможно, достигнут хард-лимит FortiOS на количество объектов в одной группе. Рекомендуется создать вторую группу и изменить название целевой группы в настройках интеграции Pulse.`,
             status: 'todo',
             priority: 'high',
             department: 'Кибербезопасность',

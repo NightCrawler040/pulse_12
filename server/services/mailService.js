@@ -121,7 +121,7 @@ export async function sendMail(to, subject, htmlContent) {
   const mailOptions = {
     from: mailConfig.from || mailConfig.user,
     to: to,
-    subject: `[Pulse 12] ${subject}`,
+    subject: `[Pulse] ${subject}`,
     html: htmlContent
   };
 
@@ -219,13 +219,13 @@ export async function sendMailNotification(recipient, notifText, eventType, task
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-      <h2 style="color: #0f172a; margin-top: 0;">Уведомление Pulse 12</h2>
+      <h2 style="color: #0f172a; margin-top: 0;">Уведомление Pulse</h2>
       <p style="color: #334155; font-size: 16px; line-height: 1.5;">${notifText}</p>
       
       ${taskDetailsHtml}
       
       <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-      <p style="color: #94a3b8; font-size: 12px; margin-bottom: 0;">Вы получили это письмо, так как являетесь участником корпоративной системы управления задачами Pulse 12.</p>
+      <p style="color: #94a3b8; font-size: 12px; margin-bottom: 0;">Вы получили это письмо, так как являетесь участником корпоративной системы управления задачами Pulse.</p>
     </div>
   `;
 
@@ -246,7 +246,7 @@ export async function sendMailDeadlineWarning(recipient, task, timeRemainingLabe
       </p>
       <p style="color: #334155; font-size: 16px; line-height: 1.5;">Текущий статус: <strong>${task.status}</strong></p>
       <hr style="border: 0; border-top: 1px solid #fcd34d; margin: 20px 0;" />
-      <p style="color: #b45309; font-size: 12px; margin-bottom: 0;">Пожалуйста, актуализируйте статус задачи в системе Pulse 12.</p>
+      <p style="color: #b45309; font-size: 12px; margin-bottom: 0;">Пожалуйста, актуализируйте статус задачи в системе Pulse.</p>
     </div>
   `;
 

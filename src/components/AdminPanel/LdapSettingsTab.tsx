@@ -522,7 +522,7 @@ export const LdapSettingsTab: React.FC = () => {
                   📋 Список сотрудников из Active Directory ({previewUsers.length} чел.)
                 </h3>
                 <p style={{ margin: '4px 0 0 0', fontSize: '0.9rem', color: 'hsl(var(--text-secondary))' }}>
-                  Отметьте галочками сотрудников, которых нужно добавить или обновить в системе Pulse 12
+                  Отметьте галочками сотрудников, которых нужно добавить или обновить в системе Pulse
                 </p>
               </div>
 
