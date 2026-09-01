@@ -1,7 +1,7 @@
-export const initialUsers = [
+﻿export const initialUsers = [
   {
     id: 'usr-1',
-    name: 'Александр Громов',
+    name: 'РђР»РµРєСЃР°РЅРґСЂ Р“СЂРѕРјРѕРІ',
     login: process.env.ADMIN_LOGIN || 'admin',
     // Default password is 'cortis1234'
     password: process.env.ADMIN_PASSWORD_HASH || '$2a$10$jm9p1H3ipWidxF9fxD3BJO4v3Da73u8wQ71jRj9yORHcfBAR/jTiO',
