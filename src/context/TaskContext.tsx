@@ -53,7 +53,6 @@ interface TaskContextType {
   promoteFindingToTask: (id: string, assigneeId?: string, sprintId?: string, priority?: string) => Promise<any>;
   addApiKey: (name: string, source?: string, allowedDepartments?: string[]) => Promise<ApiKeySettings>;
   deleteApiKey: (id: string) => void;
-  resetToDefault: () => void;
   exportData: () => void;
   importData: (jsonData: string) => boolean;
 }
@@ -656,18 +655,6 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     apiService.deleteUser(id, permanent).catch(e => console.error(e));
   };
-
-  const resetToDefault = () => {
-    if (window.confirm('Вы уверены, что хотите сбросить все данные к исходным демонстрационным?')) {
-      setTasks(mockTasks);
-      setSprints(mockSprints);
-      setUsers(mockUsers);
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem(USERS_STORAGE_KEY);
-      apiService.resetDatabase().catch(e => console.error(e));
-    }
-  };
-
   const exportData = () => {
     const dataStr = JSON.stringify({ tasks, sprints, users, exportDate: new Date().toISOString() }, null, 2);
     const blob = new Blob([dataStr], { type: 'application/json' });
@@ -860,7 +847,6 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setApiKeys(prev => prev.filter(k => k.id !== id));
         apiService.deleteApiKey(id).catch(e => console.error(e));
       },
-      resetToDefault,
       exportData,
       importData
     }}>
