@@ -12,7 +12,11 @@ export const FortigateSettingsTab: React.FC = () => {
     unbanUrl: '',
     apiToken: '',
     banDurationDays: 90,
-    addressGroup: ''
+    addressGroup: '',
+    tempGroups: ['Pulse_Temp_1', 'Pulse_Temp_2', 'Pulse_Temp_3'],
+    permGroup: 'Pulse_Perm',
+    maxPerGroup: 600,
+    groupCapacities: {} as Record<string, number>
   });
 
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
