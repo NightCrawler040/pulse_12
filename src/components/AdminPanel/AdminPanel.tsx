@@ -682,7 +682,7 @@ export const AdminPanel: React.FC = () => {
               <div style={{ marginTop: '6px' }}><strong>🔑 Заголовок авторизации:</strong> <code>X-API-Key: &lt;ВАШ_СГЕНЕРИРОВАННЫЙ_КЛЮЧ&gt;</code></div>
               <div style={{ marginTop: '6px', color: 'hsl(var(--text-secondary))' }}>
                 <em>Пример cURL запроса для проверки DerScanner:</em><br />
-                <code>{`curl -X POST http://localhost:3001/api/v1/webhooks/derscanner -H "X-API-Key: ds-live-8f92a4c17e3b9012d45a" -H "Content-Type: application/json" -d '{"source":"derscanner","title":"SQL Injection in LoginController","severity":"Critical","project":"Pulse12 Corporate","fileLocation":"AuthController.java:142","cwe":"CWE-89"}'`}</code>
+                <code>{`curl -X POST https://localhost/api/v1/webhooks/derscanner -H "X-API-Key: ds-live-8f92a4c17e3b9012d45a" -H "Content-Type: application/json" -d '{"source":"derscanner","title":"SQL Injection in LoginController","severity":"Critical","project":"Pulse12 Corporate","fileLocation":"AuthController.java:142","cwe":"CWE-89"}'`}</code>
               </div>
             </div>
             <div style={{
