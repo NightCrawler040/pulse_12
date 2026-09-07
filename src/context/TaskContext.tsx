@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import type { Task, User, Column, Sprint, FilterState, ViewMode, Status, Comment, Group, NotificationItem, ExternalFinding, ApiKeySettings } from '../types';
-import { mockUsers, mockColumns, mockSprints, mockTasks } from '../data/mockData';
+import { mockColumns } from '../data/mockData';
 import { apiService, getSocket } from '../services/api';
 
 interface TaskContextType {
