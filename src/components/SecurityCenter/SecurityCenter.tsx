@@ -17,6 +17,7 @@ import {
   Bug
 } from 'lucide-react';
 import './SecurityCenter.css';
+import { FortigateTable } from './FortigateTable';
 
 export const SecurityCenter: React.FC = () => {
   const { 
@@ -34,7 +35,7 @@ export const SecurityCenter: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('active');
   const [severityFilter, setSeverityFilter] = useState<string>('all');
-  const [systemTab, setSystemTab] = useState<'all' | 'derscanner' | 'siem' | 'waf'>('all');
+  const [systemTab, setSystemTab] = useState<'all' | 'derscanner' | 'fortigate'>('all');
 
   const canAccessSystem = (source: string) => {
     if (isAdmin || !currentUser) return true;
@@ -42,12 +43,7 @@ export const SecurityCenter: React.FC = () => {
     if (source === 'derscanner') {
       return ['Engineering', 'Security', 'QA Engineering', 'Product & Agile', 'Инженерный', 'Разработка', 'Кибербезопасность'].some(d => userDept.includes(d) || d.includes(userDept));
     }
-    if (source === 'siem') {
-      return ['Security', 'DevOps', 'Engineering', 'Кибербезопасность', 'Инженерный'].some(d => userDept.includes(d) || d.includes(userDept));
-    }
-    if (source === 'waf') {
-      return ['Security', 'DevOps', 'Infrastructure', 'Кибербезопасность'].some(d => userDept.includes(d) || d.includes(userDept));
-    }
+    
     return true;
   };
 
@@ -208,21 +204,13 @@ export const SecurityCenter: React.FC = () => {
           {!canAccessSystem('derscanner') && <span title="Ограничен по отделу">🔒</span>}
         </button>
         <button
-          className={`filter-btn ${systemTab === 'siem' ? 'active' : ''}`}
-          onClick={() => setSystemTab('siem')}
-          style={{ background: systemTab === 'siem' ? '#3b82f6' : undefined, color: systemTab === 'siem' ? 'white' : undefined, display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
+          className={`filter-btn ${systemTab === 'fortigate' ? 'active' : ''}`}
+          onClick={() => setSystemTab('fortigate')}
+          style={{ background: systemTab === 'fortigate' ? '#10b981' : undefined, color: systemTab === 'fortigate' ? 'white' : undefined, display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
         >
-          🚨 SIEM Monitor ({accessibleFindings.filter(f => f.source === 'siem').length})
-          {!canAccessSystem('siem') && <span title="Ограничен по отделу">🔒</span>}
+          <ShieldAlert size={16} /> Индикаторы FortiGate
         </button>
-        <button
-          className={`filter-btn ${systemTab === 'waf' ? 'active' : ''}`}
-          onClick={() => setSystemTab('waf')}
-          style={{ background: systemTab === 'waf' ? '#f97316' : undefined, color: systemTab === 'waf' ? 'white' : undefined, display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
-        >
-          🔥 WAF Gateway ({accessibleFindings.filter(f => f.source === 'waf').length})
-          {!canAccessSystem('waf') && <span title="Ограничен по отделу">🔒</span>}
-        </button>
+
       </div>
 
       {/* Filters & Search */}
@@ -304,7 +292,7 @@ export const SecurityCenter: React.FC = () => {
             Права доступа к внешним сканерам и алертам безопасности настраиваются Администратором в разделе <strong>«⚙️ Панель Администратора &gt; 🔌 Интеграции & API-ключи»</strong>.
           </p>
         </div>
-      ) : (
+      ) : systemTab === "fortigate" ? <FortigateTable /> : (
       <div className="findings-list">
         {filteredFindings.map(finding => (
           <div key={finding.id} className={`finding-card severity-${finding.severity}`}>
