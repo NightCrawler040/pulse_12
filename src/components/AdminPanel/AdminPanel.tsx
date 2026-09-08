@@ -678,7 +678,7 @@ export const AdminPanel: React.FC = () => {
               lineHeight: '1.5',
               wordBreak: 'break-all'
             }}>
-              <div><strong>🌐 Webhook Endpoint URL:</strong> <code>http://&lt;IP-ВАШЕГО-СЕРВЕРА&gt;:3001/api/v1/webhooks/derscanner</code></div>
+              <div><strong>🌐 Webhook Endpoint URL:</strong> <code>https://&lt;IP-ВАШЕГО-СЕРВЕРА&gt;</code></div>
               <div style={{ marginTop: '6px' }}><strong>🔑 Заголовок авторизации:</strong> <code>X-API-Key: &lt;ВАШ_СГЕНЕРИРОВАННЫЙ_КЛЮЧ&gt;</code></div>
               <div style={{ marginTop: '6px', color: 'hsl(var(--text-secondary))' }}>
                 <em>Пример cURL запроса для проверки DerScanner:</em><br />
@@ -702,7 +702,7 @@ export const AdminPanel: React.FC = () => {
                 При интеграции внешнего сканера (DerScanner / SIEM) через настройки подключения из скриншота укажите параметры:
               </span>
               <ul style={{ margin: '8px 0 0 20px', padding: 0 }}>
-                <li style={{ marginBottom: '4px' }}><strong>URL сервера (Jira / Webhook):</strong> <code>http://&lt;IP-ВАШЕГО-СЕРВЕРА&gt;:3001/api/v1/webhooks/derscanner</code></li>
+                <li style={{ marginBottom: '4px' }}><strong>URL сервера (Jira / Webhook):</strong> <code>https://&lt;IP-ВАШЕГО-СЕРВЕРА&gt;</code></li>
                 <li style={{ marginBottom: '4px' }}><strong>Логин Jira (или Токен доступа):</strong> вставьте сгенерированный ключ <code>ds-live-...</code> (или передавайте в заголовке <code>X-API-Key</code>)</li>
                 <li><strong>Пароль Jira:</strong> можно указать <code>webhook-token</code> (или оставить пустым, если система разрешает)</li>
               </ul>
