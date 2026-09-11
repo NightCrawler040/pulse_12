@@ -66,6 +66,7 @@ export interface User {
   roleType?: 'admin' | 'manager' | 'member';
   pin?: string;
   isActive?: boolean;
+  workspaceIds?: string[];
   isOnline?: boolean;
 }
 

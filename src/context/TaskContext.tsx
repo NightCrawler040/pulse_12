@@ -5,6 +5,8 @@ import { apiService, getSocket } from '../services/api';
 
 interface TaskContextType {
   workspaces: Workspace[];
+  activeWorkspaceId: string | null;
+  setActiveWorkspaceId: (id: string | null) => void;
   addWorkspace: (ws: Omit<Workspace, 'id' | 'createdAt'>) => void;
   updateWorkspace: (id: string, updates: Partial<Workspace>) => void;
   deleteWorkspace: (id: string) => void;
@@ -126,6 +128,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [findings, setFindings] = useState<ExternalFinding[]>([]);
   const [apiKeys, setApiKeys] = useState<ApiKeySettings[]>([]);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
   const [activeSprintId, setActiveSprintId] = useState<string>('all');
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
   const [viewMode, setViewModeState] = useState<ViewMode>(() => {
@@ -765,6 +768,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return (
     <TaskContext.Provider value={{
+      activeWorkspaceId,
+      setActiveWorkspaceId,
       workspaces,
       
       tasks,

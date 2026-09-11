@@ -512,8 +512,26 @@ app.post('/api/login', loginRateLimiter, async (req, res) => {
           };
           dbData.users.push(user);
         }
+          // --- STEP 4: AUTO WORKSPACE MAPPING ---
+          if (!user.workspaceIds) user.workspaceIds = [];
+          if (user.department && dbData.workspaces) {
+            const matchingWorkspaces = dbData.workspaces.filter(ws => 
+              ws.adGroup && ws.adGroup.toLowerCase() === user.department.toLowerCase()
+            );
+            matchingWorkspaces.forEach(ws => {
+              if (!user.workspaceIds.includes(ws.id)) {
+                user.workspaceIds.push(ws.id);
+                console.log(`[LDAP Sync] Auto-assigned ${user.login} to workspace ${ws.name}`);
+              }
+            });
+          }
+          if (user.workspaceIds.length === 0 && dbData.workspaces && dbData.workspaces.find(w => w.id === 'WS-1')) {
+             if (!user.workspaceIds.includes('WS-1')) user.workspaceIds.push('WS-1');
+          }
+          // ---------------------------------------
 
-        await saveCollection('users', dbData.users);
+          await saveCollection('users', dbData.users);
+
         broadcastUpdate('users');
         console.log(`✅ [LDAP Auth] Пользователь AD "${user.login}" (${user.email}) успешно авторизован и сохранен в системе!`);
       }
