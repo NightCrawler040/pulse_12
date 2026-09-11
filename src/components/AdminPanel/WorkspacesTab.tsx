@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useTaskContext } from '../../context/TaskContext';
-import { Workspace } from '../../types';
+import type { Workspace } from '../../types';
 
 export const WorkspacesTab: React.FC = () => {
-  const { workspaces, users, addWorkspace, updateWorkspace, deleteWorkspace, groups } = useTaskContext();
+  const { workspaces, users, addWorkspace, updateWorkspace, deleteWorkspace } = useTaskContext();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingWs, setEditingWs] = useState<Workspace | null>(null);

@@ -294,6 +294,12 @@ export const AdminPanel: React.FC = () => {
           </p>
           <div className="admin-tabs">
             <button
+              className={`admin-tab-btn ${activeTab === 'workspaces' ? 'active' : ''}`}
+              onClick={() => setActiveTab('workspaces')}
+            >
+              📂 Рабочие пространства
+            </button>
+            <button
               className={`admin-tab-btn ${activeTab === 'users' ? 'active' : ''}`}
               onClick={() => setActiveTab('users')}
             >
@@ -332,6 +338,7 @@ export const AdminPanel: React.FC = () => {
           </div>
         </div>
 
+        {activeTab === 'workspaces' && <WorkspacesTab />}
         {activeTab === 'users' ? (
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
             <button
