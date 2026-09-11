@@ -4,6 +4,10 @@ import { mockColumns } from '../data/mockData';
 import { apiService, getSocket } from '../services/api';
 
 interface TaskContextType {
+  workspaces: Workspace[];
+  addWorkspace: (ws: Omit<Workspace, 'id' | 'createdAt'>) => void;
+  updateWorkspace: (id: string, updates: Partial<Workspace>) => void;
+  deleteWorkspace: (id: string) => void;
   tasks: Task[];
   users: User[];
   groups: Group[];
