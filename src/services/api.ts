@@ -1,5 +1,5 @@
 import { io, Socket } from 'socket.io-client';
-import type { Task, Sprint, User, Group, NotificationItem, ExternalFinding, ApiKeySettings } from '../types';
+import type { Task, Sprint, User, Group, NotificationItem, ExternalFinding, ApiKeySettings, Workspace } from '../types';
 
 const SERVER_URL_KEY = 'PULSE12_SERVER_URL';
 
@@ -89,6 +89,7 @@ export interface DatabaseData {
   notifications?: NotificationItem[];
   findings?: ExternalFinding[];
   api_keys?: ApiKeySettings[];
+  workspaces?: Workspace[];
 }
 
 export const apiService = {
