@@ -84,7 +84,7 @@ export const WorkspacesTab: React.FC = () => {
                 <tr key={ws.id}>
                   <td style={{ fontFamily: 'monospace' }}>{ws.id}</td>
                   <td><strong>{ws.name}</strong></td>
-                  <td>{owner ? \`\${owner.name} (\${owner.login})\` : 'Не назначен'}</td>
+                  <td>{owner ? owner.name + ' (' + owner.login + ')' : 'Не назначен'}</td>
                   <td><span className="badge badge-outline">{ws.adGroup || '—'}</span></td>
                   <td>
                     <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
