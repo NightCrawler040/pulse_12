@@ -56,27 +56,28 @@ export const WorkspacesTab: React.FC = () => {
   };
 
   return (
-    <div className="admin-tab-content active">
-      <div className="tab-header">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2>Управление Пространствами (Workspaces)</h2>
-          <p className="tab-description">Изолированные рабочие области для департаментов</p>
+          <h2 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', color: 'hsl(var(--text-primary))' }}>Управление Пространствами (Workspaces)</h2>
+          <p style={{ margin: 0, color: 'hsl(var(--text-secondary))', fontSize: '0.9rem' }}>Изолированные рабочие области для департаментов</p>
         </div>
-        <button className="primary-button" onClick={handleOpenAdd}>+ Создать Workspace</button>
+        <button className="btn-primary" onClick={handleOpenAdd}>+ Создать Workspace</button>
       </div>
 
-      <div className="table-container">
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Название</th>
-              <th>Владелец (Admin)</th>
-              <th>Группа AD</th>
-              <th>Включенные Модули</th>
-              <th>Действия</th>
-            </tr>
-          </thead>
+      <div className="admin-table-card">
+        <div className="table-responsive-wrapper">
+          <table className="users-admin-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Название</th>
+                <th>Владелец (Admin)</th>
+                <th>Группа AD</th>
+                <th>Включенные Модули</th>
+                <th style={{ textAlign: 'right' }}>Действия</th>
+              </tr>
+            </thead>
           <tbody>
             {workspaces.map(ws => {
               const owner = users.find(u => u.id === ws.ownerId);
@@ -93,20 +94,21 @@ export const WorkspacesTab: React.FC = () => {
                       {ws.enabledModules?.includes('integrations') && <span className="badge badge-purple">Интеграции</span>}
                     </div>
                   </td>
-                  <td>
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      <button className="icon-button edit" onClick={() => handleOpenEdit(ws)} title="Редактировать">✏️</button>
-                      <button className="icon-button delete" onClick={() => handleDelete(ws.id)} title="Удалить">🗑️</button>
+                  <td style={{ textAlign: 'right' }}>
+                    <div className="action-buttons-row" style={{ justifyItems: 'end', justifyContent: 'flex-end' }}>
+                      <button className="btn-icon-mini" onClick={() => handleOpenEdit(ws)} title="Редактировать">✏️</button>
+                      <button className="btn-icon-mini text-danger" onClick={() => handleDelete(ws.id)} title="Удалить">🗑️</button>
                     </div>
                   </td>
                 </tr>
               );
             })}
             {workspaces.length === 0 && (
-              <tr><td colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>Нет созданных пространств</td></tr>
+              <tr><td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'hsl(var(--text-secondary))' }}>Нет созданных пространств</td></tr>
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {isModalOpen && (
