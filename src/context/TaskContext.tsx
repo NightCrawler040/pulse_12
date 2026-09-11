@@ -765,6 +765,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return (
     <TaskContext.Provider value={{
+      workspaces,
+      
       tasks,
       users,
       groups,
@@ -835,6 +837,24 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.error('Failed to promote finding to task:', e);
           throw e;
         }
+      },
+      addWorkspace: async (ws) => {
+        try {
+          const res = await fetch('/api/workspaces', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-user': 'usr-1' }, body: JSON.stringify(ws) });
+          if (res.ok) { const data = await res.json(); setWorkspaces(prev => [...prev, data]); }
+        } catch (e) { console.error(e); }
+      },
+      updateWorkspace: async (id, updates) => {
+        try {
+          const res = await fetch(`/api/workspaces/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'x-auth-user': 'usr-1' }, body: JSON.stringify(updates) });
+          if (res.ok) { setWorkspaces(prev => prev.map(w => w.id === id ? { ...w, ...updates } : w)); }
+        } catch (e) { console.error(e); }
+      },
+      deleteWorkspace: async (id) => {
+        try {
+          const res = await fetch(`/api/workspaces/${id}`, { method: 'DELETE', headers: { 'x-auth-user': 'usr-1' } });
+          if (res.ok) { setWorkspaces(prev => prev.filter(w => w.id !== id)); }
+        } catch (e) { console.error(e); }
       },
       addApiKey: async (name, source, allowedDepartments) => {
         try {
