@@ -186,7 +186,7 @@ const sanitizeLdapSettings = (settings) => {
 
 const getSanitizedDbData = () => {
   // Ensure workspaces exists
-  if (!dbData.workspaces) {
+  if (!dbData.workspaces || dbData.workspaces.length === 0) {
     dbData.workspaces = [
       {
         id: 'WS-1',
@@ -197,6 +197,7 @@ const getSanitizedDbData = () => {
         createdAt: new Date().toISOString()
       }
     ];
+    saveCollection('workspaces', dbData.workspaces).catch(e => console.error('Failed to save initial workspaces', e));
   }
   
   // Migrate tasks
