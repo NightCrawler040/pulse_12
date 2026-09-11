@@ -550,6 +550,33 @@ app.post('/api/login', loginRateLimiter, async (req, res) => {
 });
 
 // Create task
+
+// --- WORKSPACES API ---
+app.post('/api/workspaces', requireAdmin, (req, res) => {
+  const newWs = {
+    ...req.body,
+    id: `WS-${Date.now()}`,
+    createdAt: new Date().toISOString()
+  };
+  if (!dbData.workspaces) dbData.workspaces = [];
+  dbData.workspaces.push(newWs);
+  broadcastUpdate('workspaces');
+  res.status(201).json(newWs);
+});
+app.put('/api/workspaces/:id', requireAdmin, (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+  dbData.workspaces = dbData.workspaces.map(w => w.id === id ? { ...w, ...updates } : w);
+  broadcastUpdate('workspaces');
+  res.json({ success: true });
+});
+app.delete('/api/workspaces/:id', requireAdmin, (req, res) => {
+  const { id } = req.params;
+  dbData.workspaces = dbData.workspaces.filter(w => w.id !== id);
+  broadcastUpdate('workspaces');
+  res.json({ success: true });
+});
+
 app.post('/api/tasks', requireAuth, (req, res) => {
   const newTaskData = req.body;
   const newId = newTaskData.id || `NEX-${Math.floor(100 + Math.random() * 900)}`;

@@ -6,6 +6,7 @@ import { apiService } from '../../services/api';
 import { LdapSettingsTab } from './LdapSettingsTab';
 import { MailSettingsTab } from './MailSettingsTab';
 import { FortigateSettingsTab } from './FortigateSettingsTab';
+import { WorkspacesTab } from './WorkspacesTab';
 import './AdminPanel.css';
 
 export const AdminPanel: React.FC = () => {
@@ -14,7 +15,7 @@ export const AdminPanel: React.FC = () => {
   const isProtectedAdmin = (u: User) => u.id === 'usr-1' || u.login?.toLowerCase() === 'admin';
   const employeeUsers = users.filter(u => !isProtectedAdmin(u));
 
-  const [activeTab, setActiveTab] = useState<'users' | 'groups' | 'integrations' | 'ldap' | 'mail' | 'fortigate'>('users');
+  const [activeTab, setActiveTab] = useState<'workspaces' | 'users' | 'groups' | 'integrations' | 'ldap' | 'mail' | 'fortigate'>('workspaces');
   const [newKeyName, setNewKeyName] = useState('');
   const [newKeySource, setNewKeySource] = useState<'derscanner' | 'siem' | 'custom'>('derscanner');
   const [newKeyAllowedDepts, setNewKeyAllowedDepts] = useState<string[]>(['all']);

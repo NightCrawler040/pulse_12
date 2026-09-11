@@ -138,3 +138,12 @@ export interface ApiKeySettings {
   lastUsedAt?: string | null;
   allowedDepartments?: string[];
 }
+
+export interface Workspace {
+  id: string;
+  name: string;
+  ownerId: string;
+  adGroup: string;
+  enabledModules: string[];
+  createdAt: string;
+}

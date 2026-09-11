@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import type { Task, User, Column, Sprint, FilterState, ViewMode, Status, Comment, Group, NotificationItem, ExternalFinding, ApiKeySettings } from '../types';
+import type { Task, User, Column, Sprint, FilterState, ViewMode, Status, Comment, Group, NotificationItem, ExternalFinding, ApiKeySettings , Workspace } from '../types';
 import { mockColumns } from '../data/mockData';
 import { apiService, getSocket } from '../services/api';
 
@@ -121,6 +121,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isNetworkModalOpen, setIsNetworkModalOpen] = useState<boolean>(false);
   const [findings, setFindings] = useState<ExternalFinding[]>([]);
   const [apiKeys, setApiKeys] = useState<ApiKeySettings[]>([]);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [activeSprintId, setActiveSprintId] = useState<string>('all');
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
   const [viewMode, setViewModeState] = useState<ViewMode>(() => {
