@@ -299,7 +299,7 @@ export const fetchLdapUsers = async (settings) => {
             let login = getVal(loginAttr) || getVal('sAMAccountName') || getVal('userPrincipalName');
             let email = getVal(emailAttr) || getVal('mail') || getVal('userPrincipalName');
             let name = getVal(nameAttr) || getVal('displayName') || getVal('cn');
-            let department = getVal(deptAttr) || getVal('department') || 'Корпоративный отдел';
+            let department = getVal(deptAttr) || getVal('department') || 'Отдел не указан';
 
             // --- АВТОМАТИЧЕСКАЯ ФИЛЬТРАЦИЯ СИСТЕМ И КОМПЬЮТЕРОВ (ОСТАВЛЯЕМ ТОЛЬКО ЛЮДЕЙ!) ---
             // 1. Если sAMAccountName или логин заканчивается на $ (например, WEB-01$ или KRBTGT$) — это компьютер или сервис!
@@ -420,7 +420,7 @@ export const reconcileAndSaveLdapUsers = async (dbData, saveCollection, adUsers,
         login: adUser.login || (adUser.email ? adUser.email.split('@')[0] : `user_${Date.now()}`),
         email: adUser.email || `${adUser.login || 'user'}@${settings.domainName || 'enpf.kz'}`,
         name: adUser.name || adUser.login || adUser.email,
-        department: adUser.department || 'Корпоративный отдел',
+        department: adUser.department || 'Отдел не указан',
         role: 'Сотрудник',
         roleType: 'member',
         authSource: 'LDAP',
@@ -561,7 +561,7 @@ export const authenticateLdapUser = (loginInput, passwordInput, settings = {}) =
             login: cleanLogin.split('@')[0],
             email: tryUpn,
             name: cleanLogin.split('@')[0],
-            department: 'Корпоративный отдел',
+            department: 'Отдел не указан',
             authSource: 'LDAP'
           });
         }
@@ -575,7 +575,7 @@ export const authenticateLdapUser = (loginInput, passwordInput, settings = {}) =
               login: cleanLogin.split('@')[0],
               email: tryUpn,
               name: cleanLogin.split('@')[0],
-              department: 'Корпоративный отдел',
+              department: 'Отдел не указан',
               authSource: 'LDAP'
             });
           }
@@ -670,7 +670,7 @@ export const authenticateLdapUser = (loginInput, passwordInput, settings = {}) =
           const email = getVal(emailAttr) || getVal('mail') || getVal('userPrincipalName') || tryUpn;
           const login = getVal('sAMAccountName') || getVal(loginAttr) || cleanLogin.split('@')[0];
           const name = getVal(nameAttr) || getVal('displayName') || getVal('cn') || login;
-          const department = getVal(deptAttr) || getVal('department') || 'Корпоративный отдел';
+          const department = getVal(deptAttr) || getVal('department') || 'Отдел не указан';
 
           const userClient = createLdapClient(settings);
           userClient.on('error', () => {});

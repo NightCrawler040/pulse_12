@@ -502,7 +502,7 @@ app.post('/api/login', loginRateLimiter, async (req, res) => {
             login: ldapUser.login,
             email: ldapUser.email,
             name: ldapUser.name || ldapUser.login,
-            department: ldapUser.department || 'Корпоративный отдел',
+            department: ldapUser.department || 'Отдел не указан',
             role: isAdminUser ? 'Администратор' : 'Сотрудник',
             roleType: isAdminUser ? 'admin' : 'member',
             authSource: 'LDAP',
