@@ -2,7 +2,7 @@ import pg from 'pg';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { initialUsers, initialSprints, initialTasks, initialGroups, initialFindings, initialApiKeys } from './initialData.js';
+import { initialUsers, initialSprints, initialTasks, initialGroups, initialFindings, initialApiKeys, initialWorkspaces } from './initialData.js';
 
 const { Pool } = pg;
 const __filename = fileURLToPath(import.meta.url);
@@ -103,6 +103,7 @@ const loadLocalFile = () => {
     sprints: initialSprints,
     users: initialUsers,
     groups: initialGroups,
+    workspaces: initialWorkspaces,
     notifications: [],
     findings: initialFindings,
     api_keys: initialApiKeys,
@@ -162,6 +163,7 @@ export const initDb = async () => {
       await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['sprints', JSON.stringify(initialSprints)]);
       await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['users', JSON.stringify(initialUsers)]);
       await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['groups', JSON.stringify(initialGroups)]);
+      await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['workspaces', JSON.stringify(initialWorkspaces)]);
       await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['notifications', JSON.stringify([])]);
       await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['findings', JSON.stringify(initialFindings)]);
       await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['api_keys', JSON.stringify(initialApiKeys)]);
@@ -181,6 +183,7 @@ export const initDb = async () => {
         sprints: allPgData.sprints || [],
         users: allPgData.users || [],
         groups: allPgData.groups || [],
+        workspaces: allPgData.workspaces || [],
         notifications: allPgData.notifications || [],
         findings: allPgData.findings || [],
         api_keys: allPgData.api_keys || [],

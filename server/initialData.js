@@ -23,3 +23,14 @@ export const initialGroups = [];
 export const initialFindings = [];
 
 export const initialApiKeys = [];
+
+export const initialWorkspaces = [
+  {
+    id: 'WS-1',
+    name: 'Security & Engineering',
+    ownerId: 'usr-1',
+    adGroup: 'Engineering',
+    enabledModules: ['kanban', 'security_center', 'integrations'],
+    createdAt: new Date().toISOString()
+  }
+];
