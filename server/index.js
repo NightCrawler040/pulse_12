@@ -979,7 +979,6 @@ app.get('/api/fortigate/settings', requireAuth, (req, res) => {
       apiToken: settings.apiToken ? '********' : ''
     });
   });
-});
 
 app.post('/api/fortigate/settings', requireAuth, async (req, res) => {
     if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin') {
@@ -989,7 +988,7 @@ app.post('/api/fortigate/settings', requireAuth, async (req, res) => {
     if (!dbData.fortigateSettings) dbData.fortigateSettings = {};
     
     const current = workspaceId ? (dbData.fortigateSettings[workspaceId] || {}) : (dbData.fortigateSettings || {});
-    const isMaskedOrEmpty = updates.apiToken === '********' || updates.apiToken === '••••••••' || (/^[•*]+$/.test(updates.apiToken || '')) || (!updates.apiToken && current.apiToken);
+    const isMaskedOrEmpty = updates.apiToken === '********' || updates.apiToken === '••••••••' || (/^[•\\*]+$/.test(updates.apiToken || '')) || (!updates.apiToken && current.apiToken);
     const apiToken = isMaskedOrEmpty ? current.apiToken : updates.apiToken;
   
     if (workspaceId) {
@@ -1001,21 +1000,6 @@ app.post('/api/fortigate/settings', requireAuth, async (req, res) => {
     const updatedSettings = workspaceId ? dbData.fortigateSettings[workspaceId] : dbData.fortigateSettings;
     res.json({ success: true, settings: { ...updatedSettings, apiToken: updatedSettings.apiToken ? '********' : '' } });
   });
-  }
-  const updates = req.body || {};
-  const current = dbData.fortigateSettings || {};
-  
-  const isMaskedOrEmpty = updates.apiToken === '********' || updates.apiToken === '••••••••' || (/^[•\*]+$/.test(updates.apiToken || '')) || (!updates.apiToken && current.apiToken);
-  const apiToken = isMaskedOrEmpty ? current.apiToken : updates.apiToken;
-
-  dbData.fortigateSettings = {
-    ...current,
-    ...updates,
-    apiToken
-  };
-  await saveCollection('fortigateSettings', dbData.fortigateSettings);
-  res.json({ success: true, settings: { ...dbData.fortigateSettings, apiToken: dbData.fortigateSettings.apiToken ? '********' : '' } });
-});
 
 app.post('/api/fortigate/test', requireAuth, async (req, res) => {
     if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin') {
@@ -1343,7 +1327,7 @@ app.get('/api/api-keys', requireAuth, (req, res) => {
 
 // Сгенерировать новый API-ключ для внешней системы
 app.post('/api/api-keys', requireAuth, (req, res) => {
-  const { name, source,\n      workspaceId: matchedKey ? matchedKey.workspaceId : null, workspaceId } = req.body;
+  const { name, source, workspaceId } = req.body;
   if (!name) {
     return res.status(400).json({ error: 'Укажите название интеграции / ключа' });
   }
@@ -1354,7 +1338,7 @@ app.post('/api/api-keys', requireAuth, (req, res) => {
     name: name.trim(),
     key: `${srcPrefix}live-${randomHex}`,
     source: source || 'custom',
-    allowedDepartments: Array.isArray(allowedDepartments) && allowedDepartments.length ? allowedDepartments : ['all'],
+    workspaceId: workspaceId || null,
     createdAt: new Date().toISOString(),
     lastUsedAt: null
   };
@@ -1783,9 +1767,12 @@ const handleJiraCreateMeta = (req, res) => {
 };
 
 const handleJiraCreateIssue = (req, res) => {
+  const token = extractTokenFromRequest(req);
+  const matchedKey = dbData.api_keys?.find(k => k.key === token || k.name === token);
+  
   const fields = (req.body && req.body.fields) || req.body || {};
   const summary = fields.summary || fields.title || "DerScanner Security Finding";
-  const description = fields.description || "Уязвимость, обнаруженная сканером DerScanner";
+  const description = fields.description || "Уязвимость, обнаруженная через шлюз DerScanner";
   const priorityName = fields.priority && (fields.priority.name || fields.priority.id) ? fields.priority.name : "High";
   const projectKey = fields.project && (fields.project.key || fields.project.id) ? fields.project.key : "PULSE";
   const assigneeVal = fields.assignee && (fields.assignee.name || fields.assignee.key || fields.assignee.id || fields.assignee.displayName) ? (fields.assignee.name || fields.assignee.key || fields.assignee.id || fields.assignee.displayName) : "admin";
@@ -1795,6 +1782,7 @@ const handleJiraCreateIssue = (req, res) => {
   const newFinding = {
     id: newId,
     source: 'derscanner',
+    workspaceId: matchedKey ? matchedKey.workspaceId : null,
     title: String(summary).trim(),
     description: typeof description === 'string' ? description : JSON.stringify(description),
     severity: ['Highest', 'Critical', '1'].includes(String(priorityName)) ? 'Critical' : ['High', '2'].includes(String(priorityName)) ? 'High' : 'Medium',
