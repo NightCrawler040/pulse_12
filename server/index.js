@@ -622,6 +622,19 @@ app.post('/api/tasks', requireAuth, (req, res) => {
 app.put('/api/tasks/:id', requireAuth, (req, res) => {
   const { id } = req.params;
   const updates = req.body;
+  
+  const existingTask = (dbData.tasks || []).find(t => t.id === id);
+  if (!existingTask) {
+    return res.status(404).json({ error: 'Задача не найдена' });
+  }
+
+  // IDOR Protection: Only admin, creator, or assignee can edit the task
+  if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin' && 
+      existingTask.creatorId !== req.currentUser?.id && 
+      existingTask.assigneeId !== req.currentUser?.id) {
+    return res.status(403).json({ error: 'Доступ запрещен: Вы не являетесь создателем или исполнителем данной задачи' });
+  }
+
   let found = false;
   dbData.tasks = dbData.tasks.map(t => {
     if (t.id === id) {
@@ -651,6 +664,16 @@ app.put('/api/tasks/:id', requireAuth, (req, res) => {
 // Delete task
 app.delete('/api/tasks/:id', requireAuth, (req, res) => {
   const { id } = req.params;
+  
+  const existingTask = (dbData.tasks || []).find(t => t.id === id);
+  if (existingTask) {
+    // IDOR Protection: Only admin or creator can delete the task
+    if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin' && 
+        existingTask.creatorId !== req.currentUser?.id) {
+      return res.status(403).json({ error: 'Доступ запрещен: Вы не можете удалить чужую задачу' });
+    }
+  }
+
   dbData.tasks = dbData.tasks.filter(t => t.id !== id);
   broadcastUpdate('tasks');
   res.json({ success: true });
@@ -781,7 +804,7 @@ app.get('/api/groups', requireAuth, (req, res) => {
   res.json(dbData.groups || []);
 });
 
-app.post('/api/groups', requireAuth, (req, res) => {
+app.post('/api/groups', requireAdmin, (req, res) => {
   const groupData = req.body;
   const newId = `grp-${Date.now()}`;
   const newGroup = {
@@ -795,7 +818,7 @@ app.post('/api/groups', requireAuth, (req, res) => {
   res.status(201).json(newGroup);
 });
 
-app.put('/api/groups/:id', requireAuth, (req, res) => {
+app.put('/api/groups/:id', requireAdmin, (req, res) => {
   const { id } = req.params;
   const updates = req.body;
   if (!dbData.groups) dbData.groups = [];
@@ -809,7 +832,7 @@ app.put('/api/groups/:id', requireAuth, (req, res) => {
   res.json({ success: true });
 });
 
-app.delete('/api/groups/:id', requireAuth, (req, res) => {
+app.delete('/api/groups/:id', requireAdmin, (req, res) => {
   const { id } = req.params;
   if (!dbData.groups) dbData.groups = [];
   dbData.groups = dbData.groups.filter(g => g.id !== id);
@@ -818,7 +841,7 @@ app.delete('/api/groups/:id', requireAuth, (req, res) => {
 });
 
 // Sprints CRUD
-app.post('/api/sprints', requireAuth, (req, res) => {
+app.post('/api/sprints', requireAdmin, (req, res) => {
   const sprintData = req.body;
   const newId = sprintData.id || `sprint-${Date.now()}`;
   const newSprint = {
@@ -832,7 +855,7 @@ app.post('/api/sprints', requireAuth, (req, res) => {
   res.status(201).json(newSprint);
 });
 
-app.put('/api/sprints/:id', requireAuth, (req, res) => {
+app.put('/api/sprints/:id', requireAdmin, (req, res) => {
   const { id } = req.params;
   const updates = req.body;
   if (!dbData.sprints) dbData.sprints = [];
@@ -846,7 +869,7 @@ app.put('/api/sprints/:id', requireAuth, (req, res) => {
   res.json({ success: true });
 });
 
-app.delete('/api/sprints/:id', requireAuth, (req, res) => {
+app.delete('/api/sprints/:id', requireAdmin, (req, res) => {
   const { id } = req.params;
   if (!dbData.sprints) dbData.sprints = [];
   dbData.sprints = dbData.sprints.filter(s => s.id !== id);
@@ -973,7 +996,7 @@ app.post('/api/import', requireAdmin, (req, res) => {
 });
 
 // --- FORTIGATE API ENDPOINTS ---
-app.get('/api/fortigate/settings', requireAuth, (req, res) => {
+app.get('/api/fortigate/settings', requireAdmin, (req, res) => {
     const { workspaceId } = req.query;
     if (!dbData.fortigateSettings) dbData.fortigateSettings = {};
     const settings = workspaceId ? (dbData.fortigateSettings[workspaceId] || {}) : (dbData.fortigateSettings || {});
@@ -983,10 +1006,8 @@ app.get('/api/fortigate/settings', requireAuth, (req, res) => {
     });
   });
 
-app.post('/api/fortigate/settings', requireAuth, async (req, res) => {
-    if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin') {
-      return res.status(403).json({ error: 'Доступ запрещен' });
-    }
+app.post('/api/fortigate/settings', requireAdmin, async (req, res) => {
+    
     const { workspaceId, ...updates } = req.body || {};
     if (!dbData.fortigateSettings) dbData.fortigateSettings = {};
     
@@ -1004,10 +1025,8 @@ app.post('/api/fortigate/settings', requireAuth, async (req, res) => {
     res.json({ success: true, settings: { ...updatedSettings, apiToken: updatedSettings.apiToken ? '********' : '' } });
   });
 
-app.post('/api/fortigate/test', requireAuth, async (req, res) => {
-    if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin') {
-      return res.status(403).json({ error: 'Не админ' });
-    }
+app.post('/api/fortigate/test', requireAdmin, async (req, res) => {
+    
     const { workspaceId } = req.body || {};
     const current = workspaceId && dbData.fortigateSettings ? (dbData.fortigateSettings[workspaceId] || {}) : (dbData.fortigateSettings || {});
   if (!current.enabled || !current.banUrl || !current.apiToken) {
@@ -1029,18 +1048,14 @@ app.post('/api/fortigate/test', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/fortigate/banned-ips', requireAuth, (req, res) => {
-    if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin') {
-      return res.status(403).json({ error: 'Доступ закрыт' });
-    }
+app.get('/api/fortigate/banned-ips', requireAdmin, (req, res) => {
+    
     res.json({ success: true, bannedIps: dbData.bannedIps || [] });
   });
 
   
-  app.post('/api/fortigate/ban', requireAuth, async (req, res) => {
-    if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin') {
-      return res.status(403).json({ error: 'Не админ' });
-    }
+  app.post('/api/fortigate/ban', requireAdmin, async (req, res) => {
+    
     const { ip, expiresAt, isPermanent, workspaceId } = req.body;
     if (!ip) return res.status(400).json({ success: false, error: 'IP адрес не указан' });
     const settings = workspaceId && dbData.fortigateSettings ? (dbData.fortigateSettings[workspaceId] || {}) : (dbData.fortigateSettings || {});
@@ -1076,10 +1091,8 @@ app.get('/api/fortigate/banned-ips', requireAuth, (req, res) => {
     }
   });
 
-  app.post('/api/fortigate/unban', requireAuth, async (req, res) => {
-    if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin') {
-      return res.status(403).json({ error: 'Доступ закрыт' });
-    }
+  app.post('/api/fortigate/unban', requireAdmin, async (req, res) => {
+    
     const { ip, workspaceId } = req.body;
     if (!ip) return res.status(400).json({ success: false, error: 'IP адрес не указан' });
     const settings = workspaceId && dbData.fortigateSettings ? (dbData.fortigateSettings[workspaceId] || {}) : (dbData.fortigateSettings || {});
@@ -1324,12 +1337,12 @@ app.post('/api/findings/:id/promote', requireAuth, (req, res) => {
 });
 
 // Получить список API-ключей для интеграций
-app.get('/api/api-keys', requireAuth, (req, res) => {
+app.get('/api/api-keys', requireAdmin, (req, res) => {
   res.json(dbData.api_keys || []);
 });
 
 // Сгенерировать новый API-ключ для внешней системы
-app.post('/api/api-keys', requireAuth, (req, res) => {
+app.post('/api/api-keys', requireAdmin, (req, res) => {
   const { name, source, workspaceId } = req.body;
   if (!name) {
     return res.status(400).json({ error: 'Укажите название интеграции / ключа' });
@@ -1352,7 +1365,7 @@ app.post('/api/api-keys', requireAuth, (req, res) => {
 });
 
 // Удалить/отозвать API-ключ
-app.delete('/api/api-keys/:id', requireAuth, (req, res) => {
+app.delete('/api/api-keys/:id', requireAdmin, (req, res) => {
   const { id } = req.params;
   if (!dbData.api_keys) dbData.api_keys = [];
   dbData.api_keys = dbData.api_keys.filter(k => k.id !== id);
