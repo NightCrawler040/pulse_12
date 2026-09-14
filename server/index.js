@@ -579,6 +579,7 @@ app.post('/api/workspaces', requireAdmin, (req, res) => {
   };
   if (!dbData.workspaces) dbData.workspaces = [];
   dbData.workspaces.push(newWs);
+  saveCollection('workspaces', dbData.workspaces).catch(() => {});
   broadcastUpdate('workspaces');
   res.status(201).json(newWs);
 });
@@ -586,12 +587,14 @@ app.put('/api/workspaces/:id', requireAdmin, (req, res) => {
   const { id } = req.params;
   const updates = req.body;
   dbData.workspaces = dbData.workspaces.map(w => w.id === id ? { ...w, ...updates } : w);
+  saveCollection('workspaces', dbData.workspaces).catch(() => {});
   broadcastUpdate('workspaces');
   res.json({ success: true });
 });
 app.delete('/api/workspaces/:id', requireAdmin, (req, res) => {
   const { id } = req.params;
   dbData.workspaces = dbData.workspaces.filter(w => w.id !== id);
+  saveCollection('workspaces', dbData.workspaces).catch(() => {});
   broadcastUpdate('workspaces');
   res.json({ success: true });
 });
@@ -2042,6 +2045,21 @@ const startServer = async () => {
     startImapService(settings, dbData, broadcastUpdate);
   };
   global.restartImapService(dbData.imapSettings);
+
+  let migrated = false;
+  if (dbData.api_keys) {
+    dbData.api_keys.forEach(k => {
+      if (!k.workspaceId) { k.workspaceId = 'WS-1'; migrated = true; }
+    });
+  }
+  if (dbData.fortigateSettings && !dbData.fortigateSettings['WS-1'] && dbData.fortigateSettings.apiToken) {
+    dbData.fortigateSettings['WS-1'] = { ...dbData.fortigateSettings };
+    migrated = true;
+  }
+  if (migrated) {
+    saveCollection('api_keys', dbData.api_keys).catch(() => {});
+    saveCollection('fortigateSettings', dbData.fortigateSettings).catch(() => {});
+  }
 
   console.log(`✅ Инициализированы данные системы (${isPostgresMode() ? 'PostgreSQL' : 'Файловый режим'}): ${dbData.tasks.length} задач, ${dbData.users.length} сотрудников.`);
 
