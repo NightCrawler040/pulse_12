@@ -156,9 +156,9 @@ export const WorkspacesTab: React.FC = () => {
                 </div>
               </div>
 
-              <div className="modal-actions" style={{ gridColumn: '1 / -1' }}>
-                <button type="button" className="secondary-button" onClick={() => setIsModalOpen(false)}>Отмена</button>
-                <button type="submit" className="primary-button">Сохранить</button>
+              <div className="modal-actions" style={{ gridColumn: '1 / -1', marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button type="button" className="btn-secondary" onClick={() => setIsModalOpen(false)}>Отмена</button>
+                <button type="submit" className="btn-primary save-btn">Сохранить</button>
               </div>
             </form>
           </div>
