@@ -50,8 +50,17 @@ export const Sidebar: React.FC = () => {
     { mode: 'help', label: 'Помощь', icon: <HelpCircle size={18} /> },
   ];
 
+  const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId);
+  const enabledModules = activeWorkspace?.enabledModules || ['kanban', 'security_center', 'integrations'];
+
+  let filteredNavItems = navItems.filter(item => {
+    if (['board', 'backlog', 'workload', 'analytics'].includes(item.mode)) return enabledModules.includes('kanban');
+    if (item.mode === 'security') return enabledModules.includes('security_center');
+    return true;
+  });
+
   if (isAdmin) {
-    navItems.push({ mode: 'admin', label: 'Админ', icon: <Settings size={18} /> });
+    filteredNavItems.push({ mode: 'admin', label: 'Админ', icon: <Settings size={18} /> });
   }
 
   return (
@@ -93,7 +102,7 @@ export const Sidebar: React.FC = () => {
 
       {currentUser && (
         <nav className="sidebar-nav">
-          {navItems.map((item) => (
+          {filteredNavItems.map((item) => (
             <button
               key={item.mode}
               className={`sidebar-nav-item ${viewMode === item.mode ? 'active' : ''}`}
