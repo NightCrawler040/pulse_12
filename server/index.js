@@ -492,10 +492,6 @@ app.post('/api/login', loginRateLimiter, async (req, res) => {
           user.isActive = true;
           if (ldapUser.email) user.email = ldapUser.email;
           if (ldapUser.department) user.department = ldapUser.department;
-          if (isAdminUser) {
-            user.role = 'Администратор';
-            user.roleType = 'admin';
-          }
         } else {
           const newId = `usr-ad-${ldapUser.login || Math.floor(Math.random() * 90000 + 10000)}`;
           user = {
