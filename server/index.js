@@ -184,6 +184,20 @@ const sanitizeLdapSettings = (settings) => {
   };
 };
 
+
+const getSanitizedDbDataForUser = (user) => {
+  const data = getSanitizedDbData();
+  if (!user || user.roleType === 'admin') {
+    return data;
+  }
+  const userWorkspaces = user.workspaceIds || [];
+  const filteredTasks = (data.tasks || []).filter(t => !t.workspaceId || userWorkspaces.includes(t.workspaceId));
+  const filteredFindings = (data.findings || []).filter(f => !f.workspaceId || userWorkspaces.includes(f.workspaceId));
+  const filteredSprints = (data.sprints || []).filter(s => !s.workspaceId || userWorkspaces.includes(s.workspaceId));
+  const filteredGroups = (data.groups || []).filter(g => !g.workspaceId || userWorkspaces.includes(g.workspaceId));
+  return { ...data, tasks: filteredTasks, findings: filteredFindings, sprints: filteredSprints, groups: filteredGroups };
+};
+
 const getSanitizedDbData = () => {
   // Ensure workspaces exists
   if (!dbData.workspaces || dbData.workspaces.length === 0) {
@@ -329,7 +343,22 @@ const requireAdmin = (req, res, next) => {
 // Zero-Latency broadcast: immediately broadcast to all clients (< 1ms), persist to PostgreSQL asynchronously in background
 const broadcastUpdate = (key) => {
   // 1. Мгновенно рассылаем свежие данные всем клиентам в памяти
-  io.emit('data-updated', getSanitizedDbData());
+  if (io && io.sockets && io.sockets.sockets) {
+    io.sockets.sockets.forEach(socket => {
+      if (socket.userId) {
+        const u = dbData.users.find(usr => usr.id === socket.userId);
+        if (u) {
+          socket.emit('data-updated', getSanitizedDbDataForUser(u));
+        } else {
+          socket.emit('data-updated', getSanitizedDbData());
+        }
+      } else {
+        socket.emit('data-updated', getSanitizedDbData());
+      }
+    });
+  } else {
+    io.emit('data-updated', getSanitizedDbData());
+  }
 
   // 2. Асинхронно сохраняем в базу данных без задержки HTTP-ответа
   const savePromise = (key && dbData[key])
@@ -383,7 +412,7 @@ app.get('/api/data', (req, res) => {
     const user = userId ? dbData.users.find(u => u.id === userId && u.isActive !== false) : null;
 
     if (user && (!tokenHeader || tokenHeader === generateAuthToken(user))) {
-      return res.json(getSanitizedDbData());
+      return res.json(getSanitizedDbDataForUser(user));
     }
 
     const publicUsers = sanitizeUsers(dbData.users).map(u => ({
@@ -568,6 +597,9 @@ app.post('/api/login', loginRateLimiter, async (req, res) => {
 
 // --- WORKSPACES API ---
 app.post('/api/workspaces', requireAdmin, (req, res) => {
+  if (!req.body || !req.body.name || !String(req.body.name).trim()) {
+    return res.status(400).json({ error: 'Имя пространства не может быть пустым' });
+  }
   const newWs = {
     ...req.body,
     id: `WS-${Date.now()}`,
@@ -582,6 +614,9 @@ app.post('/api/workspaces', requireAdmin, (req, res) => {
 app.put('/api/workspaces/:id', requireAdmin, (req, res) => {
   const { id } = req.params;
   const updates = req.body;
+  if (updates && updates.name !== undefined && !String(updates.name).trim()) {
+    return res.status(400).json({ error: 'Имя пространства не может быть пустым' });
+  }
   dbData.workspaces = dbData.workspaces.map(w => w.id === id ? { ...w, ...updates } : w);
   saveCollection('workspaces', dbData.workspaces).catch(() => {});
   broadcastUpdate('workspaces');
@@ -602,13 +637,18 @@ app.post('/api/tasks', requireAuth, (req, res) => {
   const safeComments = Array.isArray(newTaskData.comments) 
     ? newTaskData.comments.map(c => ({ ...c, userId: req.currentUser ? req.currentUser.id : c.userId }))
     : [];
-  const newTask = {
-    ...newTaskData,
-    id: newId,
-    createdAt: now,
-    updatedAt: now,
-    comments: safeComments
-  };
+  let wsId = newTaskData.workspaceId;
+    if (!wsId && req.currentUser) {
+      wsId = (req.currentUser.workspaceIds && req.currentUser.workspaceIds.length > 0) ? req.currentUser.workspaceIds[0] : 'WS-1';
+    }
+    const newTask = {
+      ...newTaskData,
+      id: newId,
+      createdAt: now,
+      updatedAt: now,
+      comments: safeComments,
+      workspaceId: wsId
+    };
   dbData.tasks.unshift(newTask);
   broadcastUpdate('tasks');
   res.status(201).json(newTask);

@@ -213,7 +213,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const onConnect = () => setIsServerConnected(true);
     const onDisconnect = () => setIsServerConnected(false);
     const onDataUpdated = (data: any) => {
-      console.log('⚡ Real-time update received from server!', data);
+      console.log('🔄 Real-time update received from server!', data);
       if (data && Array.isArray(data.tasks)) {
         setTasks(data.tasks);
         if (Array.isArray(data.sprints)) setSprints(data.sprints);
@@ -222,6 +222,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (Array.isArray(data.notifications)) setNotifications(data.notifications);
         if (Array.isArray(data.findings)) setFindings(data.findings);
         if (Array.isArray(data.api_keys)) setApiKeys(data.api_keys);
+        if (Array.isArray(data.workspaces)) setWorkspaces(data.workspaces);
       }
     };
     const onOnlineUsersUpdated = (ids: any) => {
@@ -269,6 +270,11 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Filtered tasks
   const filteredTasks = useMemo(() => {
     return tasks.filter(task => {
+      // Изоляция по Workspace
+      if (activeWorkspaceId && task.workspaceId && task.workspaceId !== activeWorkspaceId) {
+        return false;
+      }
+      
       if (filters.sprintId !== 'all' && task.sprintId !== filters.sprintId) {
         return false;
       }
@@ -293,7 +299,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return true;
     });
-  }, [tasks, filters]);
+  }, [tasks, filters, activeWorkspaceId]);
 
   const addNotification = (notifData: Omit<NotificationItem, 'id' | 'createdAt' | 'read'>) => {
     const newNotif: NotificationItem = {

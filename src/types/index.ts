@@ -52,6 +52,7 @@ export interface Task {
   createdAt: string;
   updatedAt: string;
   sprintId: string | null;
+  workspaceId?: string;
 }
 
 export interface User {
@@ -75,6 +76,7 @@ export interface Group {
   name: string;
   color: string;
   memberIds: string[];
+  workspaceId?: string;
 }
 
 export interface Column {
@@ -90,6 +92,7 @@ export interface Sprint {
   endDate: string;
   goal: string;
   isActive: boolean;
+  workspaceId?: string;
 }
 
 export interface FilterState {
