@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 
-export const FortigateSettingsTab: React.FC = () => {
+export const FortigateSettingsTab: React.FC<{workspaceId?: string; }> = ({workspaceId}) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState({
@@ -23,7 +23,8 @@ export const FortigateSettingsTab: React.FC = () => {
 
   const fetchSettings = async () => {
     try {
-      const res: any = await apiService.get('/api/fortigate/settings');
+      const url = workspaceId ? `/api/fortigate/settings?workspaceId=${workspaceId}` : '/api/fortigate/settings';
+      const res: any = await apiService.get(url);
       setSettings(res);
     } catch (err) {
       console.error(err);
@@ -33,15 +34,15 @@ export const FortigateSettingsTab: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchSettings();
-  }, []);
+    if (workspaceId) fetchSettings();
+  }, [workspaceId]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     setMessage(null);
     try {
-      const res: any = await apiService.post('/api/fortigate/settings', settings);
+      const res: any = await apiService.post('/api/fortigate/settings', { ...settings, workspaceId });
       if (res.success) {
         setSettings(res.settings);
         setMessage({ text: "Настройки успешно сохранены!", type: 'success' });
@@ -59,7 +60,7 @@ export const FortigateSettingsTab: React.FC = () => {
     setIsTesting(true);
     setMessage(null);
     try {
-      const res: any = await apiService.post('/api/fortigate/test', {});
+      const res: any = await apiService.post('/api/fortigate/test', { workspaceId });
       if (res.success) {
         setMessage({ text: res.message || "Успешное тестовое подключение к FortiGate", type: 'success' });
       } else {

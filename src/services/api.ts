@@ -182,8 +182,8 @@ export const apiService = {
   fetchApiKeys: () => 
     apiRequest<ApiKeySettings[]>('/api/api-keys', { method: 'GET' }),
 
-  createApiKey: (name: string, source?: string, allowedDepartments?: string[]) => 
-    apiRequest<ApiKeySettings>('/api/api-keys', { method: 'POST', body: JSON.stringify({ name, source, allowedDepartments }) }),
+  createApiKey: (name: string, source?: string, workspaceId?: string) => 
+    apiRequest<ApiKeySettings>('/api/api-keys', { method: 'POST', body: JSON.stringify({ name, source, workspaceId }) }),
 
   deleteApiKey: (id: string) => 
     apiRequest<{ success: boolean }>(`/api/api-keys/${id}`, { method: 'DELETE' }),

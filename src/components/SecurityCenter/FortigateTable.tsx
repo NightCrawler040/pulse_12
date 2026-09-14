@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { Plus, Trash2 } from 'lucide-react';
+import { useTaskContext } from '../../context/TaskContext';
 
 export const FortigateTable: React.FC = () => {
+  const { activeWorkspaceId } = useTaskContext();
   const [loading, setLoading] = useState(true);
   const [bannedIps, setBannedIps] = useState<any[]>([]);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -39,7 +41,7 @@ export const FortigateTable: React.FC = () => {
   const handleUnban = async (ip: string) => {
     if (!window.confirm("Удалить блокировку для IP " + ip + "?")) return;
     try {
-      const res: any = await apiService.post('/api/fortigate/unban', { ip });
+      const res: any = await apiService.post('/api/fortigate/unban', { ip, workspaceId: activeWorkspaceId });
       if (res.success) {
         setBannedIps(prev => prev.filter(b => b.ip !== ip));
         setMessage({ text: "IP " + ip + " успешно разблокирован", type: 'success' });
@@ -60,7 +62,7 @@ export const FortigateTable: React.FC = () => {
         isPermanent: false,
         expiresAt: new Date(newIndicatorValidTo).getTime()
       };
-      const res: any = await apiService.post('/api/fortigate/ban', payload);
+      const res: any = await apiService.post('/api/fortigate/ban', { ...payload, workspaceId: activeWorkspaceId });
       if (res.success) {
         setBannedIps(prev => {
           const filtered = prev.filter(b => b.ip !== res.banRecord.ip);

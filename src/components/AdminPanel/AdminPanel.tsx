@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTaskContext } from '../../context/TaskContext';
 import { useAuth } from '../../context/AuthContext';
 import type { User, Group } from '../../types';
@@ -10,11 +10,12 @@ import { WorkspacesTab } from './WorkspacesTab';
 import './AdminPanel.css';
 
 export const AdminPanel: React.FC = () => {
-  const { users, groups, onlineUserIds, apiKeys, addUser, updateUser, deleteUser, addGroup, updateGroup, deleteGroup, addApiKey, deleteApiKey } = useTaskContext();
+  const { users, groups, onlineUserIds, workspaces, apiKeys, addUser, updateUser, deleteUser, addGroup, updateGroup, deleteGroup, addApiKey, deleteApiKey } = useTaskContext();
   const { isAdmin } = useAuth();
   const isProtectedAdmin = (u: User) => u.id === 'usr-1' || u.login?.toLowerCase() === 'admin';
   const employeeUsers = users.filter(u => !isProtectedAdmin(u));
 
+  const [selectedIntegrationWsId, setSelectedIntegrationWsId] = useState<string>("");
   const [activeTab, setActiveTab] = useState<'workspaces' | 'users' | 'groups' | 'integrations' | 'ldap' | 'mail' | 'fortigate'>('workspaces');
   const [newKeyName, setNewKeyName] = useState('');
   const [newKeySource, setNewKeySource] = useState<'derscanner' | 'siem' | 'custom'>('derscanner');
@@ -67,6 +68,13 @@ export const AdminPanel: React.FC = () => {
       </div>
     );
   }
+
+  
+  useEffect(() => {
+    if (workspaces.length > 0 && !selectedIntegrationWsId) {
+      setSelectedIntegrationWsId(workspaces[0].id);
+    }
+  }, [workspaces, selectedIntegrationWsId]);
 
   const DEFAULT_AVATAR = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2364748b"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>';
 
@@ -732,7 +740,7 @@ export const AdminPanel: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {apiKeys.map(k => (
+                  {apiKeys.filter(k => !selectedIntegrationWsId || k.workspaceId === selectedIntegrationWsId).map(k => (
                     <tr key={k.id}>
                       <td>
                         <strong style={{ fontSize: '1rem', color: 'hsl(var(--text-primary))' }}>{k.name}</strong>
@@ -813,7 +821,7 @@ export const AdminPanel: React.FC = () => {
       )}
 
       {activeTab === 'fortigate' && (
-        <FortigateSettingsTab />
+        <FortigateSettingsTab workspaceId={selectedIntegrationWsId}  />
       )}
 
       {/* Add / Edit USER Modal */}
@@ -1089,7 +1097,7 @@ export const AdminPanel: React.FC = () => {
             <form onSubmit={async (e) => {
               e.preventDefault();
               if (!newKeyName.trim()) return;
-              await addApiKey(newKeyName, newKeySource, newKeyAllowedDepts);
+              await addApiKey(newKeyName, newKeySource, selectedIntegrationWsId);
               setIsKeyModalOpen(false);
               setNewKeyName('');
               setNewKeyAllowedDepts(['all']);

@@ -138,6 +138,7 @@ export interface ApiKeySettings {
   createdAt: string;
   lastUsedAt?: string | null;
   allowedDepartments?: string[];
+  workspaceId?: string;
 }
 
 export interface Workspace {

@@ -971,16 +971,36 @@ app.post('/api/import', requireAdmin, (req, res) => {
 
 // --- FORTIGATE API ENDPOINTS ---
 app.get('/api/fortigate/settings', requireAuth, (req, res) => {
-  const settings = dbData.fortigateSettings || {};
-  res.json({
-    ...settings,
-    apiToken: settings.apiToken ? '********' : ''
+    const { workspaceId } = req.query;
+    if (!dbData.fortigateSettings) dbData.fortigateSettings = {};
+    const settings = workspaceId ? (dbData.fortigateSettings[workspaceId] || {}) : (dbData.fortigateSettings || {});
+    res.json({
+      ...settings,
+      apiToken: settings.apiToken ? '********' : ''
+    });
   });
 });
 
 app.post('/api/fortigate/settings', requireAuth, async (req, res) => {
-  if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin') {
-    return res.status(403).json({ error: 'Доступ запрещен' });
+    if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin') {
+      return res.status(403).json({ error: 'Доступ запрещен' });
+    }
+    const { workspaceId, ...updates } = req.body || {};
+    if (!dbData.fortigateSettings) dbData.fortigateSettings = {};
+    
+    const current = workspaceId ? (dbData.fortigateSettings[workspaceId] || {}) : (dbData.fortigateSettings || {});
+    const isMaskedOrEmpty = updates.apiToken === '********' || updates.apiToken === '••••••••' || (/^[•*]+$/.test(updates.apiToken || '')) || (!updates.apiToken && current.apiToken);
+    const apiToken = isMaskedOrEmpty ? current.apiToken : updates.apiToken;
+  
+    if (workspaceId) {
+      dbData.fortigateSettings[workspaceId] = { ...current, ...updates, apiToken };
+    } else {
+      dbData.fortigateSettings = { ...current, ...updates, apiToken };
+    }
+    await saveCollection('fortigateSettings', dbData.fortigateSettings);
+    const updatedSettings = workspaceId ? dbData.fortigateSettings[workspaceId] : dbData.fortigateSettings;
+    res.json({ success: true, settings: { ...updatedSettings, apiToken: updatedSettings.apiToken ? '********' : '' } });
+  });
   }
   const updates = req.body || {};
   const current = dbData.fortigateSettings || {};
@@ -998,10 +1018,11 @@ app.post('/api/fortigate/settings', requireAuth, async (req, res) => {
 });
 
 app.post('/api/fortigate/test', requireAuth, async (req, res) => {
-  if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin') {
-    return res.status(403).json({ error: 'Нет доступа' });
-  }
-  const current = dbData.fortigateSettings || {};
+    if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin') {
+      return res.status(403).json({ error: 'Не админ' });
+    }
+    const { workspaceId } = req.body || {};
+    const current = workspaceId && dbData.fortigateSettings ? (dbData.fortigateSettings[workspaceId] || {}) : (dbData.fortigateSettings || {});
   if (!current.enabled || !current.banUrl || !current.apiToken) {
     return res.status(400).json({ success: false, error: 'Интеграция не настроена или нет URL/токена.' });
   }
@@ -1031,12 +1052,11 @@ app.get('/api/fortigate/banned-ips', requireAuth, (req, res) => {
   
   app.post('/api/fortigate/ban', requireAuth, async (req, res) => {
     if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin') {
-      return res.status(403).json({ error: 'Нет прав' });
+      return res.status(403).json({ error: 'Не админ' });
     }
-    const { ip, expiresAt, isPermanent } = req.body;
+    const { ip, expiresAt, isPermanent, workspaceId } = req.body;
     if (!ip) return res.status(400).json({ success: false, error: 'IP адрес не указан' });
-
-    const settings = dbData.fortigateSettings || {};
+    const settings = workspaceId && dbData.fortigateSettings ? (dbData.fortigateSettings[workspaceId] || {}) : (dbData.fortigateSettings || {});
     try {
       let success = true;
       if (settings.enabled && settings.banUrl) {
@@ -1073,10 +1093,9 @@ app.get('/api/fortigate/banned-ips', requireAuth, (req, res) => {
     if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin') {
       return res.status(403).json({ error: 'Доступ закрыт' });
     }
-    const { ip } = req.body;
+    const { ip, workspaceId } = req.body;
     if (!ip) return res.status(400).json({ success: false, error: 'IP адрес не указан' });
-
-    const settings = dbData.fortigateSettings || {};
+    const settings = workspaceId && dbData.fortigateSettings ? (dbData.fortigateSettings[workspaceId] || {}) : (dbData.fortigateSettings || {});
     try {
       let success = true;
       if (settings.enabled && settings.unbanUrl) {
@@ -1324,7 +1343,7 @@ app.get('/api/api-keys', requireAuth, (req, res) => {
 
 // Сгенерировать новый API-ключ для внешней системы
 app.post('/api/api-keys', requireAuth, (req, res) => {
-  const { name, source, allowedDepartments } = req.body;
+  const { name, source,\n      workspaceId: matchedKey ? matchedKey.workspaceId : null, workspaceId } = req.body;
   if (!name) {
     return res.status(400).json({ error: 'Укажите название интеграции / ключа' });
   }

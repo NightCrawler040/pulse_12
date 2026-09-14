@@ -57,7 +57,7 @@ interface TaskContextType {
   updateFindingStatus: (id: string, status: ExternalFinding['status'], promotedTaskId?: string) => void;
   deleteFinding: (id: string) => void;
   promoteFindingToTask: (id: string, assigneeId?: string, sprintId?: string, priority?: string) => Promise<any>;
-  addApiKey: (name: string, source?: string, allowedDepartments?: string[]) => Promise<ApiKeySettings>;
+  addApiKey: (name: string, source?: string, workspaceId?: string) => Promise<ApiKeySettings>;
   deleteApiKey: (id: string) => void;
   exportData: () => void;
   importData: (jsonData: string) => boolean;
@@ -862,9 +862,9 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (res.ok) { setWorkspaces(prev => prev.filter(w => w.id !== id)); }
         } catch (e) { console.error(e); }
       },
-      addApiKey: async (name, source, allowedDepartments) => {
+      addApiKey: async (name, source, workspaceId) => {
         try {
-          const res = await apiService.createApiKey(name, source, allowedDepartments);
+          const res = await apiService.createApiKey(name, source, workspaceId);
           if (res) {
             setApiKeys(prev => [...prev, res]);
           }
