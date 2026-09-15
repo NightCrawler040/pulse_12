@@ -86,19 +86,33 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [commentText, setCommentText] = useState('');
 
+  // --- DRAFT AUTO-SAVE ---
   useEffect(() => {
     if (isOpenNew) {
-      setTitle('');
-      setDescription('');
+      const draft = { title, description, priority, assigneeId, storyPoints, estimatedHours, tags };
+      localStorage.setItem('pulse_new_task_draft', JSON.stringify(draft));
+    }
+  }, [isOpenNew, title, description, priority, assigneeId, storyPoints, estimatedHours, tags]);
+
+  useEffect(() => {
+    if (isOpenNew) {
+      let draft: any = null;
+      try {
+        const draftStr = localStorage.getItem('pulse_new_task_draft');
+        if (draftStr) draft = JSON.parse(draftStr);
+      } catch(e) {}
+      
+      setTitle(draft?.title || '');
+      setDescription(draft?.description || '');
       setStatus(defaultStatus);
-      setPriority('medium');
-      setAssigneeId(null);
+      setPriority(draft?.priority || 'medium');
+      setAssigneeId(draft?.assigneeId || null);
       setAssigneeGroupId(null);
-      setStoryPoints(3);
-      setEstimatedHours(8);
+      setStoryPoints(draft?.storyPoints || 3);
+      setEstimatedHours(draft?.estimatedHours || 8);
       setLoggedHours(0);
       setSprintId(defaultSprintId !== undefined ? defaultSprintId : 'sprint-1');
-      setTags(['Engineering']);
+      setTags(draft?.tags || ['Engineering']);
       setDueDate('');
       setSubtasksList([]);
       setAttachmentsList([]);
@@ -173,6 +187,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
         subtasks: subtasksList,
         attachments: attachmentsList
       });
+      localStorage.removeItem('pulse_new_task_draft');
     } else if (existingTask) {
       updateTask(existingTask.id, {
         title,
@@ -1037,3 +1052,4 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
     </div>
   );
 };
+
