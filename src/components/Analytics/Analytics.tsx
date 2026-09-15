@@ -17,8 +17,7 @@ export const Analytics: React.FC = () => {
       setIsDownloadingPdf(true);
       const authUserStr = localStorage.getItem('korpjira-flowspace-auth-v1') || '';
       const token = localStorage.getItem('korpjira-auth-token') || localStorage.getItem('pulse_api_token') || '';
-      const currentUserStr = localStorage.getItem('pulse_current_user');
-      const currentUser = currentUserStr ? JSON.parse(currentUserStr) : null;
+      
       const userId = currentUser?.id || authUserStr || 'usr-1';
 
       const headers: Record<string, string> = {
