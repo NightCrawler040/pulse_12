@@ -86,33 +86,19 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [commentText, setCommentText] = useState('');
 
-  // --- DRAFT AUTO-SAVE ---
   useEffect(() => {
     if (isOpenNew) {
-      const draft = { title, description, priority, assigneeId, storyPoints, estimatedHours, tags };
-      localStorage.setItem('pulse_new_task_draft', JSON.stringify(draft));
-    }
-  }, [isOpenNew, title, description, priority, assigneeId, storyPoints, estimatedHours, tags]);
-
-  useEffect(() => {
-    if (isOpenNew) {
-      let draft: any = null;
-      try {
-        const draftStr = localStorage.getItem('pulse_new_task_draft');
-        if (draftStr) draft = JSON.parse(draftStr);
-      } catch(e) {}
-      
-      setTitle(draft?.title || '');
-      setDescription(draft?.description || '');
+      setTitle('');
+      setDescription('');
       setStatus(defaultStatus);
-      setPriority(draft?.priority || 'medium');
-      setAssigneeId(draft?.assigneeId || null);
+      setPriority('medium');
+      setAssigneeId(null);
       setAssigneeGroupId(null);
-      setStoryPoints(draft?.storyPoints || 3);
-      setEstimatedHours(draft?.estimatedHours || 8);
+      setStoryPoints(3);
+      setEstimatedHours(8);
       setLoggedHours(0);
       setSprintId(defaultSprintId !== undefined ? defaultSprintId : 'sprint-1');
-      setTags(draft?.tags || ['Engineering']);
+      setTags(['Engineering']);
       setDueDate('');
       setSubtasksList([]);
       setAttachmentsList([]);
@@ -132,7 +118,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
       setSubtasksList(existingTask.subtasks || []);
       setAttachmentsList(existingTask.attachments || []);
     }
-  }, [taskId, isOpenNew, defaultStatus, defaultSprintId]);
+  }, [taskId, isOpenNew, defaultStatus, defaultSprintId, existingTask]);
 
   useEffect(() => {
     if (existingTask?.attachments) {
@@ -187,7 +173,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
         subtasks: subtasksList,
         attachments: attachmentsList
       });
-      localStorage.removeItem('pulse_new_task_draft');
+      
     } else if (existingTask) {
       updateTask(existingTask.id, {
         title,
@@ -216,10 +202,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
     // Ensure they clicked the backdrop itself, not its children
     if (e.target !== e.currentTarget) return;
     if (e.target === e.currentTarget) {
-      if (isOpenNew && (title.trim() !== '' || description.trim() !== '')) {
-        const confirmClose = window.confirm('У вас есть несохраненные данные (черновик сохранен). Закрыть окно?');
-        if (!confirmClose) return;
-      }
       onClose();
     }
   };
@@ -1045,7 +1027,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
         <div className="modal-footer">
           <button type="button" className="btn-secondary" onClick={() => {
     if (isOpenNew) {
-      localStorage.removeItem('pulse_new_task_draft');
+      
     }
     onClose();
   }}>Отмена</button>
