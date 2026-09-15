@@ -14,6 +14,7 @@ interface KanbanBoardProps {
 }
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWithStatus }) => {
+  const [viewMode, setViewMode] = React.useState<'kanban' | 'list'>('kanban');
   const { 
     columns, 
     filteredTasks, 

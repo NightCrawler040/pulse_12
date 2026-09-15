@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Task, Column, User } from '../../types';
+import type { Task, Column, User } from '../../types';
 import './ListView.css';
 
 interface ListViewProps {
