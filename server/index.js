@@ -446,6 +446,9 @@ app.get('/api/reports/pdf', requireAuth, async (req, res) => {
   try {
     const sprintId = req.query.sprintId || 'all';
     const targetUserId = req.query.userId || null;
+    if (targetUserId && targetUserId !== req.currentUser.id && req.currentUser.roleType !== 'admin') {
+      return res.status(403).json({ error: 'У вас нет прав для скачивания отчетов других сотрудников' });
+    }
     let filename = sprintId === 'all' ? 'Pulse12_Corporate_Report_All.pdf' : `Pulse12_Sprint_${sprintId}_Report.pdf`;
     if (targetUserId) {
       filename = `Pulse12_Employee_Report_${targetUserId}.pdf`;

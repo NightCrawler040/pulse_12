@@ -1,11 +1,13 @@
 import React from 'react';
 import { useTaskContext } from '../../context/TaskContext';
+import { useAuth } from '../../context/AuthContext';
 import { apiService } from '../../services/api';
 import { Mail, Briefcase, Clock, AlertTriangle, ShieldCheck, Moon } from 'lucide-react';
 import './TeamWorkload.css';
 
 export const TeamWorkload: React.FC = () => {
   const { users, groups, tasks, setFilters, setViewMode } = useTaskContext();
+  const { currentUser, isAdmin } = useAuth();
   const employees = users.filter(u => u.id !== 'usr-1' && u.login?.toLowerCase() !== 'admin');
 
   const handleSelectUser = (userId: string) => {
@@ -98,18 +100,20 @@ export const TeamWorkload: React.FC = () => {
                   </span>
                   <span className="emp-dept">{user.department}</span>
                 </div>
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    apiService.downloadPdf(`/api/reports/pdf?sprintId=all&userId=${user.id}`, `report-${user.login || user.id}.pdf`);
-                  }}
-                  title="Скачать персональный отчет сотрудника"
-                  style={{ background: 'rgba(59,132,246,0.1)', border: 'none', cursor: 'pointer', padding: '8px', borderRadius: '8px', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s' }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(59,132,246,0.2)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(59,132,246,0.1)'}
-                >
-                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                </button>
+                { (isAdmin || currentUser?.id === user.id) && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  apiService.downloadPdf(`/api/reports/pdf?sprintId=all&userId=${user.id}`, `report-${user.login || user.id}.pdf`);
+                }}
+                title="Скачать отчет"
+                style={{ background: 'rgba(59,132,246,0.1)', border: 'none', cursor: 'pointer', padding: '8px', borderRadius: '8px', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s' }}
+                onMouseOver={(e) => e.currentTarget.style.background = 'rgba(59,132,246,0.2)'}
+                onMouseOut={(e) => e.currentTarget.style.background = 'rgba(59,132,246,0.1)'}
+              >
+                <FileText size={16} />
+              </button>
+            )}
               </div>
 
               {/* Status Badge */}
