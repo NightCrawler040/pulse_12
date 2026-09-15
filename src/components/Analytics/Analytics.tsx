@@ -288,7 +288,13 @@ export const Analytics: React.FC = () => {
             const uSP = uTasks.reduce((sum, t) => sum + (t.storyPoints || 0), 0);
             return (
               <div key={u.id} className="leaderboard-item">
-                <img src={u.avatar} alt={u.name} className="leaderboard-avatar" />
+                {u.avatar ? (
+                  <img src={u.avatar} alt={u.name} className="leaderboard-avatar" />
+                ) : (
+                  <div className="leaderboard-avatar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e2e8f0', color: '#64748b', fontSize: '1.2rem', fontWeight: 600 }}>
+                    {((u.name || u.login || '?')[0]).toUpperCase()}
+                  </div>
+                )}
                 <div className="leaderboard-info">
                   <span className="leader-name">{u.name}</span>
                   <span className="leader-role">{u.role}</span>
