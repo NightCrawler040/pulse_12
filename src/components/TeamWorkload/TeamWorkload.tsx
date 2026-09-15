@@ -2,7 +2,7 @@ import React from 'react';
 import { useTaskContext } from '../../context/TaskContext';
 import { useAuth } from '../../context/AuthContext';
 import { apiService } from '../../services/api';
-import { Mail, Briefcase, Clock, AlertTriangle, ShieldCheck, Moon } from 'lucide-react';
+import { Mail, Briefcase, Clock, AlertTriangle, ShieldCheck, Moon, FileText } from 'lucide-react';
 import './TeamWorkload.css';
 
 export const TeamWorkload: React.FC = () => {
