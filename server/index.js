@@ -2082,6 +2082,23 @@ if (fs.existsSync(DIST_DIR)) {
 const startServer = async () => {
   await initDb();
   dbData = await getAllData();
+
+  // Auto-migrate massive IMAP tasks that blow up the PDF report
+  let tasksModified = false;
+  if (dbData.tasks) {
+    dbData.tasks.forEach(t => {
+      if (t.description && t.description.length > 2500 && (t.description.includes('[SOAR Auto-Ban]') || t.authorId === 'system')) {
+         t.description = t.description.substring(0, 1000) + '<br/><br/><i>[Длинный текст (список адресов/подписи) автоматически обрезан для сохранения читабельности PDF-отчетов]</i><br/><br/>' + 
+               (t.description.includes('[SOAR Auto-Ban]') ? '<strong>Найденные индикаторы (IP/DNS) добавлены в локальную базу.</strong>' : '');
+         tasksModified = true;
+      }
+    });
+    if (tasksModified) {
+      await saveCollection('tasks', dbData.tasks);
+      console.log('✅ Auto-truncated massive IMAP tasks in the database to prevent PDF crash');
+    }
+  }
+  
   initMailService(dbData, saveCollection);
   initDeadlineCron(() => dbData);
 
