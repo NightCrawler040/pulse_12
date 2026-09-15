@@ -75,7 +75,7 @@ async function apiRequest<T>(endpoint: string, options?: RequestInit): Promise<T
       throw new Error(errData.error || `HTTP Error ${res.status}`);
     }
     return await res.json();
-  } catch (err) {
+  } catch (err: any) {
     console.error(`❌ API Request Failed [${endpoint}]:`, err);
     throw err;
   }
@@ -121,7 +121,7 @@ export const apiService = {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-    } catch (err) {
+    } catch (err: any) {
       console.error('PDF Download failed', err);
       alert('Ошибка при скачивании PDF: ' + err.message);
       throw err;
