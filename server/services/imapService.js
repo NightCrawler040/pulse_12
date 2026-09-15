@@ -308,10 +308,15 @@ ${indicatorItemsXml}
       }
     }
 
-    const newTask = {
+          let displayBody = cleanBody;
+      if (uniqueIps.length > 5 && displayBody.length > 1000) {
+        displayBody = displayBody.substring(0, 800) + '... <br/><br/><i>[Длинный список адресов вырезан для сохранения читабельности задач и отчетов. Заблокировано IP: ' + uniqueIps.length + ']</i>';
+      }
+      
+      const newTask = {
       id: `task-${Date.now()}`,
       title: cleanSubject(parsedMail.subject),
-      description: `${cleanBody}<br/><br/><strong>Найденные индикаторы (IP/DNS) сохранены в прикрепленных файлах.</strong>${fortigateBanStatus}`,
+      description: `${displayBody}<br/><br/><strong>Найденные индикаторы (IP/DNS) сохранены в прикрепленных файлах.</strong>${fortigateBanStatus}`,
       status: 'to-do',
       priority: 'high',
       assigneeId: pulseUser.id,
