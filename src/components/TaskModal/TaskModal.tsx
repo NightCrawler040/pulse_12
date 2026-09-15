@@ -196,6 +196,19 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
     onClose();
   };
 
+  
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    // Ensure they clicked the backdrop itself, not its children
+    if (e.target !== e.currentTarget) return;
+    if (e.target === e.currentTarget) {
+      if (isOpenNew && (title.trim() !== '' || description.trim() !== '')) {
+        const confirmClose = window.confirm('У вас есть несохраненные данные (черновик сохранен). Закрыть окно?');
+        if (!confirmClose) return;
+      }
+      onClose();
+    }
+  };
+
   const handleDelete = () => {
     if (!canDeleteTask()) {
       alert('Удаление задач разрешено только Администраторам.');
@@ -368,7 +381,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
   const progressPercent = subtasksList.length > 0 ? Math.round((completedCount / subtasksList.length) * 100) : 0;
 
   return (
-    <div className="modal-backdrop animate-fade-in" onClick={onClose}>
+    <div className="modal-backdrop animate-fade-in" onClick={handleBackdropClick}>
       <div className="modal-content glass-panel" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="modal-header">
