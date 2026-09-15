@@ -225,7 +225,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
   };
 
   const handleDelete = () => {
-    if (!canDeleteTask()) {
+    if (!canDeleteTask(existingTask)) {
       alert('Удаление задач разрешено только Администраторам.');
       return;
     }
@@ -416,7 +416,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
           </div>
 
           <div className="modal-header-actions">
-            {existingTask && canDeleteTask() && (
+            {existingTask && canDeleteTask(existingTask) && (
               <button className="icon-btn danger-hover" onClick={handleDelete} title="Удалить задачу">
                 <Trash2 size={18} />
               </button>
@@ -1043,7 +1043,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
 
         {/* Footer Actions */}
         <div className="modal-footer">
-          <button type="button" className="btn-secondary" onClick={onClose}>Отмена</button>
+          <button type="button" className="btn-secondary" onClick={() => {
+    if (isOpenNew) {
+      localStorage.removeItem('pulse_new_task_draft');
+    }
+    onClose();
+  }}>Отмена</button>
           <button type="button" className="btn-primary save-btn" onClick={handleSave}>
             {isOpenNew ? 'Создать задачу' : 'Сохранить изменения'}
           </button>

@@ -12,7 +12,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isManagerOrAdmin: boolean;
   canEditTask: (task: Task) => boolean;
-  canDeleteTask: () => boolean;
+  canDeleteTask: (task?: any) => boolean;
   canManageSprints: () => boolean;
   canManageUsers: () => boolean;
   sessionExpired: boolean;
@@ -168,8 +168,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   };
 
-  const canDeleteTask = () => {
-    return isAdmin;
+  const canDeleteTask = (task?: any) => {
+    if (isAdmin) return true;
+    if (task && currentUser && (task.authorId === currentUser.id || task.creatorId === currentUser.id)) return true;
+    return false;
   };
 
   const canManageSprints = () => {
