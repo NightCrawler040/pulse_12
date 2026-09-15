@@ -100,26 +100,33 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
 
   const handleExportExcel = () => {
     const headers = ['ID', 'Название', 'Статус', 'Приоритет', 'Исполнитель', 'Story Points', 'Оценка (ч)', 'Затрачено (ч)', 'Теги'];
-    const rows = displayTasks.map(t => {
+    
+    let tableHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8" /><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Tasks</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body><table border="1"><thead><tr>`;
+    
+    headers.forEach(h => { tableHtml += `<th>${h}</th>`; });
+    tableHtml += `</tr></thead><tbody>`;
+
+    displayTasks.forEach(t => {
       const assignee = users.find(u => u.id === t.assigneeId)?.name || 'Не назначен';
-      return [
-        t.id,
-        `"${t.title.replace(/"/g, '""')}"`,
-        t.status,
-        t.priority,
-        `"${assignee}"`,
-        t.storyPoints,
-        t.estimatedHours,
-        t.loggedHours,
-        `"${(t.tags || []).join(', ')}"`
-      ].join(';');
+      tableHtml += `<tr>`;
+      tableHtml += `<td>${t.id}</td>`;
+      tableHtml += `<td>${t.title}</td>`;
+      tableHtml += `<td>${t.status}</td>`;
+      tableHtml += `<td>${t.priority}</td>`;
+      tableHtml += `<td>${assignee}</td>`;
+      tableHtml += `<td>${t.storyPoints || 0}</td>`;
+      tableHtml += `<td>${t.estimatedHours || 0}</td>`;
+      tableHtml += `<td>${t.loggedHours || 0}</td>`;
+      tableHtml += `<td>${(t.tags || []).join(', ')}</td>`;
+      tableHtml += `</tr>`;
     });
-    const csvContent = '\uFEFFsep=;\n' + [headers.join(';'), ...rows].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    tableHtml += `</tbody></table></body></html>`;
+
+    const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `pulse12_tasks_${new Date().toISOString().slice(0,10)}.csv`);
+    link.setAttribute('download', `pulse12_tasks_${new Date().toISOString().slice(0,10)}.xls`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
