@@ -202,3 +202,15 @@ button {
 .animate-fade-in {
   animation: fadeIn 0.25s ease-out forwards;
 }
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}

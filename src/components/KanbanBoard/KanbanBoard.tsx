@@ -5,7 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 import { KanbanColumn } from './KanbanColumn';
 import type { Status } from '../../types';
 import confetti from 'canvas-confetti';
-import { Download, Filter } from 'lucide-react';
+import { Download, Filter, List, LayoutGrid } from 'lucide-react';
+import { ListView } from './ListView';
 import './KanbanBoard.css';
 
 interface KanbanBoardProps {
@@ -166,7 +167,15 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
           )}
         </div>
 
-        <div className="board-toolbar-right">
+        <div className="board-toolbar-right" style={{ display: 'flex', gap: '10px' }}>
+          <div className="view-mode-toggle" style={{ display: 'flex', background: 'hsl(var(--bg-secondary))', border: '1px solid var(--border-color)', borderRadius: '6px', overflow: 'hidden' }}>
+            <button onClick={() => setViewMode('kanban')} style={{ padding: '6px 12px', background: viewMode === 'kanban' ? 'hsl(var(--primary))' : 'transparent', color: viewMode === 'kanban' ? '#fff' : 'hsl(var(--text-secondary))', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600 }}>
+              <LayoutGrid size={14} /> Kanban
+            </button>
+            <button onClick={() => setViewMode('list')} style={{ padding: '6px 12px', background: viewMode === 'list' ? 'hsl(var(--primary))' : 'transparent', color: viewMode === 'list' ? '#fff' : 'hsl(var(--text-secondary))', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600 }}>
+              <List size={14} /> List
+            </button>
+          </div>
           <button
             className="btn-secondary export-excel-btn"
             onClick={handleExportExcel}
@@ -244,24 +253,33 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
         </div>
       )}
 
-      <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="kanban-grid">
-          {columns.map((col) => {
-            const columnTasks = displayTasks.filter(t => t.status === col.id);
-            return (
-              <KanbanColumn
-                key={col.id}
-                column={col}
-                tasks={columnTasks}
-                users={users}
-                groups={groups}
-                onCardClick={(taskId) => setActiveTaskModalId(taskId)}
-                onAddTaskToColumn={(status) => onOpenNewTaskModalWithStatus(status)}
-              />
-            );
-          })}
-        </div>
-      </DragDropContext>
+      {viewMode === 'kanban' ? (
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <div className="kanban-grid">
+            {columns.map((col) => {
+              const columnTasks = displayTasks.filter(t => t.status === col.id);
+              return (
+                <KanbanColumn
+                  key={col.id}
+                  column={col}
+                  tasks={columnTasks}
+                  users={users}
+                  groups={groups}
+                  onCardClick={(taskId) => setActiveTaskModalId(taskId)}
+                  onAddTaskToColumn={(status) => onOpenNewTaskModalWithStatus(status)}
+                />
+              );
+            })}
+          </div>
+        </DragDropContext>
+      ) : (
+        <ListView 
+          tasks={displayTasks}
+          columns={columns}
+          users={users}
+          onCardClick={(taskId) => setActiveTaskModalId(taskId)}
+        />
+      )}
     </div>
   );
 };
