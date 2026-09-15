@@ -100,7 +100,7 @@ export const TeamWorkload: React.FC = () => {
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
-                    window.open(`/api/reports/pdf?sprintId=all&userId=${user.id}`, '_blank');
+                    apiService.downloadPdf(`/api/reports/pdf?sprintId=all&userId=${user.id}`, `report-${user.login || user.id}.pdf`);
                   }}
                   title="Скачать персональный отчет сотрудника"
                   style={{ background: 'rgba(59,132,246,0.1)', border: 'none', cursor: 'pointer', padding: '8px', borderRadius: '8px', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s' }}

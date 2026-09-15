@@ -93,6 +93,41 @@ export interface DatabaseData {
 }
 
 export const apiService = {
+
+  downloadPdf: async (endpoint: string, filename: string) => {
+    const baseUrl = getServerUrl();
+    const url = `${baseUrl}${endpoint}`;
+    const authUserId = localStorage.getItem('korpjira-flowspace-auth-v1') || '';
+    const authToken = localStorage.getItem('korpjira-auth-token') || '';
+    const headers: Record<string, string> = {};
+    if (authUserId) headers['x-auth-user'] = authUserId;
+    if (authToken) headers['x-api-token'] = authToken;
+
+    try {
+      const res = await fetch(url, { method: 'GET', headers });
+      if (!res.ok) {
+        let errStr = `HTTP Error ${res.status}`;
+        try {
+          const errData = await res.json();
+          if (errData.error) errStr = errData.error;
+        } catch(e) {}
+        throw new Error(errStr);
+      }
+      const blob = await res.blob();
+      const objUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objUrl;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('PDF Download failed', err);
+      alert('Ошибка при скачивании PDF: ' + err.message);
+      throw err;
+    }
+  },
+
   get: <T>(endpoint: string, options?: RequestInit) => apiRequest<T>(endpoint, { ...options, method: 'GET' }),
   post: <T>(endpoint: string, body?: any, options?: RequestInit) => apiRequest<T>(endpoint, { ...options, method: 'POST', body: body ? JSON.stringify(body) : undefined }),
   put: <T>(endpoint: string, body?: any, options?: RequestInit) => apiRequest<T>(endpoint, { ...options, method: 'PUT', body: body ? JSON.stringify(body) : undefined }),
