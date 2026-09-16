@@ -534,7 +534,11 @@ const createLdapClient = (settings) => {
 
 export const authenticateLdapUser = (loginInput, passwordInput, settings = {}) => {
   return new Promise((resolve) => {
+    const escapeLDAP = (str) => {
+  return str.replace(/[*()\\\x00]/g, (char) => '\\' + char.charCodeAt(0).toString(16).padStart(2, '0'));
+};
     const cleanLogin = String(loginInput || '').trim();
+    const escapedLogin = escapeLDAP(cleanLogin);
     const cleanPass = String(passwordInput || '').trim();
 
     if (!cleanLogin || !cleanPass || !settings || !settings.serverUrl) {
@@ -612,7 +616,7 @@ export const authenticateLdapUser = (loginInput, passwordInput, settings = {}) =
       const nameAttr = settings.nameAttribute || 'displayName';
       const deptAttr = settings.departmentAttribute || 'department';
 
-      const filter = `(|(${loginAttr}=${cleanLogin})(${emailAttr}=${cleanLogin})(sAMAccountName=${cleanLogin})(userPrincipalName=${cleanLogin})(mail=${cleanLogin})(cn=${cleanLogin})(displayName=${cleanLogin})(name=${cleanLogin}))`;
+      const filter = `(|(${loginAttr}=${escapedLogin})(${emailAttr}=${escapedLogin})(sAMAccountName=${escapedLogin})(userPrincipalName=${escapedLogin})(mail=${escapedLogin})(cn=${escapedLogin})(displayName=${escapedLogin})(name=${escapedLogin}))`;
 
       client.search(settings.baseDN, { filter, scope: 'sub', sizeLimit: 1 }, (searchErr, res) => {
         if (searchErr) {

@@ -1,3 +1,4 @@
+import { saveCollection } from '../db.js';
 import express from 'express';
 import { banIpAddress, unbanIpAddress } from '../services/fortigateService.js';
 

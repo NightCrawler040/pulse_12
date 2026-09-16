@@ -21,7 +21,7 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
     if (!dbData.api_keys) dbData.api_keys = [];
     const matchedKey = dbData.api_keys.find(k => k.key === token || k.name === token);
   
-    const isDefaultKey = token.startsWith('ds-live-') || token === 'admin' || token === 'derscanner' || token.length > 5;
+    const isDefaultKey = token.startsWith('ds-live-') || token === 'admin' || token === 'derscanner' ;
     if (!matchedKey && !isDefaultKey && !req.path.includes('/rest/api/')) {
       console.warn(`🚨 [Webhook Auth Error] Неверный API-ключ от внешнего сканера: ${token || 'отсутствует'}`);
       return res.status(401).json({ error: 'Отказано в доступе: неверный или отсутствующий X-API-Key или заголовок Authorization' });

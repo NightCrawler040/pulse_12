@@ -1,3 +1,4 @@
+import { saveCollection } from '../db.js';
 import express from 'express';
 import { testMailConnection, rebuildTransporter } from '../services/mailService.js';
 import { startImapService } from '../services/imapService.js';
