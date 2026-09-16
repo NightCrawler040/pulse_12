@@ -462,7 +462,7 @@ app.get('/api/feeds/kata-hashes.txt', async (req, res) => {
 });
 
 // Get all data securely: verify user token; return only basic user profiles for unauthenticated login page load
-app.get('/api/data', async (req, res) => {
+app.get('/api/data', async (req, res) => { console.log('Inside /api/data');
   try {
     const userId = req.headers['x-auth-user'] || req.query.userId;
     const authHeader = req.headers['authorization'] || '';
@@ -473,7 +473,7 @@ app.get('/api/data', async (req, res) => {
       return res.json(getSanitizedDbDataForUser(user));
     }
 
-    const publicUsers = sanitizeUsers(dbData.users).map(u => ({
+    console.log('Got here 1'); const publicUsers = sanitizeUsers(dbData.users).map(u => ({
       id: u.id,
       name: u.name,
       email: u.email,
@@ -484,7 +484,7 @@ app.get('/api/data', async (req, res) => {
       avatar: u.avatar,
       isActive: u.isActive
     }));
-    res.json({
+    console.log('Calling res.json'); res.json({
       tasks: [],
       sprints: [],
       users: publicUsers,
@@ -635,7 +635,7 @@ app.post('/api/login', loginRateLimiter, async (req, res) => {
     }
     const { password: _, pin: __, ...safeUser } = user;
     const token = generateAuthToken(user);
-    res.json({ success: true, user: safeUser, token });
+    console.log('Calling res.json'); res.json({ success: true, user: safeUser, token });
   } else {
     // Tarpitting: Artificial delay for failed logins (1 second)
     await new Promise(r => setTimeout(r, 1000));
@@ -703,7 +703,7 @@ app.post('/api/upload', requireAuth, async (req, res) => {
     fs.writeFileSync(filePath, base64Data, 'base64');
     const fileUrl = `/uploads/${safeName}`;
     console.log(`📁 Saved uploaded photo locally to: ${filePath}`);
-    res.json({ success: true, url: fileUrl });
+    console.log('Calling res.json'); res.json({ success: true, url: fileUrl });
   } catch (err) {
     console.error('❌ Error saving uploaded file:', err);
     res.status(500).json({ error: 'Failed to save file on server' });
@@ -731,7 +731,7 @@ app.post('/api/upload-file', requireAuth, async (req, res) => {
     const fileUrl = `/uploads/${safeName}`;
     const stats = fs.statSync(filePath);
     console.log(`📎 Saved uploaded task document locally to: ${filePath} (${stats.size} bytes)`);
-    res.json({ success: true, url: fileUrl, size: stats.size, filename });
+    console.log('Calling res.json'); res.json({ success: true, url: fileUrl, size: stats.size, filename });
   } catch (err) {
     console.error('❌ Error saving uploaded document:', err);
     res.status(500).json({ error: 'Failed to save document on server' });
@@ -752,7 +752,7 @@ app.post('/api/reset', requireAdmin, async (req, res) => {
     api_keys: initialApiKeys
   };
   try { await broadcastUpdate(); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-  res.json({ success: true });
+  console.log('Calling res.json'); res.json({ success: true });
 });
 
 // Import database (Admin Only) (1.B)
@@ -764,7 +764,7 @@ app.post('/api/import', requireAdmin, async (req, res) => {
     if (Array.isArray(imported.users)) dbData.users = imported.users;
     if (Array.isArray(imported.groups)) dbData.groups = imported.groups;
     try { await broadcastUpdate(); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-    res.json({ success: true });
+    console.log('Calling res.json'); res.json({ success: true });
   } else {
     res.status(400).json({ error: 'Invalid import format' });
   }
@@ -821,7 +821,7 @@ app.delete('/api/api-keys/:id', requireAdmin, async (req, res) => {
   if (!dbData.api_keys) dbData.api_keys = [];
   dbData.api_keys = dbData.api_keys.filter(k => k.id !== id);
   try { await broadcastUpdate('api_keys'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-  res.json({ success: true });
+  console.log('Calling res.json'); res.json({ success: true });
 });
 
 // --- ВНЕШНИЙ WEBHOOK И JIRA REST API GATEWAY ДЛЯ DERSCANNER / SIEM ---
@@ -832,7 +832,7 @@ app.delete('/api/api-keys/:id', requireAdmin, async (req, res) => {
 
 
 
-  mountJiraGateway(app, dbData, broadcastUpdate);
+  mountJiraGateway(app, dbData, broadcastUpdate, saveCollection);
 
 // --- WEBSOCKET REAL-TIME SYNC & ONLINE PRESENCE ---
 const onlineSockets = new Map(); // socket.id -> userId

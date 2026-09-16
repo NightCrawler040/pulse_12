@@ -1,4 +1,4 @@
-export function mountJiraGateway(app, dbData, broadcastUpdate) {
+export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
 
   const extractTokenFromRequest = (req) => {
     let token = req.headers['x-api-key'] || req.headers['authorization'] || req.query.token || req.query.apiKey || '';
