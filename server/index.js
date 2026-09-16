@@ -462,8 +462,7 @@ app.get('/api/feeds/kata-hashes.txt', async (req, res) => {
 });
 
 // Get all data securely: verify user token; return only basic user profiles for unauthenticated login page load
-app.get('/api/data', async (req, res) => { console.log('Inside /api/data');
-  try {
+app.get('/api/data', async (req, res) => { try {
     const userId = req.headers['x-auth-user'] || req.query.userId;
     const authHeader = req.headers['authorization'] || '';
     const tokenHeader = req.headers['x-api-token'] || (authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '');
@@ -473,7 +472,7 @@ app.get('/api/data', async (req, res) => { console.log('Inside /api/data');
       return res.json(getSanitizedDbDataForUser(user));
     }
 
-    console.log('Got here 1'); const publicUsers = sanitizeUsers(dbData.users).map(u => ({
+    const publicUsers = sanitizeUsers(dbData.users).map(u => ({
       id: u.id,
       name: u.name,
       email: u.email,
@@ -484,7 +483,7 @@ app.get('/api/data', async (req, res) => { console.log('Inside /api/data');
       avatar: u.avatar,
       isActive: u.isActive
     }));
-    console.log('Calling res.json'); res.json({
+    res.json({
       tasks: [],
       sprints: [],
       users: publicUsers,
@@ -635,7 +634,7 @@ app.post('/api/login', loginRateLimiter, async (req, res) => {
     }
     const { password: _, pin: __, ...safeUser } = user;
     const token = generateAuthToken(user);
-    console.log('Calling res.json'); res.json({ success: true, user: safeUser, token });
+    res.json({ success: true, user: safeUser, token });
   } else {
     // Tarpitting: Artificial delay for failed logins (1 second)
     await new Promise(r => setTimeout(r, 1000));
@@ -703,7 +702,7 @@ app.post('/api/upload', requireAuth, async (req, res) => {
     fs.writeFileSync(filePath, base64Data, 'base64');
     const fileUrl = `/uploads/${safeName}`;
     console.log(`📁 Saved uploaded photo locally to: ${filePath}`);
-    console.log('Calling res.json'); res.json({ success: true, url: fileUrl });
+    res.json({ success: true, url: fileUrl });
   } catch (err) {
     console.error('❌ Error saving uploaded file:', err);
     res.status(500).json({ error: 'Failed to save file on server' });
@@ -731,7 +730,7 @@ app.post('/api/upload-file', requireAuth, async (req, res) => {
     const fileUrl = `/uploads/${safeName}`;
     const stats = fs.statSync(filePath);
     console.log(`📎 Saved uploaded task document locally to: ${filePath} (${stats.size} bytes)`);
-    console.log('Calling res.json'); res.json({ success: true, url: fileUrl, size: stats.size, filename });
+    res.json({ success: true, url: fileUrl, size: stats.size, filename });
   } catch (err) {
     console.error('❌ Error saving uploaded document:', err);
     res.status(500).json({ error: 'Failed to save document on server' });
@@ -752,7 +751,7 @@ app.post('/api/reset', requireAdmin, async (req, res) => {
     api_keys: initialApiKeys
   };
   try { await broadcastUpdate(); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-  console.log('Calling res.json'); res.json({ success: true });
+  res.json({ success: true });
 });
 
 // Import database (Admin Only) (1.B)
@@ -764,7 +763,7 @@ app.post('/api/import', requireAdmin, async (req, res) => {
     if (Array.isArray(imported.users)) dbData.users = imported.users;
     if (Array.isArray(imported.groups)) dbData.groups = imported.groups;
     try { await broadcastUpdate(); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-    console.log('Calling res.json'); res.json({ success: true });
+    res.json({ success: true });
   } else {
     res.status(400).json({ error: 'Invalid import format' });
   }
@@ -821,7 +820,7 @@ app.delete('/api/api-keys/:id', requireAdmin, async (req, res) => {
   if (!dbData.api_keys) dbData.api_keys = [];
   dbData.api_keys = dbData.api_keys.filter(k => k.id !== id);
   try { await broadcastUpdate('api_keys'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-  console.log('Calling res.json'); res.json({ success: true });
+  res.json({ success: true });
 });
 
 // --- ВНЕШНИЙ WEBHOOK И JIRA REST API GATEWAY ДЛЯ DERSCANNER / SIEM ---
