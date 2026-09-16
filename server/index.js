@@ -689,13 +689,17 @@ app.put('/api/tasks/:id', requireAuth, async (req, res) => {
       found = true;
       let safeUpdates = { ...updates };
       if (safeUpdates.comments && Array.isArray(safeUpdates.comments)) {
-        const existingIds = new Set((t.comments || []).map(c => c.id));
-        safeUpdates.comments = safeUpdates.comments.map(c => {
-          if (!existingIds.has(c.id) && req.currentUser) {
-            return { ...c, userId: req.currentUser.id };
+        // Умное слияние (Smart Merge) для предотвращения затирания комментариев при Last-Write-Wins
+        const currentCommentsMap = new Map((t.comments || []).map(c => [c.id, c]));
+        safeUpdates.comments.forEach(c => {
+          if (!currentCommentsMap.has(c.id)) {
+            currentCommentsMap.set(c.id, { ...c, userId: req.currentUser ? req.currentUser.id : c.userId });
           }
-          return c;
         });
+        // Всегда сохраняем существующие комментарии, плюс добавляем новые
+        safeUpdates.comments = Array.from(currentCommentsMap.values());
+        // Сортируем по времени (сначала старые, потом новые)
+        safeUpdates.comments.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
       }
       return { ...t, ...safeUpdates, updatedAt: new Date().toISOString() };
     }
