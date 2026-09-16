@@ -88,6 +88,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
 
   useEffect(() => {
     if (isOpenNew) {
+      setCommentText('');
       setTitle('');
       setDescription('');
       setStatus(defaultStatus);
@@ -103,6 +104,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
       setSubtasksList([]);
       setAttachmentsList([]);
     } else if (existingTask) {
+      setCommentText('');
       setTitle(existingTask.title || '');
       setDescription(existingTask.description || '');
       setStatus(existingTask.status || defaultStatus);
