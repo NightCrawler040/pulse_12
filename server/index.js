@@ -19,6 +19,10 @@ import { banIpAddress, unbanIpAddress } from './services/fortigateService.js';
 import createTasksRouter from './routes/tasks.js';
 import createUsersRouter from './routes/users.js';
 import createSprintsRouter from './routes/sprints.js';
+import createNotificationsRouter from './routes/notifications.js';
+
+import createFindingsRouter from './routes/findings.js';
+
 
 import createGroupsRouter from './routes/groups.js';
 
@@ -402,6 +406,10 @@ const broadcastUpdate = async (key) => {
   app.use('/api/tasks', createTasksRouter(requireAuth));
   app.use('/api/users', createUsersRouter(requireAuth, requireAdmin));
   app.use('/api/sprints', createSprintsRouter(requireAuth, requireAdmin));
+  app.use('/api/notifications', createNotificationsRouter(requireAuth));
+
+  app.use('/api/findings', createFindingsRouter(requireAuth));
+
 
   app.use('/api/groups', createGroupsRouter(requireAuth, requireAdmin));
 
@@ -661,31 +669,9 @@ app.post('/api/login', loginRateLimiter, async (req, res) => {
 
 
 // --- NOTIFICATION PERSISTENCE ENDPOINTS ---
-app.delete('/api/notifications', requireAuth, async (req, res) => {
-  const { userId, id } = req.query;
-  if (!Array.isArray(dbData.notifications)) dbData.notifications = [];
-  if (id) {
-    dbData.notifications = dbData.notifications.filter(n => n.id !== id);
-  } else if (userId) {
-    dbData.notifications = dbData.notifications.filter(n => n.userId !== userId && n.userId !== 'all');
-  } else {
-    dbData.notifications = [];
-  }
-  try { await broadcastUpdate('notifications'); } catch (e) { console.error('Socket save error', e); }
-  res.json({ success: true });
-});
 
-app.put('/api/notifications/read', requireAuth, async (req, res) => {
-  const { id, userId } = req.body || {};
-  if (!Array.isArray(dbData.notifications)) return res.json({ success: true });
-  dbData.notifications = dbData.notifications.map(n => {
-    if (id && n.id === id) return { ...n, read: true };
-    if (!id && (n.userId === userId || n.userId === 'all' || !userId)) return { ...n, read: true };
-    return n;
-  });
-  try { await broadcastUpdate('notifications'); } catch (e) { console.error('Socket save error', e); }
-  res.json({ success: true });
-});
+
+
 
 // --- FILE UPLOAD ENDPOINT (LOCAL AVATARS) ---
 app.post('/api/upload', requireAuth, async (req, res) => {
@@ -1002,114 +988,19 @@ app.post('/api/ldap/import-selected', requireAuth, async (req, res) => {
 // --- SECURITY CENTER & INTEGRATIONS API ENDPOINTS ---
 
 // Получить список всех внешних инцидентов / уязвимостей
-app.get('/api/findings', requireAuth, async (req, res) => {
-  res.json(dbData.findings || []);
-});
+
 
 // Создать инцидент вручную из UI или через внутренний API
-app.post('/api/findings', requireAuth, async (req, res) => {
-  const findingData = req.body;
-  const newId = findingData.id || `fnd-${Date.now()}`;
-  const newFinding = {
-    ...findingData,
-    id: newId,
-    source: findingData.source || 'custom',
-    status: findingData.status || 'new',
-    createdAt: findingData.createdAt || new Date().toISOString()
-  };
-  if (!dbData.findings) dbData.findings = [];
-  dbData.findings.unshift(newFinding);
-  try { await broadcastUpdate('findings'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-  res.status(201).json(newFinding);
-});
+
 
 // Обновить статус инцидента (new -> analyzing -> false-positive / resolved)
-app.put('/api/findings/:id', requireAuth, async (req, res) => {
-  const { id } = req.params;
-  const updates = req.body;
-  if (!dbData.findings) dbData.findings = [];
-  dbData.findings = dbData.findings.map(f => {
-    if (f.id === id) {
-      return { ...f, ...updates };
-    }
-    return f;
-  });
-  try { await broadcastUpdate('findings'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-  res.json({ success: true });
-});
+
 
 // Удалить инцидент
-app.delete('/api/findings/:id', requireAuth, async (req, res) => {
-  const { id } = req.params;
-  if (!dbData.findings) dbData.findings = [];
-  dbData.findings = dbData.findings.filter(f => f.id !== id);
-  try { await broadcastUpdate('findings'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-  res.json({ success: true });
-});
+
 
 // Перевести инцидент (DerScanner/SIEM) в рабочую задачу (Promote to Task)
-app.post('/api/findings/:id/promote', requireAuth, async (req, res) => {
-  const { id } = req.params;
-  const { assigneeId, sprintId, priority } = req.body;
-  if (!dbData.findings) dbData.findings = [];
-  const finding = dbData.findings.find(f => f.id === id);
-  if (!finding) {
-    return res.status(404).json({ error: 'Инцидент не найден' });
-  }
 
-  let resolvedAssigneeId = assigneeId || null;
-  if (!resolvedAssigneeId && finding.assignee) {
-    const foundUser = (dbData.users || []).find(u => u.login === finding.assignee || u.id === finding.assignee || u.name === finding.assignee);
-    resolvedAssigneeId = foundUser ? foundUser.id : finding.assignee;
-  }
-
-  const newTaskId = `NEX-${Math.floor(100 + Math.random() * 900)}`;
-  const promotedTask = {
-    id: newTaskId,
-    title: `[${finding.source.toUpperCase()}] ${finding.title}`,
-    description: `${finding.description || ''}\n\n🛡️ **Данные инцидента:**\n- **Проект:** ${finding.project || 'Не указано'}\n- **Файл/Расположение:** \`${finding.fileLocation || 'Не указано'}\`\n- **CWE/CVE:** ${finding.cwe || 'N/A'}\n- **Компонент:** ${finding.component || 'N/A'}\n- **Ответственный от сканера:** ${finding.assignee || 'Не назначен'}\n- **Критичность:** ${finding.severity}`,
-    status: 'todo',
-    priority: priority || (finding.severity === 'Critical' ? 'urgent' : finding.severity === 'High' ? 'high' : 'medium'),
-    assigneeId: resolvedAssigneeId,
-    sprintId: sprintId || null,
-    storyPoints: finding.severity === 'Critical' ? 5 : 3,
-    estimatedHours: finding.severity === 'Critical' ? 8 : 4,
-    loggedHours: 0,
-    subtasks: [],
-    comments: [
-      {
-        id: `c-${Date.now()}`,
-        userId: req.currentUser?.id || 'usr-1',
-        text: `Инцидент безопасности официально переведен в разработку из Центра ИБ (Source: ${finding.source.toUpperCase()}).`,
-        createdAt: new Date().toISOString(),
-        isSystemLog: true
-      }
-    ],
-    tags: ['Security', finding.source === 'derscanner' ? 'DerScanner' : finding.source.toUpperCase()],
-    externalFindingId: finding.id,
-    project: finding.project || 'PULSE',
-    fileLocation: finding.fileLocation || 'Не указано',
-    cwe: finding.cwe || 'N/A',
-    component: finding.component || 'General Security',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-
-  if (!dbData.tasks) dbData.tasks = [];
-  dbData.tasks.unshift(promotedTask);
-
-  // Обновляем статус инцидента на promoted и связываем ID
-  dbData.findings = dbData.findings.map(f => {
-    if (f.id === id) {
-      return { ...f, status: 'promoted', promotedTaskId: newTaskId };
-    }
-    return f;
-  });
-
-  try { await broadcastUpdate('tasks'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-  try { await broadcastUpdate('findings'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-  res.status(201).json({ success: true, task: promotedTask, findingId: id });
-});
 
 // Получить список API-ключей для интеграций
 app.get('/api/api-keys', requireAdmin, async (req, res) => {
