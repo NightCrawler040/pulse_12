@@ -8,7 +8,7 @@ import { fileURLToPath } from 'url';
 import { initialUsers, initialSprints, initialTasks, initialGroups, initialFindings, initialApiKeys } from './initialData.js';
 import { initDb, getAllData, saveCollection, saveAllData, isPostgresMode } from './db.js';
 import { initMailService, sendMailNotification, rebuildTransporter, testMailConnection } from './services/mailService.js';
-import { initDeadlineCron } from './cronService.js';
+import { initDeadlineCron } from './services/cronService.js';
 import { generateSprintPdf } from './services/pdfService.js';
 import compression from 'compression';
 import crypto from 'crypto';
