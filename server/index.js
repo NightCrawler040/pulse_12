@@ -829,8 +829,8 @@ app.delete('/api/api-keys/:id', requireAdmin, async (req, res) => {
 
 // Catch-all wildcard для любых других запросов от DerScanner по путям /rest и /api/v1/webhooks/derscanner
 
-app.use('/rest', handleWildcard);
-app.use('/api/v1/webhooks/derscanner', handleWildcard);
+
+
 
   mountJiraGateway(app, dbData, broadcastUpdate);
 

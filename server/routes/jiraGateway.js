@@ -485,8 +485,9 @@ export function mountJiraGateway(app, dbData, broadcastUpdate) {
     console.log(`⚠️ [Jira Gateway Wildcard] ${req.method} ${url}`);
     res.status(200).json({ success: true, warning: 'Wildcard mocked response' });
   };
-  app.get(['/rest/*', '/api/v1/webhooks/derscanner/*'], handleWildcard);
-  app.post(['/rest/*', '/api/v1/webhooks/derscanner/*'], handleWildcard);
-  app.put(['/rest/*', '/api/v1/webhooks/derscanner/*'], handleWildcard);
+  app.use('/rest', handleWildcard);
+  app.use('/api/v1/webhooks/derscanner', handleWildcard);
+  
+  
 
 }
