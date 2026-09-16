@@ -16,6 +16,8 @@ import bcrypt from 'bcryptjs';
 import { testLdapConnection, fetchLdapUsers, syncLdapUsersAndTasks, importSelectedLdapUsers, authenticateLdapUser } from './services/ldapService.js';
 import { startImapService } from './services/imapService.js';
 import { banIpAddress, unbanIpAddress } from './services/fortigateService.js';
+import createTasksRouter from './routes/tasks.js';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -381,7 +383,17 @@ const broadcastUpdate = async (key) => {
 
 // --- REST API ENDPOINTS ---
 
-const apiRateLimiter = (req, res, next) => {
+
+  // --- INJECT GLOBAL STATE INTO REQUEST FOR ROUTERS ---
+  app.use((req, res, next) => {
+    req.dbData = dbData;
+    req.broadcastUpdate = broadcastUpdate;
+    next();
+  });
+  
+  app.use('/api/tasks', createTasksRouter(requireAuth));
+
+  const apiRateLimiter = (req, res, next) => {
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
   const now = Date.now();
   const record = ipApiRequests.get(ip) || { count: 0, firstAttempt: now };
@@ -642,94 +654,7 @@ app.delete('/api/workspaces/:id', requireAdmin, async (req, res) => {
   res.json({ success: true });
 });
 
-app.post('/api/tasks', requireAuth, async (req, res) => {
-  const newTaskData = req.body;
-  const newId = newTaskData.id || `NEX-${Math.floor(100 + Math.random() * 900)}`;
-  const now = new Date().toISOString();
-  const safeComments = Array.isArray(newTaskData.comments) 
-    ? newTaskData.comments.map(c => ({ ...c, userId: req.currentUser ? req.currentUser.id : c.userId }))
-    : [];
-  let wsId = newTaskData.workspaceId;
-    if (!wsId && req.currentUser) {
-      wsId = (req.currentUser.workspaceIds && req.currentUser.workspaceIds.length > 0) ? req.currentUser.workspaceIds[0] : 'WS-1';
-    }
-    const newTask = {
-      ...newTaskData,
-      id: newId,
-      createdAt: now,
-      updatedAt: now,
-      comments: safeComments,
-      workspaceId: wsId
-    };
-  dbData.tasks.unshift(newTask);
-  try { await broadcastUpdate('tasks'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-  res.status(201).json(newTask);
-});
 
-// Update task
-app.put('/api/tasks/:id', requireAuth, async (req, res) => {
-  const { id } = req.params;
-  const updates = req.body;
-  
-  const existingTask = (dbData.tasks || []).find(t => t.id === id);
-  if (!existingTask) {
-    return res.status(404).json({ error: 'Задача не найдена' });
-  }
-
-  // IDOR Protection: Only admin, creator, or assignee can edit the task
-  if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin' && 
-      existingTask.creatorId !== req.currentUser?.id && 
-      existingTask.assigneeId !== req.currentUser?.id) {
-    return res.status(403).json({ error: 'Доступ запрещен: Вы не являетесь создателем или исполнителем данной задачи' });
-  }
-
-  let found = false;
-  dbData.tasks = dbData.tasks.map(t => {
-    if (t.id === id) {
-      found = true;
-      let safeUpdates = { ...updates };
-      if (safeUpdates.comments && Array.isArray(safeUpdates.comments)) {
-        // Умное слияние (Smart Merge) для предотвращения затирания комментариев при Last-Write-Wins
-        const currentCommentsMap = new Map((t.comments || []).map(c => [c.id, c]));
-        safeUpdates.comments.forEach(c => {
-          if (!currentCommentsMap.has(c.id)) {
-            currentCommentsMap.set(c.id, { ...c, userId: req.currentUser ? req.currentUser.id : c.userId });
-          }
-        });
-        // Всегда сохраняем существующие комментарии, плюс добавляем новые
-        safeUpdates.comments = Array.from(currentCommentsMap.values());
-        // Сортируем по времени (сначала старые, потом новые)
-        safeUpdates.comments.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-      }
-      return { ...t, ...safeUpdates, updatedAt: new Date().toISOString() };
-    }
-    return t;
-  });
-  if (found) {
-    try { await broadcastUpdate('tasks'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-    res.json({ success: true });
-  } else {
-    res.status(404).json({ error: 'Task not found' });
-  }
-});
-
-// Delete task
-app.delete('/api/tasks/:id', requireAuth, async (req, res) => {
-  const { id } = req.params;
-  
-  const existingTask = (dbData.tasks || []).find(t => t.id === id);
-  if (existingTask) {
-    // IDOR Protection: Only admin or creator can delete the task
-    if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin' && 
-        existingTask.creatorId !== req.currentUser?.id) {
-      return res.status(403).json({ error: 'Доступ запрещен: Вы не можете удалить чужую задачу' });
-    }
-  }
-
-  dbData.tasks = dbData.tasks.filter(t => t.id !== id);
-  try { await broadcastUpdate('tasks'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-  res.json({ success: true });
-});
 
 // Create new user (with bcrypt hashing) (1.C)
 app.post('/api/users', requireAdmin, async (req, res) => {
