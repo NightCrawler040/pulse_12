@@ -49,11 +49,15 @@ export default function createTasksRouter(requireAuth) {
       return res.status(404).json({ error: 'Задача не найдена' });
     }
 
-    // IDOR Protection: Only admin, creator, or assignee can edit the task
-    if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin' && 
-        existingTask.creatorId !== req.currentUser?.id && 
-        existingTask.assigneeId !== req.currentUser?.id) {
-      return res.status(403).json({ error: 'Доступ закрыт: вы не являетесь автором или исполнителем этой задачи' });
+    // IDOR Protection: Aligned with frontend AuthContext logic
+    const isManagerOrAdmin = req.currentUser?.roleType === 'admin' || req.currentUser?.role === 'admin' || req.currentUser?.roleType === 'manager';
+    const isCreatorOrAssignee = existingTask.creatorId === req.currentUser?.id || existingTask.assigneeId === req.currentUser?.id;
+    const isUnassigned = !existingTask.assigneeId;
+    const isGroupMember = existingTask.assigneeGroupId && Array.isArray(req.dbData.groups) && 
+      req.dbData.groups.some(g => g.id === existingTask.assigneeGroupId && (g.memberIds || []).includes(req.currentUser?.id));
+
+    if (!isManagerOrAdmin && !isCreatorOrAssignee && !isUnassigned && !isGroupMember) {
+      return res.status(403).json({ error: 'Доступ закрыт: вы не являетесь автором, исполнителем или участником группы' });
     }
 
     let found = false;
