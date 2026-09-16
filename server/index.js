@@ -17,6 +17,14 @@ import { testLdapConnection, fetchLdapUsers, syncLdapUsersAndTasks, importSelect
 import { startImapService } from './services/imapService.js';
 import { banIpAddress, unbanIpAddress } from './services/fortigateService.js';
 import createTasksRouter from './routes/tasks.js';
+import createUsersRouter from './routes/users.js';
+import createSprintsRouter from './routes/sprints.js';
+
+import createGroupsRouter from './routes/groups.js';
+
+import createWorkspacesRouter from './routes/workspaces.js';
+
+
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -392,6 +400,13 @@ const broadcastUpdate = async (key) => {
   });
   
   app.use('/api/tasks', createTasksRouter(requireAuth));
+  app.use('/api/users', createUsersRouter(requireAuth, requireAdmin));
+  app.use('/api/sprints', createSprintsRouter(requireAuth, requireAdmin));
+
+  app.use('/api/groups', createGroupsRouter(requireAuth, requireAdmin));
+
+  app.use('/api/workspaces', createWorkspacesRouter(requireAuth, requireAdmin));
+
 
   const apiRateLimiter = (req, res, next) => {
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
@@ -620,247 +635,30 @@ app.post('/api/login', loginRateLimiter, async (req, res) => {
 // Create task
 
 // --- WORKSPACES API ---
-app.post('/api/workspaces', requireAdmin, async (req, res) => {
-  if (!req.body || !req.body.name || !String(req.body.name).trim()) {
-    return res.status(400).json({ error: 'Имя пространства не может быть пустым' });
-  }
-  const newWs = {
-    ...req.body,
-    id: `WS-${Date.now()}`,
-    createdAt: new Date().toISOString()
-  };
-  if (!dbData.workspaces) dbData.workspaces = [];
-  dbData.workspaces.push(newWs);
-  saveCollection('workspaces', dbData.workspaces).catch(() => {});
-  try { await broadcastUpdate('workspaces'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-  res.status(201).json(newWs);
-});
-app.put('/api/workspaces/:id', requireAdmin, async (req, res) => {
-  const { id } = req.params;
-  const updates = req.body;
-  if (updates && updates.name !== undefined && !String(updates.name).trim()) {
-    return res.status(400).json({ error: 'Имя пространства не может быть пустым' });
-  }
-  dbData.workspaces = dbData.workspaces.map(w => w.id === id ? { ...w, ...updates } : w);
-  saveCollection('workspaces', dbData.workspaces).catch(() => {});
-  try { await broadcastUpdate('workspaces'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-  res.json({ success: true });
-});
-app.delete('/api/workspaces/:id', requireAdmin, async (req, res) => {
-  const { id } = req.params;
-  dbData.workspaces = dbData.workspaces.filter(w => w.id !== id);
-  saveCollection('workspaces', dbData.workspaces).catch(() => {});
-  try { await broadcastUpdate('workspaces'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-  res.json({ success: true });
-});
 
 
 
-// Create new user (with bcrypt hashing) (1.C)
-app.post('/api/users', requireAdmin, async (req, res) => {
-  const userData = req.body;
-  const trimmedEmail = (userData.email || '').trim().toLowerCase();
-  const trimmedLogin = (userData.login || trimmedEmail.split('@')[0] || '').trim().toLowerCase();
 
-  // Check for duplicate email or login
-  const duplicate = dbData.users.find(u => {
-    const uEmail = (u.email || '').trim().toLowerCase();
-    const uLogin = (u.login || uEmail.split('@')[0] || '').trim().toLowerCase();
-    return (trimmedEmail && uEmail === trimmedEmail) || (trimmedLogin && uLogin === trimmedLogin);
-  });
 
-  if (duplicate) {
-    return res.status(400).json({ error: `Сотрудник с такой почтой или логином уже зарегистрирован (${duplicate.name})!` });
-  }
-
-  const newId = `usr-${Date.now()}`;
-  const rawPassword = userData.password || process.env.DEFAULT_NEW_USER_PASSWORD || '';
-  const rawPin = userData.pin || rawPassword || '';
-
-  const newUser = {
-    ...userData,
-    id: newId,
-    login: userData.login || userData.email?.split('@')[0] || `user_${Date.now()}`,
-    password: hashPasswordIfNeeded(rawPassword),
-    roleType: userData.roleType || 'member',
-    pin: hashPasswordIfNeeded(rawPin),
-    avatar: userData.avatar || '',
-    isActive: true
-  };
-  dbData.users.push(newUser);
-  try { await broadcastUpdate('users'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-  const { password: _, pin: __, ...safeUser } = newUser;
-  res.status(201).json(safeUser);
-});
-
-// Update user (with bcrypt hashing) (1.C)
-app.put('/api/users/:id', requireAuth, async (req, res) => {
-  const { id } = req.params;
-  const updates = { ...req.body };
-
-  // Security checks: IDOR and Mass Assignment / Privilege Escalation protection
-  if (req.currentUser?.roleType !== 'admin' && req.currentUser?.id !== id) {
-    return res.status(403).json({ error: 'Отказано в доступе: вы можете редактировать только свой профиль' });
-  }
-  
-  if (req.currentUser?.roleType !== 'admin') {
-    delete updates.role;
-    delete updates.roleType;
-    delete updates.isActive;
-  }
-
-  if (updates.email || updates.login) {
-    const trimmedEmail = (updates.email || '').trim().toLowerCase();
-    const trimmedLogin = (updates.login || trimmedEmail.split('@')[0] || '').trim().toLowerCase();
-    const duplicate = dbData.users.find(u => {
-      if (u.id === id) return false;
-      const uEmail = (u.email || '').trim().toLowerCase();
-      const uLogin = (u.login || uEmail.split('@')[0] || '').trim().toLowerCase();
-      return (trimmedEmail && uEmail === trimmedEmail) || (trimmedLogin && uLogin === trimmedLogin);
-    });
-    if (duplicate) {
-      return res.status(400).json({ error: `Сотрудник с такой почтой или логином уже существует (${duplicate.name})!` });
-    }
-  }
-
-  const newPass = String(updates.password || updates.pin || '').trim();
-  if (newPass) {
-    const hashed = hashPasswordIfNeeded(newPass);
-    updates.password = hashed;
-    updates.pin = hashed;
-  } else {
-    delete updates.password;
-    delete updates.pin;
-  }
-
-  dbData.users = dbData.users.map(u => {
-    if (u.id === id) {
-      return { ...u, ...updates };
-    }
-    return u;
-  });
-  try { await broadcastUpdate('users'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-  res.json({ success: true });
-});
 
 // Delete (deactivate or permanent remove) user (Admin Only) (1.B)
-app.delete('/api/users/:id', requireAdmin, async (req, res) => {
-  const { id } = req.params;
-  const { permanent } = req.query;
 
-  if (permanent === 'true') {
-    dbData.users = dbData.users.filter(u => u.id !== id);
-    if (dbData.groups) {
-      dbData.groups = dbData.groups.map(g => ({
-        ...g,
-        memberIds: (g.memberIds || []).filter(mid => mid !== id)
-      }));
-    }
-    if (dbData.tasks) {
-      dbData.tasks = dbData.tasks.map(t => {
-        if (t.assigneeId === id) return { ...t, assigneeId: 'unassigned' };
-        return t;
-      });
-    }
-    console.log(`🗑️ Permanently deleted user ${id} and cleaned up group/task references.`);
-  } else {
-    dbData.users = dbData.users.map(u => {
-      if (u.id === id) {
-        return { ...u, isActive: false };
-      }
-      return u;
-    });
-    console.log(`🔒 Deactivated user ${id}.`);
-  }
-  try { await broadcastUpdate(); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-  res.json({ success: true });
-});
 
 // --- GROUPS CRUD ENDPOINTS ---
-app.get('/api/groups', requireAuth, async (req, res) => {
-  res.json(dbData.groups || []);
-});
 
-app.post('/api/groups', requireAdmin, async (req, res) => {
-  const groupData = req.body;
-  const newId = `grp-${Date.now()}`;
-  const newGroup = {
-    ...groupData,
-    id: newId,
-    memberIds: groupData.memberIds || []
-  };
-  if (!dbData.groups) dbData.groups = [];
-  dbData.groups.push(newGroup);
-  try { await broadcastUpdate('groups'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-  res.status(201).json(newGroup);
-});
 
-app.put('/api/groups/:id', requireAdmin, async (req, res) => {
-  const { id } = req.params;
-  const updates = req.body;
-  if (!dbData.groups) dbData.groups = [];
-  dbData.groups = dbData.groups.map(g => {
-    if (g.id === id) {
-      return { ...g, ...updates };
-    }
-    return g;
-  });
-  try { await broadcastUpdate('groups'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-  res.json({ success: true });
-});
 
-app.delete('/api/groups/:id', requireAdmin, async (req, res) => {
-  const { id } = req.params;
-  if (!dbData.groups) dbData.groups = [];
-  dbData.groups = dbData.groups.filter(g => g.id !== id);
-  try { await broadcastUpdate('groups'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-  res.json({ success: true });
-});
+
+
+
+
 
 // Sprints CRUD
-app.post('/api/sprints', requireAdmin, async (req, res) => {
-  const sprintData = req.body;
-  const newId = sprintData.id || `sprint-${Date.now()}`;
-  const newSprint = {
-    ...sprintData,
-    id: newId,
-    isActive: sprintData.isActive || false
-  };
-  if (!dbData.sprints) dbData.sprints = [];
-  dbData.sprints.push(newSprint);
-  try { await broadcastUpdate('sprints'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-  res.status(201).json(newSprint);
-});
 
-app.put('/api/sprints/:id', requireAdmin, async (req, res) => {
-  const { id } = req.params;
-  const updates = req.body;
-  if (!dbData.sprints) dbData.sprints = [];
-  dbData.sprints = dbData.sprints.map(s => {
-    if (s.id === id) {
-      return { ...s, ...updates };
-    }
-    return s;
-  });
-  try { await broadcastUpdate('sprints'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-  res.json({ success: true });
-});
 
-app.delete('/api/sprints/:id', requireAdmin, async (req, res) => {
-  const { id } = req.params;
-  if (!dbData.sprints) dbData.sprints = [];
-  dbData.sprints = dbData.sprints.filter(s => s.id !== id);
-  if (!dbData.tasks) dbData.tasks = [];
-  dbData.tasks = dbData.tasks.map(t => {
-    if (t.sprintId === id) {
-      return { ...t, sprintId: 'unassigned' };
-    }
-    return t;
-  });
-  try { await broadcastUpdate('sprints'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-  try { await broadcastUpdate('tasks'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
-  res.json({ success: true });
-});
+
+
+
 
 // --- NOTIFICATION PERSISTENCE ENDPOINTS ---
 app.delete('/api/notifications', requireAuth, async (req, res) => {
