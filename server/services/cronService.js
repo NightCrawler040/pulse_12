@@ -1,7 +1,7 @@
 // Cron-планировщик для автоматических напоминаний о горящих дедлайнах (dueDate)
 // Проверяет задачи каждые 15 минут и отправляет предупреждения за 24 часа и за 2 часа до сдачи.
 
-import { sendMailDeadlineWarning } from './services/mailService.js';
+import { sendMailDeadlineWarning } from './mailService.js';
 
 const notified24h = new Set();
 const notified2h = new Set();
