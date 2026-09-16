@@ -263,7 +263,40 @@ export const getCollection = async (key) => {
 /**
  * Сохранить/обновить коллекцию по ключу
  */
+
+class Mutex {
+  constructor() {
+    this.queue = [];
+    this.locked = false;
+  }
+  
+  async lock() {
+    return new Promise(resolve => {
+      this.queue.push(resolve);
+      this.dequeue();
+    });
+  }
+  
+  dequeue() {
+    if (this.locked) return;
+    const next = this.queue.shift();
+    if (next) {
+      this.locked = true;
+      next();
+    }
+  }
+  
+  unlock() {
+    this.locked = false;
+    this.dequeue();
+  }
+}
+
+const dbMutex = new Mutex();
+
 export const saveCollection = async (key, dataArrayOrObj) => {
+  await dbMutex.lock();
+  try {
   let toSave = dataArrayOrObj;
   if (key === 'users' && Array.isArray(toSave)) {
     const map = new Map();
@@ -302,6 +335,9 @@ export const saveCollection = async (key, dataArrayOrObj) => {
   } else {
     localDbData[key] = toSave;
     saveLocalFile();
+  }
+  } finally {
+    dbMutex.unlock();
   }
 };
 
@@ -351,6 +387,8 @@ export const getAllData = async () => {
  * Сохранить все данные системы одновременно
  */
 export const saveAllData = async (dataObj) => {
+  await dbMutex.lock();
+  try {
   if (isPgConnected) {
     try {
       const client = await pool.connect();
@@ -418,6 +456,9 @@ export const saveAllData = async (dataObj) => {
       ldap_settings: dataObj.ldap_settings || { ...defaultLdapSettings }
     };
     saveLocalFile();
+  }
+  } finally {
+    dbMutex.unlock();
   }
 };
 

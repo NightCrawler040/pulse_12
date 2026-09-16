@@ -341,34 +341,43 @@ const requireAdmin = (req, res, next) => {
 };
 
 // Zero-Latency broadcast: immediately broadcast to all clients (< 1ms), persist to PostgreSQL asynchronously in background
-const broadcastUpdate = (key) => {
-  // 1. Мгновенно рассылаем свежие данные всем клиентам в памяти
-  if (io && io.sockets && io.sockets.sockets) {
-    io.sockets.sockets.forEach(socket => {
-      if (socket.userId) {
-        const u = dbData.users.find(usr => usr.id === socket.userId);
-        if (u) {
-          socket.emit('data-updated', getSanitizedDbDataForUser(u));
-        } else {
-          socket.emit('data-updated', getSanitizedDbData());
-        }
+const broadcastUpdate = async (key) => {
+    try {
+      // 1. Сначала атомарно сохраняем в БД (Write-Through)
+      if (key && dbData[key]) {
+        await saveCollection(key, dbData[key]);
       } else {
-        socket.emit('data-updated', getSanitizedDbData());
+        await saveAllData(dbData);
       }
-    });
-  } else {
-    io.emit('data-updated', getSanitizedDbData());
-  }
-
-  // 2. Асинхронно сохраняем в базу данных без задержки HTTP-ответа
-  const savePromise = (key && dbData[key])
-    ? saveCollection(key, dbData[key])
-    : saveAllData(dbData);
-
-  savePromise.catch((err) => {
-    console.error('❌ Error persisting data to database in background:', err.message);
-  });
-};
+      
+      // 2. Только после успешного сохранения отправляем WebSockets
+      if (key === 'users') {
+        io.sockets.sockets.forEach(socket => {
+          if (socket.userId) {
+            const u = dbData.users.find(usr => usr.id === socket.userId);
+            if (u) {
+              socket.emit('data-updated', getSanitizedDbDataForUser(u));
+            } else {
+              socket.emit('data-updated', getSanitizedDbData());
+            }
+          } else {
+            socket.emit('data-updated', getSanitizedDbData());
+          }
+        });
+      } else {
+        io.emit('data-updated', getSanitizedDbData());
+      }
+    } catch (err) {
+      console.error('⚠️ Ошибка записи в БД, откат данных в памяти для:', key || 'ALL');
+      // ROLLBACK IN-MEMORY CACHE
+      if (key) {
+        dbData[key] = await getCollection(key);
+      } else {
+        dbData = await getAllData();
+      }
+      throw err; // Это позволит HTTP эндпоинту отловить ошибку и вернуть 500
+    }
+  };
 
 // --- REST API ENDPOINTS ---
 
@@ -393,7 +402,7 @@ const apiRateLimiter = (req, res, next) => {
 app.use('/api', apiRateLimiter);
 
 // --- KATA THREAT INTELLIGENCE FEED ENDPOINT ---
-app.get('/api/feeds/kata-hashes.txt', (req, res) => {
+app.get('/api/feeds/kata-hashes.txt', async (req, res) => {
   if (!dbData.kataHashes || !Array.isArray(dbData.kataHashes) || dbData.kataHashes.length === 0) {
     res.setHeader('Content-Type', 'text/plain');
     return res.send('');
@@ -404,7 +413,7 @@ app.get('/api/feeds/kata-hashes.txt', (req, res) => {
 });
 
 // Get all data securely: verify user token; return only basic user profiles for unauthenticated login page load
-app.get('/api/data', (req, res) => {
+app.get('/api/data', async (req, res) => {
   try {
     const userId = req.headers['x-auth-user'] || req.query.userId;
     const authHeader = req.headers['authorization'] || '';
@@ -561,7 +570,7 @@ app.post('/api/login', loginRateLimiter, async (req, res) => {
 
           await saveCollection('users', dbData.users);
 
-        broadcastUpdate('users');
+        try { await broadcastUpdate('users'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
         console.log(`✅ [LDAP Auth] Пользователь AD "${user.login}" (${user.email}) успешно авторизован и сохранен в системе!`);
       }
     } catch (ldapErr) {
@@ -599,7 +608,7 @@ app.post('/api/login', loginRateLimiter, async (req, res) => {
 // Create task
 
 // --- WORKSPACES API ---
-app.post('/api/workspaces', requireAdmin, (req, res) => {
+app.post('/api/workspaces', requireAdmin, async (req, res) => {
   if (!req.body || !req.body.name || !String(req.body.name).trim()) {
     return res.status(400).json({ error: 'Имя пространства не может быть пустым' });
   }
@@ -611,10 +620,10 @@ app.post('/api/workspaces', requireAdmin, (req, res) => {
   if (!dbData.workspaces) dbData.workspaces = [];
   dbData.workspaces.push(newWs);
   saveCollection('workspaces', dbData.workspaces).catch(() => {});
-  broadcastUpdate('workspaces');
+  try { await broadcastUpdate('workspaces'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
   res.status(201).json(newWs);
 });
-app.put('/api/workspaces/:id', requireAdmin, (req, res) => {
+app.put('/api/workspaces/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
   const updates = req.body;
   if (updates && updates.name !== undefined && !String(updates.name).trim()) {
@@ -622,18 +631,18 @@ app.put('/api/workspaces/:id', requireAdmin, (req, res) => {
   }
   dbData.workspaces = dbData.workspaces.map(w => w.id === id ? { ...w, ...updates } : w);
   saveCollection('workspaces', dbData.workspaces).catch(() => {});
-  broadcastUpdate('workspaces');
+  try { await broadcastUpdate('workspaces'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
   res.json({ success: true });
 });
-app.delete('/api/workspaces/:id', requireAdmin, (req, res) => {
+app.delete('/api/workspaces/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
   dbData.workspaces = dbData.workspaces.filter(w => w.id !== id);
   saveCollection('workspaces', dbData.workspaces).catch(() => {});
-  broadcastUpdate('workspaces');
+  try { await broadcastUpdate('workspaces'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
   res.json({ success: true });
 });
 
-app.post('/api/tasks', requireAuth, (req, res) => {
+app.post('/api/tasks', requireAuth, async (req, res) => {
   const newTaskData = req.body;
   const newId = newTaskData.id || `NEX-${Math.floor(100 + Math.random() * 900)}`;
   const now = new Date().toISOString();
@@ -653,12 +662,12 @@ app.post('/api/tasks', requireAuth, (req, res) => {
       workspaceId: wsId
     };
   dbData.tasks.unshift(newTask);
-  broadcastUpdate('tasks');
+  try { await broadcastUpdate('tasks'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
   res.status(201).json(newTask);
 });
 
 // Update task
-app.put('/api/tasks/:id', requireAuth, (req, res) => {
+app.put('/api/tasks/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
   const updates = req.body;
   
@@ -693,7 +702,7 @@ app.put('/api/tasks/:id', requireAuth, (req, res) => {
     return t;
   });
   if (found) {
-    broadcastUpdate('tasks');
+    try { await broadcastUpdate('tasks'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
     res.json({ success: true });
   } else {
     res.status(404).json({ error: 'Task not found' });
@@ -701,7 +710,7 @@ app.put('/api/tasks/:id', requireAuth, (req, res) => {
 });
 
 // Delete task
-app.delete('/api/tasks/:id', requireAuth, (req, res) => {
+app.delete('/api/tasks/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
   
   const existingTask = (dbData.tasks || []).find(t => t.id === id);
@@ -714,12 +723,12 @@ app.delete('/api/tasks/:id', requireAuth, (req, res) => {
   }
 
   dbData.tasks = dbData.tasks.filter(t => t.id !== id);
-  broadcastUpdate('tasks');
+  try { await broadcastUpdate('tasks'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
   res.json({ success: true });
 });
 
 // Create new user (with bcrypt hashing) (1.C)
-app.post('/api/users', requireAdmin, (req, res) => {
+app.post('/api/users', requireAdmin, async (req, res) => {
   const userData = req.body;
   const trimmedEmail = (userData.email || '').trim().toLowerCase();
   const trimmedLogin = (userData.login || trimmedEmail.split('@')[0] || '').trim().toLowerCase();
@@ -750,13 +759,13 @@ app.post('/api/users', requireAdmin, (req, res) => {
     isActive: true
   };
   dbData.users.push(newUser);
-  broadcastUpdate('users');
+  try { await broadcastUpdate('users'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
   const { password: _, pin: __, ...safeUser } = newUser;
   res.status(201).json(safeUser);
 });
 
 // Update user (with bcrypt hashing) (1.C)
-app.put('/api/users/:id', requireAuth, (req, res) => {
+app.put('/api/users/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
   const updates = { ...req.body };
 
@@ -801,12 +810,12 @@ app.put('/api/users/:id', requireAuth, (req, res) => {
     }
     return u;
   });
-  broadcastUpdate('users');
+  try { await broadcastUpdate('users'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
   res.json({ success: true });
 });
 
 // Delete (deactivate or permanent remove) user (Admin Only) (1.B)
-app.delete('/api/users/:id', requireAdmin, (req, res) => {
+app.delete('/api/users/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
   const { permanent } = req.query;
 
@@ -834,16 +843,16 @@ app.delete('/api/users/:id', requireAdmin, (req, res) => {
     });
     console.log(`🔒 Deactivated user ${id}.`);
   }
-  broadcastUpdate();
+  try { await broadcastUpdate(); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
   res.json({ success: true });
 });
 
 // --- GROUPS CRUD ENDPOINTS ---
-app.get('/api/groups', requireAuth, (req, res) => {
+app.get('/api/groups', requireAuth, async (req, res) => {
   res.json(dbData.groups || []);
 });
 
-app.post('/api/groups', requireAdmin, (req, res) => {
+app.post('/api/groups', requireAdmin, async (req, res) => {
   const groupData = req.body;
   const newId = `grp-${Date.now()}`;
   const newGroup = {
@@ -853,11 +862,11 @@ app.post('/api/groups', requireAdmin, (req, res) => {
   };
   if (!dbData.groups) dbData.groups = [];
   dbData.groups.push(newGroup);
-  broadcastUpdate('groups');
+  try { await broadcastUpdate('groups'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
   res.status(201).json(newGroup);
 });
 
-app.put('/api/groups/:id', requireAdmin, (req, res) => {
+app.put('/api/groups/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
   const updates = req.body;
   if (!dbData.groups) dbData.groups = [];
@@ -867,20 +876,20 @@ app.put('/api/groups/:id', requireAdmin, (req, res) => {
     }
     return g;
   });
-  broadcastUpdate('groups');
+  try { await broadcastUpdate('groups'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
   res.json({ success: true });
 });
 
-app.delete('/api/groups/:id', requireAdmin, (req, res) => {
+app.delete('/api/groups/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
   if (!dbData.groups) dbData.groups = [];
   dbData.groups = dbData.groups.filter(g => g.id !== id);
-  broadcastUpdate('groups');
+  try { await broadcastUpdate('groups'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
   res.json({ success: true });
 });
 
 // Sprints CRUD
-app.post('/api/sprints', requireAdmin, (req, res) => {
+app.post('/api/sprints', requireAdmin, async (req, res) => {
   const sprintData = req.body;
   const newId = sprintData.id || `sprint-${Date.now()}`;
   const newSprint = {
@@ -890,11 +899,11 @@ app.post('/api/sprints', requireAdmin, (req, res) => {
   };
   if (!dbData.sprints) dbData.sprints = [];
   dbData.sprints.push(newSprint);
-  broadcastUpdate('sprints');
+  try { await broadcastUpdate('sprints'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
   res.status(201).json(newSprint);
 });
 
-app.put('/api/sprints/:id', requireAdmin, (req, res) => {
+app.put('/api/sprints/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
   const updates = req.body;
   if (!dbData.sprints) dbData.sprints = [];
@@ -904,11 +913,11 @@ app.put('/api/sprints/:id', requireAdmin, (req, res) => {
     }
     return s;
   });
-  broadcastUpdate('sprints');
+  try { await broadcastUpdate('sprints'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
   res.json({ success: true });
 });
 
-app.delete('/api/sprints/:id', requireAdmin, (req, res) => {
+app.delete('/api/sprints/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
   if (!dbData.sprints) dbData.sprints = [];
   dbData.sprints = dbData.sprints.filter(s => s.id !== id);
@@ -919,13 +928,13 @@ app.delete('/api/sprints/:id', requireAdmin, (req, res) => {
     }
     return t;
   });
-  broadcastUpdate('sprints');
-  broadcastUpdate('tasks');
+  try { await broadcastUpdate('sprints'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
+  try { await broadcastUpdate('tasks'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
   res.json({ success: true });
 });
 
 // --- NOTIFICATION PERSISTENCE ENDPOINTS ---
-app.delete('/api/notifications', requireAuth, (req, res) => {
+app.delete('/api/notifications', requireAuth, async (req, res) => {
   const { userId, id } = req.query;
   if (!Array.isArray(dbData.notifications)) dbData.notifications = [];
   if (id) {
@@ -935,11 +944,11 @@ app.delete('/api/notifications', requireAuth, (req, res) => {
   } else {
     dbData.notifications = [];
   }
-  broadcastUpdate('notifications');
+  try { await broadcastUpdate('notifications'); } catch (e) { console.error('Socket save error', e); }
   res.json({ success: true });
 });
 
-app.put('/api/notifications/read', requireAuth, (req, res) => {
+app.put('/api/notifications/read', requireAuth, async (req, res) => {
   const { id, userId } = req.body || {};
   if (!Array.isArray(dbData.notifications)) return res.json({ success: true });
   dbData.notifications = dbData.notifications.map(n => {
@@ -947,12 +956,12 @@ app.put('/api/notifications/read', requireAuth, (req, res) => {
     if (!id && (n.userId === userId || n.userId === 'all' || !userId)) return { ...n, read: true };
     return n;
   });
-  broadcastUpdate('notifications');
+  try { await broadcastUpdate('notifications'); } catch (e) { console.error('Socket save error', e); }
   res.json({ success: true });
 });
 
 // --- FILE UPLOAD ENDPOINT (LOCAL AVATARS) ---
-app.post('/api/upload', requireAuth, (req, res) => {
+app.post('/api/upload', requireAuth, async (req, res) => {
   const { base64 } = req.body;
   if (!base64) {
     return res.status(400).json({ error: 'No base64 image data provided' });
@@ -975,7 +984,7 @@ app.post('/api/upload', requireAuth, (req, res) => {
 });
 
 // --- GENERAL FILE UPLOAD ENDPOINT (TASK ATTACHMENTS up to 50MB with whitelist) (1.D) ---
-app.post('/api/upload-file', requireAuth, (req, res) => {
+app.post('/api/upload-file', requireAuth, async (req, res) => {
   const { filename, base64 } = req.body;
   if (!base64 || !filename) {
     return res.status(400).json({ error: 'No base64 file data or filename provided' });
@@ -1003,7 +1012,7 @@ app.post('/api/upload-file', requireAuth, (req, res) => {
 });
 
 // Reset database (Admin Only & Blocked in Production) (1.B)
-app.post('/api/reset', requireAdmin, (req, res) => {
+app.post('/api/reset', requireAdmin, async (req, res) => {
   if (process.env.NODE_ENV === 'production') {
     return res.status(403).json({ error: 'Внимание! В продакшен-режиме сброс базы заблокирован в целях безопасности.' });
   }
@@ -1015,19 +1024,19 @@ app.post('/api/reset', requireAdmin, (req, res) => {
     findings: initialFindings,
     api_keys: initialApiKeys
   };
-  broadcastUpdate();
+  try { await broadcastUpdate(); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
   res.json({ success: true });
 });
 
 // Import database (Admin Only) (1.B)
-app.post('/api/import', requireAdmin, (req, res) => {
+app.post('/api/import', requireAdmin, async (req, res) => {
   const imported = req.body;
   if (imported && Array.isArray(imported.tasks)) {
     dbData.tasks = imported.tasks;
     if (Array.isArray(imported.sprints)) dbData.sprints = imported.sprints;
     if (Array.isArray(imported.users)) dbData.users = imported.users;
     if (Array.isArray(imported.groups)) dbData.groups = imported.groups;
-    broadcastUpdate();
+    try { await broadcastUpdate(); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
     res.json({ success: true });
   } else {
     res.status(400).json({ error: 'Invalid import format' });
@@ -1035,7 +1044,7 @@ app.post('/api/import', requireAdmin, (req, res) => {
 });
 
 // --- FORTIGATE API ENDPOINTS ---
-app.get('/api/fortigate/settings', requireAdmin, (req, res) => {
+app.get('/api/fortigate/settings', requireAdmin, async (req, res) => {
     const { workspaceId } = req.query;
     if (!dbData.fortigateSettings) dbData.fortigateSettings = {};
     const settings = workspaceId ? (dbData.fortigateSettings[workspaceId] || {}) : (dbData.fortigateSettings || {});
@@ -1087,7 +1096,7 @@ app.post('/api/fortigate/test', requireAdmin, async (req, res) => {
   }
 });
 
-app.get('/api/fortigate/banned-ips', requireAdmin, (req, res) => {
+app.get('/api/fortigate/banned-ips', requireAdmin, async (req, res) => {
     
     res.json({ success: true, bannedIps: dbData.bannedIps || [] });
   });
@@ -1156,7 +1165,7 @@ app.get('/api/fortigate/banned-ips', requireAdmin, (req, res) => {
   });
 
   // --- LDAP API ENDPOINTS ---
-  app.get('/api/ldap/settings', requireAuth, (req, res) => {
+  app.get('/api/ldap/settings', requireAuth, async (req, res) => {
   const settings = dbData.ldap_settings || {};
   res.json(sanitizeLdapSettings(settings));
 });
@@ -1177,7 +1186,7 @@ app.post('/api/ldap/settings', requireAuth, async (req, res) => {
     bindPassword
   };
   await saveCollection('ldap_settings', dbData.ldap_settings);
-  broadcastUpdate('ldap_settings');
+  try { await broadcastUpdate('ldap_settings'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
   res.json({ success: true, settings: sanitizeLdapSettings(dbData.ldap_settings) });
 });
 
@@ -1213,8 +1222,8 @@ app.post('/api/ldap/sync', requireAuth, async (req, res) => {
       bindPassword: isMaskedOrEmpty ? (current.bindPassword || '') : settings.bindPassword
     };
     const result = await syncLdapUsersAndTasks(dbData, saveCollection, syncConfig);
-    broadcastUpdate('users');
-    broadcastUpdate('tasks');
+    try { await broadcastUpdate('users'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
+    try { await broadcastUpdate('tasks'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
     res.json({ success: true, report: result });
   } catch (err) {
     console.error('❌ Ошибка синхронизации LDAP:', err);
@@ -1254,8 +1263,8 @@ app.post('/api/ldap/import-selected', requireAuth, async (req, res) => {
       bindPassword: isMaskedOrEmpty ? (current.bindPassword || '') : (settings?.bindPassword || current.bindPassword)
     };
     const result = await importSelectedLdapUsers(dbData, saveCollection, selectedUsers, importConfig);
-    broadcastUpdate('users');
-    broadcastUpdate('tasks');
+    try { await broadcastUpdate('users'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
+    try { await broadcastUpdate('tasks'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
     res.json({ success: true, report: result });
   } catch (err) {
     console.error('❌ Ошибка выборочного импорта LDAP:', err);
@@ -1266,12 +1275,12 @@ app.post('/api/ldap/import-selected', requireAuth, async (req, res) => {
 // --- SECURITY CENTER & INTEGRATIONS API ENDPOINTS ---
 
 // Получить список всех внешних инцидентов / уязвимостей
-app.get('/api/findings', requireAuth, (req, res) => {
+app.get('/api/findings', requireAuth, async (req, res) => {
   res.json(dbData.findings || []);
 });
 
 // Создать инцидент вручную из UI или через внутренний API
-app.post('/api/findings', requireAuth, (req, res) => {
+app.post('/api/findings', requireAuth, async (req, res) => {
   const findingData = req.body;
   const newId = findingData.id || `fnd-${Date.now()}`;
   const newFinding = {
@@ -1283,12 +1292,12 @@ app.post('/api/findings', requireAuth, (req, res) => {
   };
   if (!dbData.findings) dbData.findings = [];
   dbData.findings.unshift(newFinding);
-  broadcastUpdate('findings');
+  try { await broadcastUpdate('findings'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
   res.status(201).json(newFinding);
 });
 
 // Обновить статус инцидента (new -> analyzing -> false-positive / resolved)
-app.put('/api/findings/:id', requireAuth, (req, res) => {
+app.put('/api/findings/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
   const updates = req.body;
   if (!dbData.findings) dbData.findings = [];
@@ -1298,21 +1307,21 @@ app.put('/api/findings/:id', requireAuth, (req, res) => {
     }
     return f;
   });
-  broadcastUpdate('findings');
+  try { await broadcastUpdate('findings'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
   res.json({ success: true });
 });
 
 // Удалить инцидент
-app.delete('/api/findings/:id', requireAuth, (req, res) => {
+app.delete('/api/findings/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
   if (!dbData.findings) dbData.findings = [];
   dbData.findings = dbData.findings.filter(f => f.id !== id);
-  broadcastUpdate('findings');
+  try { await broadcastUpdate('findings'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
   res.json({ success: true });
 });
 
 // Перевести инцидент (DerScanner/SIEM) в рабочую задачу (Promote to Task)
-app.post('/api/findings/:id/promote', requireAuth, (req, res) => {
+app.post('/api/findings/:id/promote', requireAuth, async (req, res) => {
   const { id } = req.params;
   const { assigneeId, sprintId, priority } = req.body;
   if (!dbData.findings) dbData.findings = [];
@@ -1370,18 +1379,18 @@ app.post('/api/findings/:id/promote', requireAuth, (req, res) => {
     return f;
   });
 
-  broadcastUpdate('tasks');
-  broadcastUpdate('findings');
+  try { await broadcastUpdate('tasks'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
+  try { await broadcastUpdate('findings'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
   res.status(201).json({ success: true, task: promotedTask, findingId: id });
 });
 
 // Получить список API-ключей для интеграций
-app.get('/api/api-keys', requireAdmin, (req, res) => {
+app.get('/api/api-keys', requireAdmin, async (req, res) => {
   res.json(dbData.api_keys || []);
 });
 
 // Сгенерировать новый API-ключ для внешней системы
-app.post('/api/api-keys', requireAdmin, (req, res) => {
+app.post('/api/api-keys', requireAdmin, async (req, res) => {
   const { name, source, workspaceId } = req.body;
   if (!name) {
     return res.status(400).json({ error: 'Укажите название интеграции / ключа' });
@@ -1399,16 +1408,16 @@ app.post('/api/api-keys', requireAdmin, (req, res) => {
   };
   if (!dbData.api_keys) dbData.api_keys = [];
   dbData.api_keys.push(newKeyObj);
-  broadcastUpdate('api_keys');
+  try { await broadcastUpdate('api_keys'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
   res.status(201).json(newKeyObj);
 });
 
 // Удалить/отозвать API-ключ
-app.delete('/api/api-keys/:id', requireAdmin, (req, res) => {
+app.delete('/api/api-keys/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
   if (!dbData.api_keys) dbData.api_keys = [];
   dbData.api_keys = dbData.api_keys.filter(k => k.id !== id);
-  broadcastUpdate('api_keys');
+  try { await broadcastUpdate('api_keys'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
   res.json({ success: true });
 });
 
@@ -1429,7 +1438,7 @@ const extractTokenFromRequest = (req) => {
   return typeof token === 'string' ? token.trim() : '';
 };
 
-const handleExternalWebhook = (req, res) => {
+const handleExternalWebhook = async (req, res) => {
   const token = extractTokenFromRequest(req);
   if (!dbData.api_keys) dbData.api_keys = [];
   const matchedKey = dbData.api_keys.find(k => k.key === token || k.name === token);
@@ -1474,14 +1483,14 @@ const handleExternalWebhook = (req, res) => {
 
   if (!dbData.findings) dbData.findings = [];
   dbData.findings.unshift(newFinding);
-  broadcastUpdate('findings');
+  try { await broadcastUpdate('findings'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
 
   console.log(`🛡️ [Webhook Received] Добавлен инцидент от ${source.toUpperCase()}: "${newFinding.title}" (${newFinding.severity})`);
   res.status(201).json({ success: true, findingId: newId, message: 'Уязвимость успешно зарегистрирована в Центре ИБ Pulse' });
 };
 
 // --- JIRA REST API COMPATIBILITY GATEWAY (Для привязки аккаунта в DerScanner: Аккаунт > Доступы > Таск-менеджер / Jira) ---
-const handleJiraServerInfo = (req, res) => {
+const handleJiraServerInfo = async (req, res) => {
   res.status(200).json({
     baseUrl: req.protocol + '://' + req.get('host'),
     version: "9.4.0",
@@ -1494,7 +1503,7 @@ const handleJiraServerInfo = (req, res) => {
   });
 };
 
-const handleJiraMyself = (req, res) => {
+const handleJiraMyself = async (req, res) => {
   const token = extractTokenFromRequest(req);
   res.status(200).json({
     self: `${req.protocol}://${req.get('host')}/rest/api/2/user?username=admin`,
@@ -1591,7 +1600,7 @@ const getProjectObject = (req, keyOrId = 'PULSE') => {
   };
 };
 
-const handleJiraProjects = (req, res) => {
+const handleJiraProjects = async (req, res) => {
   const url = req.originalUrl || req.url || req.path || '';
   const list = (dbData.projects && dbData.projects.length > 0)
     ? dbData.projects.map(p => getProjectObject(req, p.key || p.id))
@@ -1602,12 +1611,12 @@ const handleJiraProjects = (req, res) => {
   return res.status(200).json(list);
 };
 
-const handleJiraProjectDetail = (req, res) => {
+const handleJiraProjectDetail = async (req, res) => {
   const keyOrId = req.params.projectIdOrKey || 'PULSE';
   res.status(200).json(getProjectObject(req, keyOrId));
 };
 
-const handleJiraComponents = (req, res) => {
+const handleJiraComponents = async (req, res) => {
   const url = req.originalUrl || req.url || req.path || '';
   const components = [
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10001`, id: "10001", name: "Backend SAST", description: "Backend services" },
@@ -1624,7 +1633,7 @@ const handleJiraComponents = (req, res) => {
   return res.status(200).json(components);
 };
 
-const handleJiraUsersSearch = (req, res) => {
+const handleJiraUsersSearch = async (req, res) => {
   const url = req.originalUrl || req.url || req.path || '';
   const list = getJiraUsersList(req);
   if (url.includes('/picker')) {
@@ -1638,7 +1647,7 @@ const handleJiraUsersSearch = (req, res) => {
   return res.status(200).json(list);
 };
 
-const handleJiraSearch = (req, res) => {
+const handleJiraSearch = async (req, res) => {
   const issues = (dbData.tasks || []).slice(0, 20).map(t => ({
     expand: "operations,versionedRepresentations,editmeta,changelog,renderedFields",
     id: String(t.id),
@@ -1660,7 +1669,7 @@ const handleJiraSearch = (req, res) => {
   });
 };
 
-const handleJiraIssueTypes = (req, res) => {
+const handleJiraIssueTypes = async (req, res) => {
   const url = req.originalUrl || req.url || req.path || '';
   const issueTypes = getEnrichedIssueTypes(req);
   if (url.match(/\/issuetype\/(1000[1-3])$/)) {
@@ -1678,7 +1687,7 @@ const handleJiraIssueTypes = (req, res) => {
   });
 };
 
-const handleJiraPriorities = (req, res) => {
+const handleJiraPriorities = async (req, res) => {
   const url = req.originalUrl || req.url || req.path || '';
   const priorities = [
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/1`, statusColor: "#ef4444", description: "Critical / Highest", iconUrl: "", name: "Highest", id: "1" },
@@ -1701,7 +1710,7 @@ const handleJiraPriorities = (req, res) => {
   });
 };
 
-const handleJiraFields = (req, res) => {
+const handleJiraFields = async (req, res) => {
   const url = req.originalUrl || req.url || req.path || '';
   const fieldsObject = getEnrichedJiraFields(req);
   const fields = Object.values(fieldsObject);
@@ -1721,7 +1730,7 @@ const handleJiraFields = (req, res) => {
   });
 };
 
-const handleJiraStatuses = (req, res) => {
+const handleJiraStatuses = async (req, res) => {
   const url = req.originalUrl || req.url || req.path || '';
   const statusList = [
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/1`, description: "Новый инцидент", iconUrl: "", name: "New", id: "1", statusCategory: { id: 2, key: "new", colorName: "blue-gray", name: "To Do" } },
@@ -1747,13 +1756,13 @@ const handleJiraStatuses = (req, res) => {
   });
 };
 
-const handleJiraVersions = (req, res) => {
+const handleJiraVersions = async (req, res) => {
   res.status(200).json([
     { self: `${req.protocol}://${req.get('host')}/rest/api/2/version/10001`, id: "10001", name: "v1.0.0", archived: false, released: true, projectId: 10001 }
   ]);
 };
 
-const handleJiraCreateMeta = (req, res) => {
+const handleJiraCreateMeta = async (req, res) => {
   const path = req.path || req.originalUrl || '';
   let issueTypesList = getEnrichedIssueTypes(req);
 
@@ -1821,7 +1830,7 @@ const handleJiraCreateMeta = (req, res) => {
   });
 };
 
-const handleJiraCreateIssue = (req, res) => {
+const handleJiraCreateIssue = async (req, res) => {
   const token = extractTokenFromRequest(req);
   const matchedKey = dbData.api_keys?.find(k => k.key === token || k.name === token);
   
@@ -1855,7 +1864,7 @@ const handleJiraCreateIssue = (req, res) => {
 
   if (!dbData.findings) dbData.findings = [];
   dbData.findings.unshift(newFinding);
-  broadcastUpdate('findings');
+  try { await broadcastUpdate('findings'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
 
   console.log(`🛡️ [Jira REST API] Создан тикет от DerScanner: "${newFinding.title}" (${newFinding.severity})`);
   
@@ -1867,7 +1876,7 @@ const handleJiraCreateIssue = (req, res) => {
 };
 
 // GET эндпоинты для проверки состояния вебхуков
-app.get(['/api/v1/webhooks/derscanner', '/api/webhooks/derscanner', '/api/v1/integrations/findings'], (req, res) => {
+app.get(['/api/v1/webhooks/derscanner', '/api/webhooks/derscanner', '/api/v1/integrations/findings'], async (req, res) => {
   res.status(200).json({ status: 'ok', service: 'Pulse DerScanner Webhook & Jira REST Gateway', version: '9.4.0' });
 });
 
@@ -1895,7 +1904,7 @@ app.use('/api/v1/webhooks/derscanner/rest/api/2/issue/createmeta', handleJiraCre
 app.post(['/rest/api/2/issue', '/api/v1/webhooks/derscanner/rest/api/2/issue'], handleJiraCreateIssue);
 
 // Catch-all wildcard для любых других запросов от DerScanner по путям /rest и /api/v1/webhooks/derscanner
-const handleWildcard = (req, res) => {
+const handleWildcard = async (req, res) => {
   const url = req.originalUrl || req.url || req.path || '';
   console.log(`📡 [Jira Gateway Wildcard] ${req.method} ${url}`);
   if (req.method === 'GET') {
@@ -1933,7 +1942,7 @@ io.on('connection', (socket) => {
   socket.emit('init-data', getSanitizedDbData());
   broadcastOnlineUsers();
 
-  socket.on('user-online', (userId) => {
+  socket.on('user-online', async (userId) => {
     if (userId) {
       onlineSockets.set(socket.id, userId);
       console.log(`🟢 User ${userId} is online on socket ${socket.id}`);
@@ -1941,16 +1950,16 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('request-sync', () => {
+  socket.on('request-sync', async () => {
     socket.emit('data-updated', getSanitizedDbData());
     broadcastOnlineUsers();
   });
 
-  socket.on('send-notification', (notif) => {
+  socket.on('send-notification', async (notif) => {
     if (notif && notif.id) {
       if (!Array.isArray(dbData.notifications)) dbData.notifications = [];
       dbData.notifications = [notif, ...dbData.notifications.filter(n => n.id !== notif.id)].slice(0, 200);
-      broadcastUpdate('notifications');
+      try { await broadcastUpdate('notifications'); } catch (e) { console.error('Socket save error', e); }
     }
     io.emit('notification-received', notif);
 
@@ -1966,23 +1975,23 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('clear-user-notifications', (userId) => {
+  socket.on('clear-user-notifications', async (userId) => {
     if (!Array.isArray(dbData.notifications)) dbData.notifications = [];
     if (userId === 'all' || !userId) {
       dbData.notifications = [];
     } else {
       dbData.notifications = dbData.notifications.filter(n => n.userId !== userId && n.userId !== 'all');
     }
-    broadcastUpdate('notifications');
+    try { await broadcastUpdate('notifications'); } catch (e) { console.error('Socket save error', e); }
   });
 
-  socket.on('mark-notification-read', (id) => {
+  socket.on('mark-notification-read', async (id) => {
     if (!Array.isArray(dbData.notifications)) return;
     dbData.notifications = dbData.notifications.map(n => n.id === id ? { ...n, read: true } : n);
-    broadcastUpdate('notifications');
+    try { await broadcastUpdate('notifications'); } catch (e) { console.error('Socket save error', e); }
   });
 
-  socket.on('mark-all-notifications-read', (userId) => {
+  socket.on('mark-all-notifications-read', async (userId) => {
     if (!Array.isArray(dbData.notifications)) return;
     dbData.notifications = dbData.notifications.map(n => {
       if (!userId || n.userId === userId || n.userId === 'all') {
@@ -1990,16 +1999,16 @@ io.on('connection', (socket) => {
       }
       return n;
     });
-    broadcastUpdate('notifications');
+    try { await broadcastUpdate('notifications'); } catch (e) { console.error('Socket save error', e); }
   });
 
-  socket.on('delete-notification', (id) => {
+  socket.on('delete-notification', async (id) => {
     if (!Array.isArray(dbData.notifications)) return;
     dbData.notifications = dbData.notifications.filter(n => n.id !== id);
-    broadcastUpdate('notifications');
+    try { await broadcastUpdate('notifications'); } catch (e) { console.error('Socket save error', e); }
   });
 
-  socket.on('disconnect', () => {
+  socket.on('disconnect', async () => {
     console.log(`🔌 Corporate laptop disconnected: ${socket.id}`);
     onlineSockets.delete(socket.id);
     broadcastOnlineUsers();
@@ -2008,7 +2017,7 @@ io.on('connection', (socket) => {
 
 // --- STATIC FRONTEND SERVING FOR PRODUCTION (vSphere VM / Docker) ---
   // Настройки почты (SMTP и IMAP)
-  app.get('/api/settings/mail', requireAdmin, (req, res) => {
+  app.get('/api/settings/mail', requireAdmin, async (req, res) => {
     res.json({
       mailSettings: dbData.mailSettings || {},
       imapSettings: dbData.imapSettings || {},
@@ -2069,7 +2078,7 @@ if (fs.existsSync(DIST_DIR)) {
   }));
 
   // SPA Fallback: маршрутизация клиентского приложения (/admin, /board, /team, /profile и т.д.)
-  app.use((req, res) => {
+  app.use(async (req, res) => {
     // Если запрос был к файлу статики (.js, .css, .png, .map), но его нет на диске — возвращаем 404 вместо index.html
     if (req.path.includes('.') || req.path.startsWith('/api/') || req.path.startsWith('/uploads/') || req.path.startsWith('/socket.io/')) {
       return res.status(404).json({ error: 'Asset or API endpoint not found' });
