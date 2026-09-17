@@ -12,14 +12,12 @@ import {
   HelpCircle,
   ShieldAlert,
   Activity,
-  Sun,
-  Moon,
   ChevronLeft
 } from 'lucide-react';
 import './Sidebar.css';
 
 export const Sidebar: React.FC = () => {
-  const { viewMode, setViewMode, theme, setTheme, users, findings, workspaces, activeWorkspaceId, setActiveWorkspaceId } = useTaskContext();
+  const { viewMode, setViewMode, users, findings, workspaces, activeWorkspaceId, setActiveWorkspaceId } = useTaskContext();
   const { currentUser, isAdmin } = useAuth();
   const [isCollapsed, setIsCollapsed] = React.useState(() => {
     const saved = localStorage.getItem('pulse_sidebar_collapsed');
@@ -116,24 +114,7 @@ export const Sidebar: React.FC = () => {
         </nav>
       )}
 
-              <div className="sidebar-bottom">
-          {isAdmin && (
-            <button 
-              className="sidebar-nav-item theme-toggle"
-              onClick={() => {
-                if (theme === 'light') setTheme('dark-classic');
-                else if (theme === 'dark-classic') setTheme('dark-matte');
-                else setTheme('light');
-              }}
-              title="Переключить тему (Светлая -> Неон -> Графит)"
-            >
-              {theme.startsWith('dark') ? <Sun size={18} /> : <Moon size={18} />}
-              <span className="nav-label">
-                {theme === 'light' ? 'Светлая тема' : theme === 'dark-matte' ? 'Тёмная (Матовая)' : 'Тёмная (Неон)'}
-              </span>
-            </button>
-          )}
-        </div>
+              
     </aside>
   );
 };

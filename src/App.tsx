@@ -19,22 +19,13 @@ import type { Status } from './types';
 import './App.css';
 
 const AppContent: React.FC = () => {
-  const { viewMode, activeTaskModalId, setActiveTaskModalId, setFilters, theme } = useTaskContext();
+  const { viewMode, activeTaskModalId, setActiveTaskModalId, setFilters } = useTaskContext();
   const { isLoggedIn, isAdmin, currentUser, sessionExpired, clearSessionExpired } = useAuth();
   
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [modalStatus, setModalStatus] = useState<Status>('todo');
   const [modalSprintId, setModalSprintId] = useState<string | null | undefined>(undefined);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-
-
-  useEffect(() => {
-    if (!isLoggedIn || !isAdmin) {
-      document.documentElement.setAttribute('data-theme', 'light');
-    } else {
-      document.documentElement.setAttribute('data-theme', theme);
-    }
-  }, [isLoggedIn, isAdmin, theme]);
 
   useEffect(() => {
     if (currentUser) {

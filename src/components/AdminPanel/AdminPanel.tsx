@@ -10,7 +10,7 @@ import { WorkspacesTab } from './WorkspacesTab';
 import './AdminPanel.css';
 
 export const AdminPanel: React.FC = () => {
-  const { users, groups, onlineUserIds, workspaces, apiKeys, theme, setTheme, addUser, updateUser, deleteUser, addGroup, updateGroup, deleteGroup, addApiKey, deleteApiKey } = useTaskContext();
+  const { users, groups, onlineUserIds, workspaces, apiKeys, globalSettings, updateGlobalSettings, addUser, updateUser, deleteUser, addGroup, updateGroup, deleteGroup, addApiKey, deleteApiKey } = useTaskContext();
   const { isAdmin } = useAuth();
   const isProtectedAdmin = (u: User) => u.id === 'usr-1' || u.login?.toLowerCase() === 'admin';
   const employeeUsers = users.filter(u => !isProtectedAdmin(u));
@@ -356,61 +356,61 @@ export const AdminPanel: React.FC = () => {
         {activeTab === 'appearance' && (
           <div className="admin-section animate-fade-in">
             <h2>Персональные Темы Администратора</h2>
-            <p className="admin-subtitle" style={{ marginBottom: '24px' }}>У рядовых сотрудников заблокирована светлая тема. Здесь вы можете выбрать дизайн для себя.</p>
+            <p className="admin-subtitle" style={{ marginBottom: '24px' }}>Здесь вы выбираете тему, которая мгновенно применится у всех пользователей системы.</p>
             
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
               
               <div 
-                onClick={() => setTheme('light')}
-                style={{ padding: '24px', cursor: 'pointer', borderRadius: '12px', border: theme === 'light' ? '3px solid #3b82f6' : '1px solid #ccc', background: '#ffffff', color: '#1a1a1a', textAlign: 'center' }}
+                onClick={() => updateGlobalSettings({ ...globalSettings, theme: 'light' })}
+                style={{ padding: '24px', cursor: 'pointer', borderRadius: '12px', border: (globalSettings?.theme || 'light') === 'light' ? '3px solid #3b82f6' : '1px solid #ccc', background: '#ffffff', color: '#1a1a1a', textAlign: 'center' }}
               >
                 <h3>Светлая тема</h3>
                 <p style={{ opacity: 0.7, fontSize: '0.85rem' }}>Корпоративный стандарт</p>
               </div>
 
               <div 
-                onClick={() => setTheme('dark-classic')}
-                style={{ padding: '24px', cursor: 'pointer', borderRadius: '12px', border: theme === 'dark-classic' ? '3px solid #3b82f6' : '1px solid #333', background: '#090a0f', color: '#ffffff', textAlign: 'center' }}
+                onClick={() => updateGlobalSettings({ ...globalSettings, theme: 'dark-classic' })}
+                style={{ padding: '24px', cursor: 'pointer', borderRadius: '12px', border: (globalSettings?.theme || 'light') === 'dark-classic' ? '3px solid #3b82f6' : '1px solid #333', background: '#090a0f', color: '#ffffff', textAlign: 'center' }}
               >
                 <h3>Тёмная (Неон)</h3>
                 <p style={{ opacity: 0.7, fontSize: '0.85rem' }}>Оригинальная тёмная тема</p>
               </div>
 
               <div 
-                onClick={() => setTheme('dark-matte')}
-                style={{ padding: '24px', cursor: 'pointer', borderRadius: '12px', border: theme === 'dark-matte' ? '3px solid #88c0d0' : '1px solid #333', background: '#121315', color: '#e6e6e6', textAlign: 'center' }}
+                onClick={() => updateGlobalSettings({ ...globalSettings, theme: 'dark-matte' })}
+                style={{ padding: '24px', cursor: 'pointer', borderRadius: '12px', border: (globalSettings?.theme || 'light') === 'dark-matte' ? '3px solid #88c0d0' : '1px solid #333', background: '#121315', color: '#e6e6e6', textAlign: 'center' }}
               >
                 <h3>Тёмная (Матовая)</h3>
                 <p style={{ opacity: 0.7, fontSize: '0.85rem' }}>Графит и Титан</p>
               </div>
 
               <div 
-                onClick={() => setTheme('ocean')}
-                style={{ padding: '24px', cursor: 'pointer', borderRadius: '12px', border: theme === 'ocean' ? '3px solid #00c8ff' : '1px solid #333', background: '#121d25', color: '#e6f2ff', textAlign: 'center' }}
+                onClick={() => updateGlobalSettings({ ...globalSettings, theme: 'ocean' })}
+                style={{ padding: '24px', cursor: 'pointer', borderRadius: '12px', border: (globalSettings?.theme || 'light') === 'ocean' ? '3px solid #00c8ff' : '1px solid #333', background: '#121d25', color: '#e6f2ff', textAlign: 'center' }}
               >
                 <h3>Deep Ocean</h3>
                 <p style={{ opacity: 0.7, fontSize: '0.85rem' }}>Глубокий сине-зеленый (Teal)</p>
               </div>
 
               <div 
-                onClick={() => setTheme('coffee')}
-                style={{ padding: '24px', cursor: 'pointer', borderRadius: '12px', border: theme === 'coffee' ? '3px solid #8b5a2b' : '1px solid #ccc', background: '#ebe4db', color: '#332211', textAlign: 'center' }}
+                onClick={() => updateGlobalSettings({ ...globalSettings, theme: 'coffee' })}
+                style={{ padding: '24px', cursor: 'pointer', borderRadius: '12px', border: (globalSettings?.theme || 'light') === 'coffee' ? '3px solid #8b5a2b' : '1px solid #ccc', background: '#ebe4db', color: '#332211', textAlign: 'center' }}
               >
                 <h3>Coffee / Sepia</h3>
                 <p style={{ opacity: 0.7, fontSize: '0.85rem' }}>Теплая бежевая, для чтения</p>
               </div>
 
               <div 
-                onClick={() => setTheme('dracula')}
-                style={{ padding: '24px', cursor: 'pointer', borderRadius: '12px', border: theme === 'dracula' ? '3px solid #ff79c6' : '1px solid #333', background: '#282a36', color: '#f8f8f2', textAlign: 'center' }}
+                onClick={() => updateGlobalSettings({ ...globalSettings, theme: 'dracula' })}
+                style={{ padding: '24px', cursor: 'pointer', borderRadius: '12px', border: (globalSettings?.theme || 'light') === 'dracula' ? '3px solid #ff79c6' : '1px solid #333', background: '#282a36', color: '#f8f8f2', textAlign: 'center' }}
               >
                 <h3 style={{ color: '#ff79c6' }}>Dracula</h3>
                 <p style={{ opacity: 0.7, fontSize: '0.85rem' }}>Легендарная тема разработчиков</p>
               </div>
 
               <div 
-                onClick={() => setTheme('nord')}
-                style={{ padding: '24px', cursor: 'pointer', borderRadius: '12px', border: theme === 'nord' ? '3px solid #88c0d0' : '1px solid #333', background: '#2e3440', color: '#eceff4', textAlign: 'center' }}
+                onClick={() => updateGlobalSettings({ ...globalSettings, theme: 'nord' })}
+                style={{ padding: '24px', cursor: 'pointer', borderRadius: '12px', border: (globalSettings?.theme || 'light') === 'nord' ? '3px solid #88c0d0' : '1px solid #333', background: '#2e3440', color: '#eceff4', textAlign: 'center' }}
               >
                 <h3 style={{ color: '#88c0d0' }}>Nord</h3>
                 <p style={{ opacity: 0.7, fontSize: '0.85rem' }}>Арктические пастельные тона</p>

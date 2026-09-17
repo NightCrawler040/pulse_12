@@ -29,6 +29,8 @@ interface TaskContextType {
   setFilters: React.Dispatch<React.SetStateAction<FilterState>>;
   setViewMode: (mode: ViewMode) => void;
   setTheme: (theme: string) => void;
+  globalSettings: any;
+  updateGlobalSettings: (settings: any) => void;
   setActiveTaskModalId: (id: string | null) => void;
   setActiveSprintId: (id: string) => void;
   addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'comments'>) => Task;
@@ -172,6 +174,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => window.removeEventListener('socket-url-changed', handleUrlChange);
   }, []);
   
+  const [globalSettings, setGlobalSettings] = useState<any>({});
   const [theme, setThemeState] = useState<string>(() => {
     const savedTheme = localStorage.getItem(THEME_KEY) || 'light';
     return savedTheme;
@@ -183,9 +186,12 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     document.documentElement.setAttribute('data-theme', newTheme);
   };
 
+  
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
+    const effectiveTheme = globalSettings.theme || theme;
+    document.documentElement.setAttribute('data-theme', effectiveTheme);
+  }, [theme, globalSettings]);
+
 
   // Connect to backend server and setup WebSockets
   useEffect(() => {
@@ -198,6 +204,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (Array.isArray(data.notifications)) setNotifications(data.notifications);
         if (Array.isArray(data.findings)) setFindings(data.findings);
         if (Array.isArray(data.api_keys)) setApiKeys(data.api_keys);
+        if ((data as any).globalSettings) setGlobalSettings((data as any).globalSettings);
           if (Array.isArray(data.workspaces)) { setWorkspaces(data.workspaces); if (data.workspaces.length > 0) setActiveWorkspaceId(data.workspaces[0].id); }
         setIsServerConnected(true);
       }
@@ -222,6 +229,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (Array.isArray(data.notifications)) setNotifications(data.notifications);
         if (Array.isArray(data.findings)) setFindings(data.findings);
         if (Array.isArray(data.api_keys)) setApiKeys(data.api_keys);
+        if ((data as any).globalSettings) setGlobalSettings((data as any).globalSettings);
         if (Array.isArray(data.workspaces)) setWorkspaces(data.workspaces);
       }
     };
@@ -683,6 +691,23 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     URL.revokeObjectURL(url);
   };
 
+  
+  const updateGlobalSettings = async (settings: any) => {
+    try {
+      const token = localStorage.getItem('korpjira-token');
+      const res = await fetch('/api/settings/global', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(settings)
+      });
+      if (res.ok) {
+        setGlobalSettings(settings);
+      }
+    } catch (err) {
+      console.error('Failed to update global settings', err);
+    }
+  };
+
   const importData = (jsonData: string): boolean => {
     try {
       const parsed = JSON.parse(jsonData);
@@ -800,6 +825,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setFilters,
       setViewMode,
       setTheme,
+      globalSettings,
+      updateGlobalSettings,
       setActiveTaskModalId,
       setActiveSprintId,
       addTask,
