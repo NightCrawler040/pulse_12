@@ -694,13 +694,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const updateGlobalSettings = async (settings: any) => {
     try {
-      const token = localStorage.getItem('korpjira-token');
-      const res = await fetch('/api/settings/global', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(settings)
-      });
-      if (res.ok) {
+      const res = await apiService.updateGlobalSettings(settings);
+      if (res.success) {
         setGlobalSettings(settings);
       }
     } catch (err) {

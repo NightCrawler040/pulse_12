@@ -135,6 +135,7 @@ export const apiService = {
   getServerUrl,
   setServerUrl,
   fetchData: () => apiRequest<DatabaseData>('/api/data'),
+  updateGlobalSettings: (settings: any) => apiRequest<{success: boolean, settings: any}>('/api/settings/global', { method: 'POST', body: JSON.stringify({theme: settings.theme}) }),
   clearNotifications: (userId?: string, id?: string) =>
     apiRequest<{ success: boolean }>('/api/notifications' + (id ? `?id=${id}` : (userId ? `?userId=${userId}` : '')), { method: 'DELETE' }),
   markNotificationsRead: (id?: string, userId?: string) =>
