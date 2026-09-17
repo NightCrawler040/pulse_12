@@ -20,7 +20,7 @@ interface TaskContextType {
   activeSprintId: string;
   filters: FilterState;
   viewMode: ViewMode;
-  theme: 'dark' | 'light' | 'dark-matte';
+  theme: string;
   filteredTasks: Task[];
   activeTaskModalId: string | null;
   isServerConnected: boolean;
@@ -28,9 +28,7 @@ interface TaskContextType {
   setIsNetworkModalOpen: (open: boolean) => void;
   setFilters: React.Dispatch<React.SetStateAction<FilterState>>;
   setViewMode: (mode: ViewMode) => void;
-  setTheme: (theme: 'dark' | 'light' | 'dark-matte') => void;
-  globalSettings: any;
-  updateGlobalSettings: (settings: any) => void;
+  setTheme: (theme: string) => void;
   setActiveTaskModalId: (id: string | null) => void;
   setActiveSprintId: (id: string) => void;
   addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'comments'>) => Task;
@@ -174,28 +172,20 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => window.removeEventListener('socket-url-changed', handleUrlChange);
   }, []);
   
-  const [globalSettings, setGlobalSettings] = useState<any>({});
-  const [theme, setThemeState] = useState<'dark' | 'light' | 'dark-matte'>(() => {
-    const savedTheme = localStorage.getItem(THEME_KEY) as 'dark' | 'light' | 'dark-matte';
-    return savedTheme || 'dark-matte';
+  const [theme, setThemeState] = useState<string>(() => {
+    const savedTheme = localStorage.getItem(THEME_KEY) || 'light';
+    return savedTheme;
   });
 
-  const setTheme = (newTheme: 'dark' | 'light' | 'dark-matte') => {
+  const setTheme = (newTheme: string) => {
     setThemeState(newTheme);
     localStorage.setItem(THEME_KEY, newTheme);
     document.documentElement.setAttribute('data-theme', newTheme);
   };
 
-  
   useEffect(() => {
-    const effectiveTheme = globalSettings.theme || theme;
-    if (effectiveTheme === 'dark-matte') {
-      document.documentElement.setAttribute('data-theme', 'dark-matte');
-    } else {
-      document.documentElement.setAttribute('data-theme', effectiveTheme);
-    }
-  }, [theme, globalSettings]);
-
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   // Connect to backend server and setup WebSockets
   useEffect(() => {
@@ -208,7 +198,6 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (Array.isArray(data.notifications)) setNotifications(data.notifications);
         if (Array.isArray(data.findings)) setFindings(data.findings);
         if (Array.isArray(data.api_keys)) setApiKeys(data.api_keys);
-        if (data.globalSettings) setGlobalSettings(data.globalSettings);
           if (Array.isArray(data.workspaces)) { setWorkspaces(data.workspaces); if (data.workspaces.length > 0) setActiveWorkspaceId(data.workspaces[0].id); }
         setIsServerConnected(true);
       }
@@ -233,7 +222,6 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (Array.isArray(data.notifications)) setNotifications(data.notifications);
         if (Array.isArray(data.findings)) setFindings(data.findings);
         if (Array.isArray(data.api_keys)) setApiKeys(data.api_keys);
-        if (data.globalSettings) setGlobalSettings(data.globalSettings);
         if (Array.isArray(data.workspaces)) setWorkspaces(data.workspaces);
       }
     };
@@ -812,8 +800,6 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setFilters,
       setViewMode,
       setTheme,
-      globalSettings,
-      updateGlobalSettings,
       setActiveTaskModalId,
       setActiveSprintId,
       addTask,
