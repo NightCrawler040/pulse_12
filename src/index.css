@@ -257,3 +257,111 @@ button {
   --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.4);
   --shadow-glow: 0 0 24px rgba(130, 140, 160, 0.15);
 }
+
+/* =========================================
+   NEW THEMES (ADMIN ONLY)
+========================================= */
+
+/* 🌊 Deep Ocean */
+[data-theme="ocean"] {
+  --bg-main: 210 40% 12%;       
+  --bg-secondary: 210 40% 15%; 
+  --bg-tertiary: 210 40% 18%;  
+  --bg-card: 210 40% 15%;      
+  --bg-card-hover: 210 40% 19%;
+  --bg-glass: rgba(18, 33, 48, 0.85);
+  --bg-glass-hover: rgba(23, 41, 59, 0.95);
+  --border-color: rgba(0, 200, 255, 0.1); 
+  --border-color-focus: rgba(0, 200, 255, 0.4);
+
+  --text-primary: 210 20% 95%;
+  --text-secondary: 210 20% 75%;
+  --text-muted: 210 20% 55%;
+
+  --primary: 190 70% 45%;      
+  --primary-hover: 190 70% 55%;
+  --primary-glow: rgba(0, 200, 255, 0.15);
+  
+  --secondary: 160 60% 40%;
+  --accent: 210 60% 50%;
+  
+  --shadow-glow: 0 0 24px rgba(0, 200, 255, 0.15);
+}
+
+/* ☕ Coffee / Sepia */
+[data-theme="coffee"] {
+  --bg-main: 35 30% 92%;       
+  --bg-secondary: 35 30% 88%; 
+  --bg-tertiary: 35 30% 84%;  
+  --bg-card: 35 30% 95%;      
+  --bg-card-hover: 0 0% 100%;
+  --bg-glass: rgba(245, 238, 229, 0.85);
+  --bg-glass-hover: rgba(255, 255, 255, 0.95);
+  --border-color: rgba(90, 60, 40, 0.1); 
+  --border-color-focus: rgba(90, 60, 40, 0.3);
+
+  --text-primary: 30 40% 20%;
+  --text-secondary: 30 30% 40%;
+  --text-muted: 30 20% 55%;
+
+  --primary: 25 40% 35%;      
+  --primary-hover: 25 40% 45%;
+  --primary-glow: rgba(90, 60, 40, 0.15);
+  
+  --secondary: 15 40% 40%;
+  --accent: 35 50% 40%;
+  
+  --shadow-glow: none;
+}
+
+/* 🧛‍♂️ Dracula */
+[data-theme="dracula"] {
+  --bg-main: 231 15% 18%;       
+  --bg-secondary: 231 15% 21%; 
+  --bg-tertiary: 231 15% 25%;  
+  --bg-card: 231 15% 21%;      
+  --bg-card-hover: 231 15% 26%;
+  --bg-glass: rgba(40, 42, 54, 0.85);
+  --bg-glass-hover: rgba(50, 52, 64, 0.95);
+  --border-color: rgba(255, 121, 198, 0.15); 
+  --border-color-focus: rgba(255, 121, 198, 0.4);
+
+  --text-primary: 0 0% 97%;
+  --text-secondary: 231 15% 75%;
+  --text-muted: 231 15% 55%;
+
+  --primary: 326 100% 74%;      
+  --primary-hover: 326 100% 80%;
+  --primary-glow: rgba(255, 121, 198, 0.2);
+  
+  --secondary: 135 94% 65%;
+  --accent: 191 97% 77%;
+  
+  --shadow-glow: 0 0 24px rgba(255, 121, 198, 0.2);
+}
+
+/* 🌲 Nord */
+[data-theme="nord"] {
+  --bg-main: 220 16% 22%;       
+  --bg-secondary: 220 16% 25%; 
+  --bg-tertiary: 220 16% 30%;  
+  --bg-card: 220 16% 26%;      
+  --bg-card-hover: 220 16% 31%;
+  --bg-glass: rgba(46, 52, 64, 0.85);
+  --bg-glass-hover: rgba(59, 66, 82, 0.95);
+  --border-color: rgba(136, 192, 208, 0.15); 
+  --border-color-focus: rgba(136, 192, 208, 0.4);
+
+  --text-primary: 218 27% 92%;
+  --text-secondary: 218 27% 75%;
+  --text-muted: 218 27% 60%;
+
+  --primary: 193 43% 67%;      
+  --primary-hover: 193 43% 77%;
+  --primary-glow: rgba(136, 192, 208, 0.15);
+  
+  --secondary: 213 32% 52%;
+  --accent: 14 51% 63%;
+  
+  --shadow-glow: 0 0 24px rgba(136, 192, 208, 0.15);
+}

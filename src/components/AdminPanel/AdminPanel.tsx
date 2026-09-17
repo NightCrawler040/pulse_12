@@ -10,13 +10,13 @@ import { WorkspacesTab } from './WorkspacesTab';
 import './AdminPanel.css';
 
 export const AdminPanel: React.FC = () => {
-  const { users, groups, onlineUserIds, workspaces, apiKeys, addUser, updateUser, deleteUser, addGroup, updateGroup, deleteGroup, addApiKey, deleteApiKey } = useTaskContext();
+  const { users, groups, onlineUserIds, workspaces, apiKeys, theme, setTheme, addUser, updateUser, deleteUser, addGroup, updateGroup, deleteGroup, addApiKey, deleteApiKey } = useTaskContext();
   const { isAdmin } = useAuth();
   const isProtectedAdmin = (u: User) => u.id === 'usr-1' || u.login?.toLowerCase() === 'admin';
   const employeeUsers = users.filter(u => !isProtectedAdmin(u));
 
   const [selectedIntegrationWsId, setSelectedIntegrationWsId] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<'workspaces' | 'users' | 'groups' | 'integrations' | 'ldap' | 'mail' | 'fortigate'>('workspaces');
+  const [activeTab, setActiveTab] = useState<'workspaces' | 'users' | 'groups' | 'integrations' | 'ldap' | 'mail' | 'fortigate' | 'appearance'>('workspaces');
   const [newKeyName, setNewKeyName] = useState('');
   const [newKeySource, setNewKeySource] = useState<'derscanner' | 'siem' | 'custom'>('derscanner');
   const [newKeyAllowedDepts, setNewKeyAllowedDepts] = useState<string[]>(['all']);
@@ -343,8 +343,82 @@ export const AdminPanel: React.FC = () => {
             >
               🛡️ FortiGate (SOAR)
             </button>
+              <button 
+                className={`admin-tab-btn ${activeTab === 'appearance' ? 'active' : ''}`}
+                onClick={() => setActiveTab('appearance')}
+              >
+                🎨 Темы (Админ)
+              </button>
+            </div>
           </div>
-        </div>
+
+        
+        {activeTab === 'appearance' && (
+          <div className="admin-section animate-fade-in">
+            <h2>Персональные Темы Администратора</h2>
+            <p className="admin-subtitle" style={{ marginBottom: '24px' }}>У рядовых сотрудников заблокирована светлая тема. Здесь вы можете выбрать дизайн для себя.</p>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+              
+              <div 
+                onClick={() => setTheme('light')}
+                style={{ padding: '24px', cursor: 'pointer', borderRadius: '12px', border: theme === 'light' ? '3px solid #3b82f6' : '1px solid #ccc', background: '#ffffff', color: '#1a1a1a', textAlign: 'center' }}
+              >
+                <h3>Светлая тема</h3>
+                <p style={{ opacity: 0.7, fontSize: '0.85rem' }}>Корпоративный стандарт</p>
+              </div>
+
+              <div 
+                onClick={() => setTheme('dark-classic')}
+                style={{ padding: '24px', cursor: 'pointer', borderRadius: '12px', border: theme === 'dark-classic' ? '3px solid #3b82f6' : '1px solid #333', background: '#090a0f', color: '#ffffff', textAlign: 'center' }}
+              >
+                <h3>Тёмная (Неон)</h3>
+                <p style={{ opacity: 0.7, fontSize: '0.85rem' }}>Оригинальная тёмная тема</p>
+              </div>
+
+              <div 
+                onClick={() => setTheme('dark-matte')}
+                style={{ padding: '24px', cursor: 'pointer', borderRadius: '12px', border: theme === 'dark-matte' ? '3px solid #88c0d0' : '1px solid #333', background: '#121315', color: '#e6e6e6', textAlign: 'center' }}
+              >
+                <h3>Тёмная (Матовая)</h3>
+                <p style={{ opacity: 0.7, fontSize: '0.85rem' }}>Графит и Титан</p>
+              </div>
+
+              <div 
+                onClick={() => setTheme('ocean')}
+                style={{ padding: '24px', cursor: 'pointer', borderRadius: '12px', border: theme === 'ocean' ? '3px solid #00c8ff' : '1px solid #333', background: '#121d25', color: '#e6f2ff', textAlign: 'center' }}
+              >
+                <h3>Deep Ocean</h3>
+                <p style={{ opacity: 0.7, fontSize: '0.85rem' }}>Глубокий сине-зеленый (Teal)</p>
+              </div>
+
+              <div 
+                onClick={() => setTheme('coffee')}
+                style={{ padding: '24px', cursor: 'pointer', borderRadius: '12px', border: theme === 'coffee' ? '3px solid #8b5a2b' : '1px solid #ccc', background: '#ebe4db', color: '#332211', textAlign: 'center' }}
+              >
+                <h3>Coffee / Sepia</h3>
+                <p style={{ opacity: 0.7, fontSize: '0.85rem' }}>Теплая бежевая, для чтения</p>
+              </div>
+
+              <div 
+                onClick={() => setTheme('dracula')}
+                style={{ padding: '24px', cursor: 'pointer', borderRadius: '12px', border: theme === 'dracula' ? '3px solid #ff79c6' : '1px solid #333', background: '#282a36', color: '#f8f8f2', textAlign: 'center' }}
+              >
+                <h3 style={{ color: '#ff79c6' }}>Dracula</h3>
+                <p style={{ opacity: 0.7, fontSize: '0.85rem' }}>Легендарная тема разработчиков</p>
+              </div>
+
+              <div 
+                onClick={() => setTheme('nord')}
+                style={{ padding: '24px', cursor: 'pointer', borderRadius: '12px', border: theme === 'nord' ? '3px solid #88c0d0' : '1px solid #333', background: '#2e3440', color: '#eceff4', textAlign: 'center' }}
+              >
+                <h3 style={{ color: '#88c0d0' }}>Nord</h3>
+                <p style={{ opacity: 0.7, fontSize: '0.85rem' }}>Арктические пастельные тона</p>
+              </div>
+
+            </div>
+          </div>
+        )}
 
         {activeTab === 'workspaces' && <WorkspacesTab />}
         {activeTab === 'users' ? (
