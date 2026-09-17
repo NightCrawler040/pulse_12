@@ -10,13 +10,13 @@ import { WorkspacesTab } from './WorkspacesTab';
 import './AdminPanel.css';
 
 export const AdminPanel: React.FC = () => {
-  const { users, groups, onlineUserIds, workspaces, apiKeys, addUser, updateUser, deleteUser, addGroup, updateGroup, deleteGroup, addApiKey, deleteApiKey } = useTaskContext();
+  const { users, groups, onlineUserIds, workspaces, apiKeys, globalSettings, updateGlobalSettings, addUser, updateUser, deleteUser, addGroup, updateGroup, deleteGroup, addApiKey, deleteApiKey } = useTaskContext();
   const { isAdmin } = useAuth();
   const isProtectedAdmin = (u: User) => u.id === 'usr-1' || u.login?.toLowerCase() === 'admin';
   const employeeUsers = users.filter(u => !isProtectedAdmin(u));
 
   const [selectedIntegrationWsId, setSelectedIntegrationWsId] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<'workspaces' | 'users' | 'groups' | 'integrations' | 'ldap' | 'mail' | 'fortigate'>('workspaces');
+  const [activeTab, setActiveTab] = useState<'workspaces' | 'users' | 'groups' | 'integrations' | 'ldap' | 'mail' | 'fortigate' | 'appearance'>('workspaces');
   const [newKeyName, setNewKeyName] = useState('');
   const [newKeySource, setNewKeySource] = useState<'derscanner' | 'siem' | 'custom'>('derscanner');
   const [newKeyAllowedDepts, setNewKeyAllowedDepts] = useState<string[]>(['all']);
@@ -332,6 +332,201 @@ export const AdminPanel: React.FC = () => {
               🏢 LDAP / AD
             </button>
             <button 
+        role: roleTitle.trim(),
+        roleType,
+        avatar: avatar.trim() || editingUser.avatar
+      };
+      if (typedPass) {
+        updates.password = typedPass;
+        updates.pin = typedPass;
+      }
+      updateUser(editingUser.id, updates);
+    } else {
+      addUser({
+        name: name.trim(),
+        email: email.trim() || `${name.toLowerCase().replace(/\s+/g, '.')}@corp.lan`,
+        login: finalLogin,
+        password: typedPass || '',
+        department: department.trim(),
+        role: roleTitle.trim(),
+        roleType,
+        pin: typedPass || '',
+        avatar: avatar.trim() || DEFAULT_AVATAR,
+        isActive: true
+      });
+    }
+    setIsModalOpen(false);
+  };
+
+  const filteredUsers = employeeUsers.filter(u => {
+    const q = searchQuery.toLowerCase();
+    const matchesSearch = !q ||
+      u.name.toLowerCase().includes(q) ||
+      (u.email && u.email.toLowerCase().includes(q)) ||
+      (u.login && u.login.toLowerCase().includes(q)) ||
+      u.role.toLowerCase().includes(q) ||
+      u.department.toLowerCase().includes(q);
+    const matchesDept = !deptFilter || u.department === deptFilter;
+    return matchesSearch && matchesDept;
+  });
+
+  const handleExportCSV = () => {
+    const headers = ['ID', 'ФИО', 'Email', 'Логин', 'Отдел', 'Должность', 'Уровень прав', 'PIN / Пароль', 'Статус'];
+    const rows = employeeUsers.map(u => [
+      u.id,
+      `"${u.name}"`,
+      `"${u.email}"`,
+      `"${u.login || ''}"`,
+      `"${u.department}"`,
+      `"${u.role}"`,
+      u.roleType || 'member',
+      `"${u.pin || u.password || ''}"`,
+      u.isActive === false ? 'Заблокирован' : 'Активен'
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `pulse12_users_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleToggleActive = (user: User) => {
+    if (user.isActive === false) {
+      updateUser(user.id, { isActive: true });
+    } else {
+      deleteUser(user.id, false);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploading(true);
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64 = reader.result as string;
+      try {
+        const res = await apiService.uploadAvatar(base64, file.name);
+        if (res.success) {
+          setAvatar(res.url);
+        }
+      } catch (err) {
+        console.error('Failed to upload avatar', err);
+        alert('Ошибка загрузки фотографии');
+      } finally {
+        setIsUploading(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // --- GROUP HANDLERS ---
+  const handleOpenAddGroupModal = () => {
+    setEditingGroup(null);
+    setGroupName('');
+    setGroupColor('#3b82f6');
+    setGroupMembers([]);
+    setIsGroupModalOpen(true);
+  };
+
+  const handleOpenEditGroupModal = (grp: Group) => {
+    setEditingGroup(grp);
+    setGroupName(grp.name);
+    setGroupColor(grp.color || '#3b82f6');
+    setGroupMembers(grp.memberIds || []);
+    setIsGroupModalOpen(true);
+  };
+
+  const handleSaveGroup = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingGroup) {
+      updateGroup(editingGroup.id, {
+        name: groupName.trim(),
+        color: groupColor,
+        memberIds: groupMembers
+      });
+    } else {
+      addGroup({
+        name: groupName.trim(),
+        color: groupColor,
+        memberIds: groupMembers
+      });
+    }
+    setIsGroupModalOpen(false);
+  };
+
+  const handleDeleteGroupClick = (grp: Group) => {
+    if (window.confirm(`Вы уверены, что хотите удалить команду «${grp.name}»?`)) {
+      deleteGroup(grp.id);
+    }
+  };
+
+  const toggleGroupMember = (userId: string) => {
+    if (groupMembers.includes(userId)) {
+      setGroupMembers(prev => prev.filter(id => id !== userId));
+    } else {
+      setGroupMembers(prev => [...prev, userId]);
+    }
+  };
+
+  // --- PASSWORD REVEAL HANDLERS ---
+  const handleToggleReveal = (userId: string) => {
+    setRevealedUsers(prev => ({ ...prev, [userId]: !prev[userId] }));
+  };
+
+  const getRoleBadge = (type?: string) => {
+    if (type === 'admin') return <span className="role-badge-mini role-admin">Администратор</span>;
+    if (type === 'manager') return <span className="role-badge-mini role-manager">Руководитель</span>;
+    return <span className="role-badge-mini role-member">Сотрудник</span>;
+  };
+
+  return (
+    <div className="admin-panel-container animate-fade-in">
+      
+      {/* Header */}
+      <div className="admin-header-card">
+        <div className="admin-header-title">
+          <h1 className="admin-title-text">
+            <span>⚙️</span> Администрирование и Ролевой доступ (RBAC)
+          </h1>
+          <p className="admin-subtitle">
+            Управление персоналом и командами корпорации
+          </p>
+          <div className="admin-tabs">
+            <button
+              className={`admin-tab-btn ${activeTab === 'workspaces' ? 'active' : ''}`}
+              onClick={() => setActiveTab('workspaces')}
+            >
+              📂 Рабочие пространства
+            </button>
+            <button
+              className={`admin-tab-btn ${activeTab === 'users' ? 'active' : ''}`}
+              onClick={() => setActiveTab('users')}
+            >
+              👥 Сотрудники ({employeeUsers.length})
+            </button>
+            <button
+              className={`admin-tab-btn ${activeTab === 'groups' ? 'active' : ''}`}
+              onClick={() => setActiveTab('groups')}
+            >
+              🏢 Команды и Группы ({groups.length})
+            </button>
+            <button
+              className={`admin-tab-btn ${activeTab === 'integrations' ? 'active' : ''}`}
+              onClick={() => setActiveTab('integrations')}
+            >
+              🔌 Интеграции & API-ключи ({apiKeys.length})
+            </button>
+            <button 
+              className={`admin-tab-btn ${activeTab === 'ldap' ? 'active' : ''}`}
+              onClick={() => setActiveTab('ldap')}
+            >
+              🏢 LDAP / AD
+            </button>
+            <button 
               className={`admin-tab-btn ${activeTab === 'mail' ? 'active' : ''}`}
               onClick={() => setActiveTab('mail')}
             >
@@ -343,10 +538,43 @@ export const AdminPanel: React.FC = () => {
             >
               🛡️ FortiGate (SOAR)
             </button>
+            <button 
+              className={`admin-tab-btn ${activeTab === 'appearance' ? 'active' : ''}`}
+              onClick={() => setActiveTab('appearance')}
+            >
+              🎨 Внешний вид
+            </button>
           </div>
         </div>
 
-        {activeTab === 'workspaces' && <WorkspacesTab />}
+        
+          {activeTab === 'appearance' && (
+            <div className="admin-section animate-fade-in">
+              <h2>Глобальный внешний вид</h2>
+              <p className="admin-subtitle" style={{ marginBottom: '24px' }}>Управление темой интерфейса для всей компании</p>
+              
+              <div className="settings-card" style={{ padding: '24px', background: 'hsl(var(--bg-card))', borderRadius: '16px', border: '1px solid hsl(var(--border-color))' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label style={{ display: 'block', marginBottom: '8px', color: 'hsl(var(--text-secondary))' }}>Принудительная тема (Global Theme)</label>
+                  <select 
+                    value={globalSettings?.theme || 'dark-matte'}
+                    onChange={(e) => updateGlobalSettings({ ...globalSettings, theme: e.target.value })}
+                    className="input-field"
+                    style={{ width: '100%', maxWidth: '400px' }}
+                  >
+                    <option value="light">Светлая тема (Light)</option>
+                    <option value="dark-classic">Тёмная (Классика/Неон)</option>
+                    <option value="dark-matte">Тёмная (Матовая/Графит)</option>
+                  </select>
+                  <p style={{ marginTop: '12px', color: 'hsl(var(--text-muted))', fontSize: '0.9rem' }}>
+                    Тема применится сразу ко всем сотрудникам онлайн. Обычные пользователи не могут её изменить.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'workspaces' && <WorkspacesTab />}
         {activeTab === 'users' ? (
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
             <button

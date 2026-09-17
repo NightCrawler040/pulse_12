@@ -117,13 +117,7 @@ export const Sidebar: React.FC = () => {
       )}
 
       <div className="sidebar-bottom">
-        <button 
-          className="sidebar-nav-item theme-toggle"
-          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-        >
-          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          <span className="nav-label">{theme === 'dark' ? 'Светлая тема' : 'Темная тема'}</span>
-        </button>
+        
       </div>
     </aside>
   );

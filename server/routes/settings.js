@@ -6,6 +6,23 @@ import { startImapService } from '../services/imapService.js';
 export default function createSettingsRouter(requireAuth, requireAdmin) {
   const router = express.Router();
 
+  router.get('/global', async (req, res) => {
+    res.json(req.dbData.globalSettings || { theme: 'dark-matte' });
+  });
+
+  router.post('/global', requireAdmin, async (req, res) => {
+    try {
+      const { theme } = req.body;
+      req.dbData.globalSettings = { ...(req.dbData.globalSettings || {}), theme };
+      await saveCollection('globalSettings', req.dbData.globalSettings);
+      req.broadcastUpdate('globalSettings');
+      res.json({ success: true, settings: req.dbData.globalSettings });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Save failed' });
+    }
+  });
+
   router.get('/mail', requireAdmin, async (req, res) => {
     res.json({
       mailSettings: req.dbData.mailSettings || {},

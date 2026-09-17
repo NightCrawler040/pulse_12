@@ -5,40 +5,40 @@
   --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
 
-    /* HSL Color Tokens - Dark Matte Style (Graphite & Titanium) */
-  --bg-main: 220 8% 8%;       /* #121315 Deep graphite */
-  --bg-secondary: 220 8% 11%; /* #1a1b1e Titanium */
-  --bg-tertiary: 220 8% 14%;  /* #212226 */
-  --bg-card: 220 8% 11%;      /* Matte cards */
-  --bg-card-hover: 220 8% 15%;
-  --bg-glass: rgba(18, 19, 21, 0.85);
-  --bg-glass-hover: rgba(26, 27, 30, 0.95);
-  --border-color: rgba(255, 255, 255, 0.08); /* Matte border */
-  --border-color-focus: rgba(255, 255, 255, 0.2);
+  /* HSL Color Tokens - Dark Mode by Default (Premium & Deep) */
+  --bg-main: 222 47% 7%;
+  --bg-secondary: 222 47% 11%;
+  --bg-tertiary: 222 40% 15%;
+  --bg-card: 222 45% 13%;
+  --bg-card-hover: 222 45% 17%;
+  --bg-glass: rgba(23, 30, 48, 0.92);
+  --bg-glass-hover: rgba(30, 41, 65, 0.96);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-color-focus: rgba(99, 102, 241, 0.5);
 
   /* Typography */
-  --text-primary: 220 10% 90%;
-  --text-secondary: 220 10% 65%;
-  --text-muted: 220 10% 45%;
+  --text-primary: 210 40% 98%;
+  --text-secondary: 215 20% 65%;
+  --text-muted: 215 15% 45%;
 
-  /* Brand Accents (Desaturated Matte) */
-  --primary: 225 30% 45%;      /* Slate blue */
-  --primary-hover: 225 30% 55%;
-  --primary-glow: rgba(255, 255, 255, 0.05);
+  /* Brand Accents */
+  --primary: 239 84% 67%;
+  --primary-hover: 239 84% 73%;
+  --primary-glow: rgba(99, 102, 241, 0.25);
   
-  --secondary: 220 15% 35%;
-  --accent: 210 20% 40%;
+  --secondary: 280 80% 65%;
+  --accent: 190 90% 50%;
   
-  /* Status & Priority Colors (Muted) */
-  --status-todo: 220 15% 50%;
-  --status-progress: 215 50% 50%;
-  --status-review: 270 40% 55%;
-  --status-done: 150 40% 40%;
+  /* Status & Priority Colors */
+  --status-todo: 215 20% 65%;
+  --status-progress: 210 100% 60%;
+  --status-review: 280 80% 65%;
+  --status-done: 150 80% 45%;
 
-  --priority-low: 220 15% 50%;
-  --priority-medium: 40 60% 50%;
-  --priority-high: 20 60% 50%;
-  --priority-urgent: 350 50% 55%;
+  --priority-low: 215 20% 65%;
+  --priority-medium: 45 95% 55%;
+  --priority-high: 25 95% 55%;
+  --priority-urgent: 350 85% 60%;
 
   /* Radii & Shadows */
   --radius-sm: 8px;
@@ -49,7 +49,7 @@
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.4);
-  --shadow-glow: 0 0 24px rgba(130, 140, 160, 0.15);
+  --shadow-glow: 0 0 24px rgba(99, 102, 241, 0.3);
 
   /* Transitions */
   --transition-fast: 0.15s ease;
@@ -213,4 +213,47 @@ button {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+}
+
+[data-theme="dark-matte"] {
+  /* HSL Color Tokens - Dark Matte Style (Graphite & Titanium) */
+  --bg-main: 220 8% 8%;       /* #121315 Deep graphite */
+  --bg-secondary: 220 8% 11%; /* #1a1b1e Titanium */
+  --bg-tertiary: 220 8% 14%;  /* #212226 */
+  --bg-card: 220 8% 11%;      /* Matte cards */
+  --bg-card-hover: 220 8% 15%;
+  --bg-glass: rgba(18, 19, 21, 0.85);
+  --bg-glass-hover: rgba(26, 27, 30, 0.95);
+  --border-color: rgba(255, 255, 255, 0.08); /* Matte border */
+  --border-color-focus: rgba(255, 255, 255, 0.2);
+
+  /* Typography */
+  --text-primary: 220 10% 90%;
+  --text-secondary: 220 10% 65%;
+  --text-muted: 220 10% 45%;
+
+  /* Brand Accents (Desaturated Matte) */
+  --primary: 225 30% 45%;      /* Slate blue */
+  --primary-hover: 225 30% 55%;
+  --primary-glow: rgba(255, 255, 255, 0.05);
+  
+  --secondary: 220 15% 35%;
+  --accent: 210 20% 40%;
+  
+  /* Status & Priority Colors (Muted) */
+  --status-todo: 220 15% 50%;
+  --status-progress: 215 50% 50%;
+  --status-review: 270 40% 55%;
+  --status-done: 150 40% 40%;
+
+  --priority-low: 220 15% 50%;
+  --priority-medium: 40 60% 50%;
+  --priority-high: 20 60% 50%;
+  --priority-urgent: 350 50% 55%;
+
+  /* Radii & Shadows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 24px rgba(130, 140, 160, 0.15);
 }
