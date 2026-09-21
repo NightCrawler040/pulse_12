@@ -97,25 +97,31 @@ export const AdminPanel: React.FC = () => {
   const handleOpenEditModal = (user: User) => {
     setEditingUser(user);
     setErrorMessage(null);
-    setName(user.name);
-    setEmail(user.email);
-    setLoginStr(user.login || user.email?.split('@')[0] || '');
+    setName(user.name || '');
+    setEmail(user.email || '');
+    setLoginStr(user.login || (user.email ? user.email.split('@')[0] : '') || '');
     setPasswordStr(user.password || user.pin || '1234');
-    setDepartment(user.department);
-    setRoleTitle(user.role);
+    setDepartment(user.department || '');
+    setRoleTitle(user.role || '');
     setRoleType(user.roleType || 'member');
     setPin('');
     setPasswordStr('');
-    setAvatar(user.avatar);
+    setAvatar(user.avatar || '');
     setIsModalOpen(true);
   };
 
   const handleSaveUser = (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmedEmail = email.trim().toLowerCase();
-    const finalLogin = (loginStr.trim() || email.split('@')[0] || `user_${Date.now()}`).toLowerCase();
+    const safeEmail = email || '';
+    const safeName = name || '';
+    const safeLogin = loginStr || '';
+    const safeDepartment = department || '';
+    const safeRoleTitle = roleTitle || '';
+    const safeAvatar = avatar || '';
 
-    // Проверка на дублирование почты или логина (кроме редактируемого сотрудника)
+    const trimmedEmail = safeEmail.trim().toLowerCase();
+    const finalLogin = (safeLogin.trim() || trimmedEmail.split('@')[0] || `user_${Date.now()}`).toLowerCase();
+
     const duplicateUser = users.find(u => {
       if (editingUser && u.id === editingUser.id) return false;
       const uEmail = (u.email || '').trim().toLowerCase();
@@ -124,7 +130,7 @@ export const AdminPanel: React.FC = () => {
     });
 
     if (duplicateUser) {
-      setErrorMessage(`⚠️ Ошибка: Сотрудник с почтой «${email}» или логином «${loginStr || finalLogin}» уже существует (${duplicateUser.name})! Укажите уникальные данные.`);
+      setErrorMessage(`⚠️ Ошибка: Сотрудник с почтой «${safeEmail}» или логином «${safeLogin || finalLogin}» уже существует (${duplicateUser.name})! Укажите уникальные данные.`);
       return;
     }
     setErrorMessage(null);
@@ -133,13 +139,13 @@ export const AdminPanel: React.FC = () => {
 
     if (editingUser) {
       const updates: Partial<User> = {
-        name: name.trim(),
-        email: email.trim(),
+        name: safeName.trim(),
+        email: safeEmail.trim(),
         login: finalLogin,
-        department: department.trim(),
-        role: roleTitle.trim(),
+        department: safeDepartment.trim(),
+        role: safeRoleTitle.trim(),
         roleType,
-        avatar: avatar.trim() || editingUser.avatar
+        avatar: safeAvatar.trim() || editingUser.avatar
       };
       if (typedPass) {
         updates.password = typedPass;
@@ -148,15 +154,15 @@ export const AdminPanel: React.FC = () => {
       updateUser(editingUser.id, updates);
     } else {
       addUser({
-        name: name.trim(),
-        email: email.trim() || `${name.toLowerCase().replace(/\s+/g, '.')}@corp.lan`,
+        name: safeName.trim(),
+        email: safeEmail.trim() || `${safeName.toLowerCase().replace(/\s+/g, '.')}@corp.lan`,
         login: finalLogin,
         password: typedPass || '',
-        department: department.trim(),
-        role: roleTitle.trim(),
+        department: safeDepartment.trim(),
+        role: safeRoleTitle.trim(),
         roleType,
         pin: typedPass || '',
-        avatar: avatar.trim() || DEFAULT_AVATAR,
+        avatar: safeAvatar.trim() || DEFAULT_AVATAR,
         isActive: true
       });
     }
