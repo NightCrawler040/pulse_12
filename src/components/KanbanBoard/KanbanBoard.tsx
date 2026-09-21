@@ -151,10 +151,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
             <option value="low">🔵 Низкий</option>
           </select>
 
-          {isAdmin && (
-            <button
-              className="btn-secondary"
-              onClick={() => setFilters(prev => ({ ...prev, myTasksOnly: !prev.myTasksOnly }))}
+          {isManagerOrAdmin && (
+              <button
+                className="btn-secondary"
+                onClick={() => setFilters(prev => ({ ...prev, myTasksOnly: !prev.myTasksOnly }))}
             title="Показать только задачи, где вы назначены"
             style={{
               background: filters.myTasksOnly ? 'hsl(var(--primary))' : 'hsl(var(--bg-secondary))',
