@@ -69,7 +69,8 @@ let localDbData = {
   mailSettings: {},
   fortigateSettings: { ...defaultFortigateSettings },
   bannedIps: [],
-  notificationEvents: {}
+  notificationEvents: {},
+    globalSettings: {}
 };
 
 const loadLocalFile = () => {
@@ -111,7 +112,8 @@ const loadLocalFile = () => {
     mailSettings: {},
     fortigateSettings: { ...defaultFortigateSettings },
     bannedIps: [],
-    notificationEvents: {}
+    notificationEvents: {},
+    globalSettings: {}
   };
   saveLocalFile();
 };
@@ -365,7 +367,8 @@ export const getAllData = async () => {
         fortigateSettings: { ...defaultFortigateSettings },
         bannedIps: [],
         imapSettings: {},
-        processedEmails: []
+        processedEmails: [],
+        globalSettings: {}
       };
       res.rows.forEach(row => {
         if (result[row.key] !== undefined) {
@@ -420,7 +423,8 @@ export const saveAllData = async (dataObj) => {
           notifications: dataObj.notifications || [],
           findings: dataObj.findings || [],
           api_keys: dataObj.api_keys || [],
-          ldap_settings: dataObj.ldap_settings || { ...defaultLdapSettings }
+          ldap_settings: dataObj.ldap_settings || { ...defaultLdapSettings },
+        globalSettings: dataObj.globalSettings || {}
         };
         saveLocalFile();
       } catch (err) {
@@ -440,7 +444,8 @@ export const saveAllData = async (dataObj) => {
         notifications: dataObj.notifications || [],
         findings: dataObj.findings || [],
         api_keys: dataObj.api_keys || [],
-        ldap_settings: dataObj.ldap_settings || { ...defaultLdapSettings }
+        ldap_settings: dataObj.ldap_settings || { ...defaultLdapSettings },
+        globalSettings: dataObj.globalSettings || {}
       };
       saveLocalFile();
     }
@@ -453,7 +458,8 @@ export const saveAllData = async (dataObj) => {
       notifications: dataObj.notifications || [],
       findings: dataObj.findings || [],
       api_keys: dataObj.api_keys || [],
-      ldap_settings: dataObj.ldap_settings || { ...defaultLdapSettings }
+      ldap_settings: dataObj.ldap_settings || { ...defaultLdapSettings },
+        globalSettings: dataObj.globalSettings || {}
     };
     saveLocalFile();
   }
