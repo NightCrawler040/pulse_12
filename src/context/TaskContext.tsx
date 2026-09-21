@@ -643,7 +643,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isActive: true
     };
     setUsers(prev => [...prev, newUser]);
-    apiService.createUser(userData).catch(e => console.error(e));
+    apiService.createUser(userData).then(realUser => { if (realUser && realUser.id) { setUsers(current => current.map(u => u.id === newId ? { ...u, id: realUser.id } : u)); } }).catch(e => console.error(e));
     return newUser;
   };
 
