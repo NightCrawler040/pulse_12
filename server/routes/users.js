@@ -34,13 +34,16 @@ export default function createUsersRouter(requireAuth, requireAdmin) {
     const rawPin = userData.pin || rawPassword || '';
 
     const newUser = {
-      ...userData,
       id: newId,
-      login: userData.login || userData.email?.split('@')[0] || `user_${Date.now()}`,
-      password: hashPasswordIfNeeded(rawPassword),
+      name: userData.name || 'Сотрудник',
+      login: trimmedLogin || `user_${Date.now()}`,
+      email: trimmedEmail,
+      department: userData.department || '',
+      role: userData.role || 'Сотрудник',
       roleType: userData.roleType || 'member',
-      pin: hashPasswordIfNeeded(rawPin),
       avatar: userData.avatar || '',
+      password: hashPasswordIfNeeded(rawPassword),
+      pin: hashPasswordIfNeeded(rawPin),
       isActive: true
     };
     req.dbData.users.push(newUser);
