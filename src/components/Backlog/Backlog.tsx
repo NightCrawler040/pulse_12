@@ -25,11 +25,11 @@ export const Backlog: React.FC<BacklogProps> = ({ onOpenNewTaskModal }) => {
     deleteSprint
   } = useTaskContext();
 
-  const { currentUser, isAdmin } = useAuth();
+  const { currentUser, isAdmin, isManagerOrAdmin } = useAuth();
 
   const displayTasks = React.useMemo(() => {
     return filteredTasks.filter(task => {
-      const shouldFilterByMe = (!isAdmin && currentUser) || (isAdmin && currentUser && filters.myTasksOnly);
+      const shouldFilterByMe = (!isManagerOrAdmin && currentUser) || (isManagerOrAdmin && currentUser && filters.myTasksOnly);
         if (shouldFilterByMe) {
           const isAssignee = task.assigneeId === currentUser.id;
           const inGroup = task.assigneeGroupId && groups ? groups.some(g => g.id === task.assigneeGroupId && g.memberIds?.includes(currentUser.id)) : false;

@@ -7,7 +7,7 @@ import './TeamWorkload.css';
 
 export const TeamWorkload: React.FC = () => {
   const { users, groups, tasks, setFilters, setViewMode } = useTaskContext();
-  const { currentUser, isAdmin } = useAuth();
+  const { currentUser, isManagerOrAdmin } = useAuth();
   const employees = users.filter(u => u.id !== 'usr-1' && u.login?.toLowerCase() !== 'admin');
 
   const handleSelectUser = (userId: string) => {
@@ -100,7 +100,7 @@ export const TeamWorkload: React.FC = () => {
                   </span>
                   <span className="emp-dept">{user.department}</span>
                 </div>
-                { (isAdmin || currentUser?.id === user.id) && (
+                { (isManagerOrAdmin || currentUser?.id === user.id) && (
               <button 
                 onClick={(e) => {
                   e.stopPropagation();

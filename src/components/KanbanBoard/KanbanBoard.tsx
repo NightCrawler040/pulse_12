@@ -29,7 +29,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
     groups
   } = useTaskContext();
 
-  const { currentUser, isAdmin } = useAuth();
+  const { currentUser, isAdmin, isManagerOrAdmin } = useAuth();
 
   const currentSprint = React.useMemo(() => {
     if (activeSprintId !== 'all') {
@@ -56,7 +56,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
 
   const displayTasks = React.useMemo(() => {
     return filteredTasks.filter(task => {
-      const shouldFilterByMe = (!isAdmin && currentUser) || (isAdmin && currentUser && filters.myTasksOnly);
+      const shouldFilterByMe = (!isManagerOrAdmin && currentUser) || (isManagerOrAdmin && currentUser && filters.myTasksOnly);
         if (shouldFilterByMe) {
           const isAssignee = task.assigneeId === currentUser.id;
           const inGroup = task.assigneeGroupId && groups ? groups.some(g => g.id === task.assigneeGroupId && g.memberIds?.includes(currentUser.id)) : false;

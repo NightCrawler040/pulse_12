@@ -6,7 +6,7 @@ import './Analytics.css';
 
 export const Analytics: React.FC = () => {
   const { tasks, users, groups, activeSprintId, filters } = useTaskContext();
-  const { currentUser, isAdmin } = useAuth();
+  const { currentUser, isManagerOrAdmin } = useAuth();
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [selectedPdfUserId, setSelectedPdfUserId] = useState('all');
   const employeeUsers = users.filter(u => u.id !== 'usr-1' && u.login?.toLowerCase() !== 'admin');
@@ -25,9 +25,9 @@ export const Analytics: React.FC = () => {
         'x-auth-user': userId
       };
 
-      const fetchUrl = (isAdmin && selectedPdfUserId === 'all') 
+      const fetchUrl = (isManagerOrAdmin && selectedPdfUserId === 'all') 
         ? `/api/reports/pdf?sprintId=${targetSprintId}` 
-        : `/api/reports/pdf?sprintId=${targetSprintId}&userId=${isAdmin ? selectedPdfUserId : currentUser?.id}`;
+        : `/api/reports/pdf?sprintId=${targetSprintId}&userId=${isManagerOrAdmin ? selectedPdfUserId : currentUser?.id}`;
 
       const response = await fetch(fetchUrl, {
         method: 'GET',
@@ -94,7 +94,7 @@ export const Analytics: React.FC = () => {
           </p>
         </div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          {isAdmin && (
+          {isManagerOrAdmin && (
             <select 
               value={selectedPdfUserId}
               onChange={(e) => setSelectedPdfUserId(e.target.value)}
