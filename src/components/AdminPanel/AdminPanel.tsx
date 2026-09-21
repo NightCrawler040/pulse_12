@@ -975,7 +975,6 @@ export const AdminPanel: React.FC = () => {
                     value={roleTitle}
                     onChange={e => setRoleTitle(e.target.value)}
                     placeholder="Например: Frontend Developer"
-                    required
                   />
                 </div>
                 <div className="form-group">
@@ -986,7 +985,6 @@ export const AdminPanel: React.FC = () => {
                     value={department}
                     onChange={e => setDepartment(e.target.value)}
                     placeholder="Engineering / Design / QA"
-                    required
                   />
                 </div>
               </div>

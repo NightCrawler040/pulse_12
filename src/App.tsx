@@ -3,13 +3,13 @@ import { TaskProvider, useTaskContext } from './context/TaskContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { TopBar } from './components/TopBar/TopBar';
-import { KanbanBoard } from './components/KanbanBoard/KanbanBoard';
-import { Backlog } from './components/Backlog/Backlog';
-import { TeamWorkload } from './components/TeamWorkload/TeamWorkload';
-import { Analytics } from './components/Analytics/Analytics';
-import { Profile } from './components/Profile/Profile';
-import { AdminPanel } from './components/AdminPanel/AdminPanel';
-import { SecurityCenter } from './components/SecurityCenter/SecurityCenter';
+const KanbanBoard = React.lazy(() => import('./components/KanbanBoard/KanbanBoard').then(m => ({ default: m.KanbanBoard })));
+const Backlog = React.lazy(() => import('./components/Backlog/Backlog').then(m => ({ default: m.Backlog })));
+const TeamWorkload = React.lazy(() => import('./components/TeamWorkload/TeamWorkload').then(m => ({ default: m.TeamWorkload })));
+const Analytics = React.lazy(() => import('./components/Analytics/Analytics').then(m => ({ default: m.Analytics })));
+const Profile = React.lazy(() => import('./components/Profile/Profile').then(m => ({ default: m.Profile })));
+const AdminPanel = React.lazy(() => import('./components/AdminPanel/AdminPanel').then(m => ({ default: m.AdminPanel })));
+const SecurityCenter = React.lazy(() => import('./components/SecurityCenter/SecurityCenter').then(m => ({ default: m.SecurityCenter })));
 import { WelcomePage } from './components/Welcome/WelcomePage';
 import { LoginModal } from './components/Login/LoginModal';
 import { TaskModal } from './components/TaskModal/TaskModal';
@@ -65,27 +65,29 @@ const AppContent: React.FC = () => {
             <WelcomePage onOpenLogin={() => setIsLoginModalOpen(true)} />
           ) : (
             <>
-              {viewMode === 'board' && (
-                <KanbanBoard onOpenNewTaskModalWithStatus={(st) => handleOpenNewModal(st)} />
-              )}
-              {viewMode === 'backlog' && (
-                <Backlog onOpenNewTaskModal={(spId) => handleOpenNewModal('todo', spId)} />
-              )}
-              {viewMode === 'workload' && (
-                <TeamWorkload />
-              )}
-              {viewMode === 'analytics' && (
-                <Analytics />
-              )}
-              {viewMode === 'profile' && (
-                <Profile />
-              )}
-              {viewMode === 'admin' && (
-                <AdminPanel />
-              )}
-              {viewMode === 'security' && (
-                <SecurityCenter />
-              )}
+              <React.Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'hsl(var(--text-secondary))' }}><div className="spinner" style={{ marginRight: '12px' }}></div> Загрузка модуля...</div>}>
+                {viewMode === 'board' && (
+                  <KanbanBoard onOpenNewTaskModalWithStatus={(st) => handleOpenNewModal(st)} />
+                )}
+                {viewMode === 'backlog' && (
+                  <Backlog onOpenNewTaskModal={(spId) => handleOpenNewModal('todo', spId)} />
+                )}
+                {viewMode === 'workload' && (
+                  <TeamWorkload />
+                )}
+                {viewMode === 'analytics' && (
+                  <Analytics />
+                )}
+                {viewMode === 'profile' && (
+                  <Profile />
+                )}
+                {viewMode === 'admin' && (
+                  <AdminPanel />
+                )}
+                {viewMode === 'security' && (
+                  <SecurityCenter />
+                )}
+              </React.Suspense>
             </>
           )}
         </main>

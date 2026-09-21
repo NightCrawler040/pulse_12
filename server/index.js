@@ -15,6 +15,7 @@ import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { testLdapConnection, fetchLdapUsers, syncLdapUsersAndTasks, importSelectedLdapUsers, authenticateLdapUser } from './services/ldapService.js';
 import { startImapService } from './services/imapService.js';
+import { startAutoBackup } from './backup.js';
 import { banIpAddress, unbanIpAddress } from './services/fortigateService.js';
 import createTasksRouter from './routes/tasks.js';
 import createUsersRouter from './routes/users.js';
@@ -980,6 +981,7 @@ const startServer = async () => {
   
   initMailService(dbData, saveCollection);
   initDeadlineCron(() => dbData);
+  startAutoBackup(() => dbData);
 
   // Auto-migrate plaintext passwords to bcrypt hashes on startup (1.C)
   const { hashed, modified } = ensureUsersHashed(dbData.users);
