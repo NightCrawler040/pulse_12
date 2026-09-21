@@ -58,6 +58,361 @@ const defaultFortigateSettings = {
 
 // Локальное файловое хранилище (для Fallback-режима без Docker/Postgres)
 let localDbData = {
+  tasks: [],
+  sprints: [],
+  users: [],
+  groups: [],
+  notifications: [],
+  findings: [],
+  api_keys: [],
+  ldap_settings: { ...defaultLdapSettings },
+  mailSettings: {},
+  fortigateSettings: { ...defaultFortigateSettings },
+  bannedIps: [],
+  notificationEvents: {}
+};
+
+const loadLocalFile = () => {
+  if (fs.existsSync(DB_FILE)) {
+    try {
+      const raw = fs.readFileSync(DB_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.tasks)) {
+        localDbData = {
+          tasks: parsed.tasks || [],
+          sprints: parsed.sprints || [],
+          users: parsed.users || [],
+          groups: parsed.groups || [],
+          notifications: parsed.notifications || [],
+          findings: parsed.findings || [],
+          api_keys: parsed.api_keys || [],
+          ldap_settings: parsed.ldap_settings || { ...defaultLdapSettings },
+          mailSettings: parsed.mailSettings || {},
+          fortigateSettings: parsed.fortigateSettings || { ...defaultFortigateSettings },
+          bannedIps: parsed.bannedIps || [],
+          notificationEvents: parsed.notificationEvents || {}
+        };
+        return;
+      }
+    } catch (err) {
+      console.warn('⚠️ Ошибка чтения db.json, возврат к демо-данным...', err);
+    }
+  }
+  localDbData = {
+    tasks: initialTasks,
+    sprints: initialSprints,
+    users: initialUsers,
+    groups: initialGroups,
+    workspaces: initialWorkspaces,
+    notifications: [],
+    findings: initialFindings,
+    api_keys: initialApiKeys,
+    ldap_settings: { ...defaultLdapSettings },
+    mailSettings: {},
+    fortigateSettings: { ...defaultFortigateSettings },
+    bannedIps: [],
+    notificationEvents: {}
+  };
+  saveLocalFile();
+};
+
+let saveTimeout = null;
+const saveLocalFile = () => {
+  if (saveTimeout) clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    fs.writeFile(DB_FILE, JSON.stringify(localDbData, null, 2), 'utf-8', (err) => {
+      if (err) console.error('❌ Ошибка асинхронного сохранения в db.json:', err.message);
+    });
+  }, 300);
+};
+
+/**
+ * Инициализация базы данных (проверка подключения к PostgreSQL или переключение на файл)
+ */
+export const initDb = async () => {
+  console.log('🐘 Попытка подключения к базе данных PostgreSQL...');
+  try {
+    const client = await pool.connect();
+    isPgConnected = true;
+    console.log('✅ Успешно подключено к PostgreSQL! Создание схемы...');
+
+    // Создание главной таблицы для хранения коллекций Pulse12 в формате JSONB
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pulse_store (
+        key VARCHAR(64) PRIMARY KEY,
+        data JSONB NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS mail_settings (
+        id INTEGER PRIMARY KEY,
+        data JSONB
+      );
+      CREATE TABLE IF NOT EXISTS notification_events (
+        id INTEGER PRIMARY KEY,
+        data JSONB
+      );
+    `);
+
+    // Проверяем, пуста ли база данных
+    const res = await client.query('SELECT COUNT(*) FROM pulse_store');
+    const count = parseInt(res.rows[0].count, 10);
+
+    if (count === 0) {
+      console.log('🌱 База данных PostgreSQL пуста. Инициализация стартовыми корпоративными данными (Администратор, спринты, группы)...');
+      await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['tasks', JSON.stringify(initialTasks)]);
+      await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['sprints', JSON.stringify(initialSprints)]);
+      await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['users', JSON.stringify(initialUsers)]);
+      await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['groups', JSON.stringify(initialGroups)]);
+      await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['workspaces', JSON.stringify(initialWorkspaces)]);
+      await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['notifications', JSON.stringify([])]);
+      await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['findings', JSON.stringify(initialFindings)]);
+      await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['api_keys', JSON.stringify(initialApiKeys)]);
+      await client.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', ['ldap_settings', JSON.stringify(defaultLdapSettings)]);
+      console.log('✅ Стартовые корпоративные данные успешно загружены в PostgreSQL!');
+    } else {
+      console.log(`✅ В PostgreSQL найдено ${count} коллекций данных. База уже инициализирована.`);
+    }
+
+    client.release();
+
+    // Мгновенно синхронизируем локальный fallback (localDbData и db.json) с актуальными данными из PostgreSQL
+    const allPgData = await getAllData();
+    if (allPgData && allPgData.users && allPgData.users.length > 0) {
+      localDbData = {
+        tasks: allPgData.tasks || [],
+        sprints: allPgData.sprints || [],
+        users: allPgData.users || [],
+        groups: allPgData.groups || [],
+        workspaces: allPgData.workspaces || [],
+        notifications: allPgData.notifications || [],
+        findings: allPgData.findings || [],
+        api_keys: allPgData.api_keys || [],
+        ldap_settings: allPgData.ldap_settings || { ...defaultLdapSettings },
+        mailSettings: allPgData.mailSettings || {},
+        notificationEvents: allPgData.notificationEvents || {},
+        imapSettings: allPgData.imapSettings || {},
+        processedEmails: allPgData.processedEmails || []
+      };
+      saveLocalFile();
+    }
+  } catch (err) {
+    console.warn(`⚠️ PostgreSQL недоступен (${err.message}). Переключение на локальный файловый режим (db.json)...`);
+    isPgConnected = false;
+    loadLocalFile();
+  }
+
+  // Запуск фонового мониторинга (каждые 15 сек) для автовосстановления связи с PostgreSQL
+  setInterval(async () => {
+    if (!isPgConnected) {
+      try {
+        const client = await pool.connect();
+        client.release();
+        isPgConnected = true;
+        console.log('🔄 [Auto-Healing] PostgreSQL снова доступен! Восстановление онлайн-режима...');
+        const allPgData = await getAllData();
+        if (allPgData && allPgData.users && allPgData.users.length > 0) {
+          localDbData = {
+            tasks: allPgData.tasks || [],
+            sprints: allPgData.sprints || [],
+            users: allPgData.users || [],
+            groups: allPgData.groups || [],
+            notifications: allPgData.notifications || [],
+            findings: allPgData.findings || [],
+            api_keys: allPgData.api_keys || [],
+            ldap_settings: allPgData.ldap_settings || { ...defaultLdapSettings },
+            mailSettings: allPgData.mailSettings || {},
+            notificationEvents: allPgData.notificationEvents || {},
+            imapSettings: allPgData.imapSettings || {},
+            processedEmails: allPgData.processedEmails || []
+          };
+          saveLocalFile();
+        }
+      } catch (e) {
+        // Остаемся в локальном режиме db.json
+      }
+    }
+  }, 15000);
+};
+
+/**
+ * Получить коллекцию по ключу ('tasks', 'users', 'sprints', 'groups', 'notifications', 'ldap_settings', 'mailSettings', 'notificationEvents', 'fortigateSettings', 'bannedIps')
+ */
+export const getCollection = async (key) => {
+  if (isPgConnected) {
+    try {
+      if (key === 'mailSettings' || key === 'notificationEvents') {
+        const tableName = key === 'mailSettings' ? 'mail_settings' : 'notification_events';
+        const res = await pool.query(`SELECT data FROM ${tableName} WHERE id = 1`);
+        return res.rows.length > 0 ? res.rows[0].data : {};
+      }
+      const res = await pool.query('SELECT data FROM pulse_store WHERE key = $1', [key]);
+      if (res.rows.length > 0) {
+        return res.rows[0].data;
+      }
+      return key === 'ldap_settings' ? { ...defaultLdapSettings } : (key === 'mailSettings' || key === 'notificationEvents' || key === 'fortigateSettings' ? {} : (key === 'bannedIps' ? [] : []));
+    } catch (err) {
+      console.error(`❌ Ошибка PostgreSQL при получении коллекции "${key}":`, err.message);
+      isPgConnected = false;
+      return localDbData[key] || (key === 'ldap_settings' ? { ...defaultLdapSettings } : (key === 'fortigateSettings' ? { ...defaultFortigateSettings } : (key === 'bannedIps' ? [] : {})));
+    }
+  } else {
+    return localDbData[key] || (key === 'ldap_settings' ? { ...defaultLdapSettings } : (key === 'fortigateSettings' ? { ...defaultFortigateSettings } : (key === 'bannedIps' ? [] : {})));
+  }
+};
+
+/**
+ * Сохранить/обновить коллекцию по ключу
+ */
+
+class Mutex {
+  constructor() {
+    this.queue = [];
+    this.locked = false;
+  }
+  
+  async lock() {
+    return new Promise(resolve => {
+      this.queue.push(resolve);
+      this.dequeue();
+    });
+  }
+  
+  dequeue() {
+    if (this.locked) return;
+    const next = this.queue.shift();
+    if (next) {
+      this.locked = true;
+      next();
+    }
+  }
+  
+  unlock() {
+    this.locked = false;
+    this.dequeue();
+  }
+}
+
+const dbMutex = new Mutex();
+
+export const saveCollection = async (key, dataArrayOrObj) => {
+  await dbMutex.lock();
+  try {
+  let toSave = dataArrayOrObj;
+  if (key === 'users' && Array.isArray(toSave)) {
+    const map = new Map();
+    toSave.forEach(u => {
+      const k = u.id || u.login;
+      if (k) map.set(k, { ...map.get(k), ...u });
+    });
+    toSave = Array.from(map.values());
+  }
+  if (isPgConnected) {
+    try {
+      if (key === 'ldap_settings' || key === 'mailSettings' || key === 'notificationEvents' || key === 'fortigateSettings') {
+        const tableName = key === 'ldap_settings' || key === 'fortigateSettings' ? 'pulse_store' : (key === 'mailSettings' ? 'mail_settings' : 'notification_events');
+        if (key === 'ldap_settings' || key === 'fortigateSettings') {
+          await pool.query('INSERT INTO pulse_store (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data', [key, JSON.stringify(toSave)]);
+        } else {
+          await pool.query(`INSERT INTO ${tableName} (id, data) VALUES (1, $1) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data`, [JSON.stringify(toSave)]);
+        }
+      } else {
+        const query = `
+          INSERT INTO pulse_store (key, data, updated_at)
+          VALUES ($1, $2, CURRENT_TIMESTAMP)
+          ON CONFLICT (key) DO UPDATE
+          SET data = $2, updated_at = CURRENT_TIMESTAMP;
+        `;
+        await pool.query(query, [key, JSON.stringify(toSave)]);
+      }
+      localDbData[key] = toSave;
+      saveLocalFile();
+    } catch (err) {
+      console.error(`❌ Ошибка PostgreSQL при сохранении коллекции "${key}":`, err.message);
+      isPgConnected = false;
+      localDbData[key] = toSave;
+      saveLocalFile();
+    }
+  } else {
+    localDbData[key] = toSave;
+    saveLocalFile();
+  }
+  } finally {
+    dbMutex.unlock();
+  }
+};
+
+/**
+ * Получить все данные системы одновременно
+ */
+export const getAllData = async () => {
+  if (isPgConnected) {
+    try {
+      const res = await pool.query('SELECT key, data FROM pulse_store');
+      const resMail = await pool.query('SELECT data FROM mail_settings WHERE id = 1');
+      const resNotif = await pool.query('SELECT data FROM notification_events WHERE id = 1');
+      
+      const result = {
+        tasks: [],
+        sprints: [],
+        users: [],
+        groups: [],
+        notifications: [],
+        findings: [],
+        api_keys: [],
+        ldap_settings: { ...defaultLdapSettings },
+        mailSettings: resMail.rows.length > 0 ? resMail.rows[0].data : {},
+        notificationEvents: resNotif.rows.length > 0 ? resNotif.rows[0].data : {},
+        fortigateSettings: { ...defaultFortigateSettings },
+        bannedIps: [],
+        imapSettings: {},
+        processedEmails: []
+      };
+      res.rows.forEach(row => {
+        if (result[row.key] !== undefined) {
+          result[row.key] = row.data;
+        }
+      });
+      return result;
+    } catch (err) {
+      console.error('❌ Ошибка PostgreSQL при получении всех данных:', err.message);
+      isPgConnected = false;
+      return { ...localDbData };
+    }
+  } else {
+    return { ...localDbData };
+  }
+};
+
+/**
+ * Сохранить все данные системы одновременно
+ */
+export const saveAllData = async (dataObj) => {
+  await dbMutex.lock();
+  try {
+  if (isPgConnected) {
+    try {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        if (dataObj.users && Array.isArray(dataObj.users)) {
+          const map = new Map();
+          dataObj.users.forEach(u => {
+            const k = u.id || u.login;
+            if (k) map.set(k, { ...map.get(k), ...u });
+          });
+          dataObj.users = Array.from(map.values());
+        }
+        for (const [key, val] of Object.entries(dataObj)) {
+          const query = `
+            INSERT INTO pulse_store (key, data, updated_at)
+            VALUES ($1, $2, CURRENT_TIMESTAMP)
+            ON CONFLICT (key) DO UPDATE
+            SET data = $2, updated_at = CURRENT_TIMESTAMP;
+          `;
+          await client.query(query, [key, JSON.stringify(val)]);
+        }
+        await client.query('COMMIT');
+        localDbData = {
           tasks: dataObj.tasks || [],
           sprints: dataObj.sprints || [],
           users: dataObj.users || [],
@@ -65,12 +420,7 @@ let localDbData = {
           notifications: dataObj.notifications || [],
           findings: dataObj.findings || [],
           api_keys: dataObj.api_keys || [],
-          ldap_settings: dataObj.ldap_settings || { ...defaultLdapSettings },
-          globalSettings: dataObj.globalSettings || {},
-          workspaces: dataObj.workspaces || [],
-          imapSettings: dataObj.imapSettings || {},
-          processedEmails: dataObj.processedEmails || [],
-          kataHashes: dataObj.kataHashes || []
+          ldap_settings: dataObj.ldap_settings || { ...defaultLdapSettings }
         };
         saveLocalFile();
       } catch (err) {
@@ -83,38 +433,28 @@ let localDbData = {
       console.error('❌ Ошибка PostgreSQL при сохранении всех данных в транзакции:', err.message);
       isPgConnected = false;
       localDbData = {
-          tasks: dataObj.tasks || [],
-          sprints: dataObj.sprints || [],
-          users: dataObj.users || [],
-          groups: dataObj.groups || [],
-          notifications: dataObj.notifications || [],
-          findings: dataObj.findings || [],
-          api_keys: dataObj.api_keys || [],
-          ldap_settings: dataObj.ldap_settings || { ...defaultLdapSettings },
-          globalSettings: dataObj.globalSettings || {},
-          workspaces: dataObj.workspaces || [],
-          imapSettings: dataObj.imapSettings || {},
-          processedEmails: dataObj.processedEmails || [],
-          kataHashes: dataObj.kataHashes || []
-        };
+        tasks: dataObj.tasks || [],
+        sprints: dataObj.sprints || [],
+        users: dataObj.users || [],
+        groups: dataObj.groups || [],
+        notifications: dataObj.notifications || [],
+        findings: dataObj.findings || [],
+        api_keys: dataObj.api_keys || [],
+        ldap_settings: dataObj.ldap_settings || { ...defaultLdapSettings }
+      };
       saveLocalFile();
     }
   } else {
     localDbData = {
-          tasks: dataObj.tasks || [],
-          sprints: dataObj.sprints || [],
-          users: dataObj.users || [],
-          groups: dataObj.groups || [],
-          notifications: dataObj.notifications || [],
-          findings: dataObj.findings || [],
-          api_keys: dataObj.api_keys || [],
-          ldap_settings: dataObj.ldap_settings || { ...defaultLdapSettings },
-          globalSettings: dataObj.globalSettings || {},
-          workspaces: dataObj.workspaces || [],
-          imapSettings: dataObj.imapSettings || {},
-          processedEmails: dataObj.processedEmails || [],
-          kataHashes: dataObj.kataHashes || []
-        };
+      tasks: dataObj.tasks || [],
+      sprints: dataObj.sprints || [],
+      users: dataObj.users || [],
+      groups: dataObj.groups || [],
+      notifications: dataObj.notifications || [],
+      findings: dataObj.findings || [],
+      api_keys: dataObj.api_keys || [],
+      ldap_settings: dataObj.ldap_settings || { ...defaultLdapSettings }
+    };
     saveLocalFile();
   }
   } finally {
