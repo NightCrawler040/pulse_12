@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import type { Task, User, Column, Sprint, FilterState, ViewMode, Status, Comment, Group, NotificationItem, ExternalFinding, ApiKeySettings, Workspace, HrOrder, HrSettings } from '../types';
+import type { Task, User, Column, Sprint, FilterState, ViewMode, Status, Comment, Group, NotificationItem, ExternalFinding, ApiKeySettings, Workspace, HrOrder } from '../types';
 import { mockColumns } from '../data/mockData';
 import { apiService, getSocket } from '../services/api';
 
