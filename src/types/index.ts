@@ -132,6 +132,7 @@ export interface ExternalFinding {
   promotedTaskId?: string | null;
   rawPayload?: any;
   createdAt: string;
+  workspaceId?: string;
 }
 
 export interface ApiKeySettings {
