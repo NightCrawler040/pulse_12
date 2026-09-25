@@ -845,6 +845,13 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       findings: filteredFindings,
       apiKeys,
       hrOrders,
+      deleteHrOrder: (id) => {
+        setHrOrders(prev => prev.filter(o => o.id !== id));
+        fetch(`/api/hr-orders/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('pulse_api_token')}` }
+        }).catch(console.error);
+      },
       updateHrOrder: (id, updates) => {
         setHrOrders(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
         fetch(`/api/hr-orders/${id}`, {
