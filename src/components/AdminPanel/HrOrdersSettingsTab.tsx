@@ -42,10 +42,10 @@ const HrOrdersSettingsTab: React.FC = () => {
         setSaveStatus('success');
         setTimeout(() => setSaveStatus(null), 3000);
       } else {
-        setSaveStatus('error');
+        setSaveStatus('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
       }
-    } catch (e) {
-      setSaveStatus('error');
+    } catch (e: any) {
+      setSaveStatus('Сетевая ошибка: ' + e.message);
     }
     setIsLoading(false);
   };
