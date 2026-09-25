@@ -103,9 +103,14 @@ export const HrOrdersDashboard: React.FC = () => {
                       <Save size={14} /> Сохранить
                     </button>
                   ) : (
+                    <div style={{ display: 'flex', gap: '4px' }}>
                     <button className="btn-secondary" style={{ padding: '4px 12px', minHeight: 'auto' }} onClick={() => handleEdit(order)}>
                       Изменить
                     </button>
+                    <button className="btn-danger" style={{ padding: '4px 8px', minHeight: 'auto', background: 'transparent', border: '1px solid #ef4444', color: '#ef4444', borderRadius: '4px', cursor: 'pointer' }} onClick={() => { if (window.confirm('Удалить приказ?')) deleteHrOrder(order.id) }} title="Удалить">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                   )}
                 </td>
               </tr>
