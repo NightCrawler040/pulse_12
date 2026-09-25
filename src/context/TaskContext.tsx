@@ -215,7 +215,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (Array.isArray(data.findings)) setFindings(data.findings);
         if (Array.isArray(data.api_keys)) setApiKeys(data.api_keys);
         if ((data as any).globalSettings) setGlobalSettings((data as any).globalSettings);
-          if (Array.isArray(data.workspaces)) { setWorkspaces(data.workspaces); if (data.workspaces.length > 0) setActiveWorkspaceId(data.workspaces[0].id); }
+        if (Array.isArray(data.workspaces)) { setWorkspaces(data.workspaces); if (data.workspaces.length > 0) setActiveWorkspaceId(data.workspaces[0].id); }
+        if (Array.isArray((data as any).hr_orders)) setHrOrders((data as any).hr_orders);
         setIsServerConnected(true);
       }
     }).catch(() => {
