@@ -465,6 +465,6 @@ export const startImapService = async (settings, dbData, broadcastUpdate) => {
       lock.release();
     }
   } catch (err) {
-    console.error('❌ [IMAP] Ошибка подключения:', err.message);
+    console.error('❌ [IMAP] Ошибка подключения:', err.message, err.response || '', err);
   }
 };
