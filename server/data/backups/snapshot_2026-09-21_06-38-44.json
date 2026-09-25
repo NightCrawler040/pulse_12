@@ -1,0 +1,73 @@
+{
+  "tasks": [],
+  "sprints": [],
+  "users": [
+    {
+      "id": "usr-1",
+      "name": "testadmin",
+      "login": "admin",
+      "password": "$2a$10$jm9p1H3ipWidxF9fxD3BJO4v3Da73u8wQ71jRj9yORHcfBAR/jTiO",
+      "role": "Admin",
+      "roleType": "admin",
+      "department": "Engineering",
+      "email": "admin@corp.lan",
+      "avatar": "",
+      "pin": "$2a$10$IYI2V6lvFdmtqOWkBic8be.NEOzmSVQ/XZLOfDvFW6FaneTG1tXDC",
+      "isActive": true
+    }
+  ],
+  "groups": [],
+  "notifications": [],
+  "findings": [],
+  "api_keys": [],
+  "ldap_settings": {
+    "enabled": false,
+    "serverUrl": "",
+    "baseDN": "",
+    "bindDN": "",
+    "bindPassword": "",
+    "userFilter": "",
+    "loginAttribute": "",
+    "emailAttribute": "",
+    "nameAttribute": "",
+    "departmentAttribute": "",
+    "objectClassUsers": "",
+    "ignoreCase": true,
+    "domainName": ""
+  },
+  "mailSettings": {
+    "host": "",
+    "port": 25,
+    "user": "",
+    "password": "",
+    "from": "",
+    "ssl": false,
+    "startTls": false,
+    "notificationReceivers": ""
+  },
+  "fortigateSettings": {
+    "enabled": true,
+    "autoBanEnabled": true,
+    "banUrl": "https://172.31.69.30:10443/api/v2/monitor/system/automation-stitch/webhook/Pulse12%20API",
+    "unbanUrl": "",
+    "apiToken": "5sj1c9Ns79s419x5856xyrn4x8dwcd",
+    "banDurationDays": 90,
+    "addressGroup": "Pulse_Banned_IPs",
+    "WS-1": {
+      "enabled": true,
+      "autoBanEnabled": true,
+      "banUrl": "https://172.31.69.30:10443/api/v2/monitor/system/automation-stitch/webhook/Pulse12%20API",
+      "unbanUrl": "",
+      "apiToken": "5sj1c9Ns79s419x5856xyrn4x8dwcd",
+      "banDurationDays": 90,
+      "addressGroup": "Pulse_Banned_IPs"
+    }
+  },
+  "bannedIps": [],
+  "notificationEvents": {
+    "taskAssigned": true,
+    "taskStatusChanged": true,
+    "deadlineWarning": true,
+    "tokenExpiration": true
+  }
+}
