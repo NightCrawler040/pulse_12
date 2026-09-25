@@ -55,6 +55,8 @@ interface TaskContextType {
   clearAllNotifications: () => void;
   findings: ExternalFinding[];
   apiKeys: ApiKeySettings[];
+  hrOrders: HrOrder[];
+  updateHrOrder: (id: string, updates: Partial<HrOrder>) => void;
   addFinding: (finding: Omit<ExternalFinding, 'id' | 'createdAt'>) => ExternalFinding;
   updateFindingStatus: (id: string, status: ExternalFinding['status'], promotedTaskId?: string) => void;
   deleteFinding: (id: string) => void;
@@ -129,6 +131,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isNetworkModalOpen, setIsNetworkModalOpen] = useState<boolean>(false);
   const [findings, setFindings] = useState<ExternalFinding[]>([]);
   const [apiKeys, setApiKeys] = useState<ApiKeySettings[]>([]);
+  const [hrOrders, setHrOrders] = useState<HrOrder[]>([]);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(() => {
     return localStorage.getItem('korpjira-active-workspace') || null;

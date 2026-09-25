@@ -62,7 +62,10 @@ export const getSanitizedDbData = () => {
         name: fallbackName,
         role: safeUser.role || 'Специалист',
         roleType: safeUser.roleType || 'member'
-      };
+      
+    hr_orders: dbData.hr_orders || [],
+    hrSettings: dbData.hrSettings || {},
+  };
     });
   };
 

@@ -1,3 +1,4 @@
+import { HrOrdersDashboard } from './HrOrdersDashboard';
 import React, { useState } from 'react';
 import { useTaskContext } from '../../context/TaskContext';
 import { useAuth } from '../../context/AuthContext';
@@ -35,7 +36,7 @@ export const SecurityCenter: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('active');
   const [severityFilter, setSeverityFilter] = useState<string>('all');
-  const [systemTab, setSystemTab] = useState<'all' | 'derscanner' | 'fortigate'>('all');
+  const [systemTab, setSystemTab] = useState<'all' | 'derscanner' | 'fortigate' | 'hr_orders'>('all');
 
   const canAccessSystem = (source: string) => {
     if (isAdmin || !currentUser) return true;
@@ -203,7 +204,14 @@ export const SecurityCenter: React.FC = () => {
           🛡️ DerScanner SAST/DAST ({accessibleFindings.filter(f => f.source === 'derscanner').length})
           {!canAccessSystem('derscanner') && <span title="Ограничен по отделу">🔒</span>}
         </button>
-        <button
+                  <button
+            className={`filter-btn ${systemTab === 'hr_orders' ? 'active' : ''}`}
+            onClick={() => setSystemTab('hr_orders')}
+            style={{ background: systemTab === 'hr_orders' ? '#f59e0b' : undefined, color: systemTab === 'hr_orders' ? 'white' : undefined, display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
+          >
+            📋 HR Приказы (JML)
+          </button>
+          <button
           className={`filter-btn ${systemTab === 'fortigate' ? 'active' : ''}`}
           onClick={() => setSystemTab('fortigate')}
           style={{ background: systemTab === 'fortigate' ? '#10b981' : undefined, color: systemTab === 'fortigate' ? 'white' : undefined, display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
@@ -214,7 +222,13 @@ export const SecurityCenter: React.FC = () => {
       </div>
 
       {/* Filters & Search */}
-      <div className="security-filters-bar">
+      
+        {systemTab === 'hr_orders' ? (
+          <HrOrdersDashboard />
+        ) : (
+          <>
+            <div className="security-filters-bar">
+
         <div className="filters-group">
           <button 
             className={`filter-btn ${statusFilter === 'active' ? 'active' : ''}`}
@@ -440,6 +454,11 @@ export const SecurityCenter: React.FC = () => {
         )}
       </div>
       )}
+
+      
+          </>
+        )}
+      { Modal for Promoting Finding to Task }
 
       {/* Modal for Promoting Finding to Task */}
       {promotingFinding && (
