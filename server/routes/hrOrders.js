@@ -2,8 +2,6 @@ import express from 'express';
 import { saveCollection } from '../db.js';
 import { requireAuth } from '../middlewares/auth.js';
 import { requireWorkspaceAccess } from '../middlewares/workspace.js';
-import { getActor } from '../services/authService.js';
-
 const router = express.Router();
 
 router.use(requireAuth);
@@ -11,7 +9,7 @@ router.use(requireAuth);
 
 router.get('/', async (req, res) => {
   const dbData = req.dbData;
-  const user = req.currentUser || getActor();
+  const user = req.currentUser ;
   const userWorkspaces = user?.workspaceIds || [];
   
   if (!dbData.hr_orders) {
@@ -55,7 +53,7 @@ router.put('/:id', async (req, res) => {
   
   // Minimal workspace check
   const order = dbData.hr_orders[index];
-  const user = req.currentUser || getActor();
+  const user = req.currentUser ;
   if (user?.roleType !== 'admin' && order.workspaceId && !user?.workspaceIds?.includes(order.workspaceId)) {
     return res.status(403).json({ error: 'Forbidden' });
   }
@@ -74,7 +72,7 @@ router.delete('/:id', async (req, res) => {
   if (index === -1 || index === undefined) return res.status(404).json({ error: 'Not found' });
   
   const order = dbData.hr_orders[index];
-  const user = req.currentUser || getActor();
+  const user = req.currentUser ;
   if (user?.roleType !== 'admin' && order.workspaceId && !user?.workspaceIds?.includes(order.workspaceId)) {
     return res.status(403).json({ error: 'Forbidden' });
   }
