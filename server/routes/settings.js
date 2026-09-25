@@ -65,5 +65,21 @@ export default function createSettingsRouter(requireAuth, requireAdmin) {
     }
   });
 
+  
+  router.get('/hr', requireAdmin, async (req, res) => {
+    res.json({ hrSettings: req.dbData.hrSettings || { workspaceId: 'WS-1', groupId: null } });
+  });
+
+  router.post('/hr', requireAdmin, async (req, res) => {
+    try {
+      const { hrSettings } = req.body;
+      req.dbData.hrSettings = hrSettings;
+      await saveCollection('hrSettings', hrSettings);
+      res.json({ success: true, message: 'Настройки HR Приказов сохранены' });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   return router;
 }

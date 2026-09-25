@@ -6,6 +6,7 @@ import { apiService } from '../../services/api';
 import { LdapSettingsTab } from './LdapSettingsTab';
 import { MailSettingsTab } from './MailSettingsTab';
 import { FortigateSettingsTab } from './FortigateSettingsTab';
+import HrOrdersSettingsTab from './HrOrdersSettingsTab';
 import { WorkspacesTab } from './WorkspacesTab';
 import './AdminPanel.css';
 
@@ -16,7 +17,7 @@ export const AdminPanel: React.FC = () => {
   const employeeUsers = users.filter(u => !isProtectedAdmin(u));
 
   const [selectedIntegrationWsId, setSelectedIntegrationWsId] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<'workspaces' | 'users' | 'groups' | 'integrations' | 'ldap' | 'mail' | 'fortigate' | 'appearance'>('workspaces');
+  const [activeTab, setActiveTab] = useState<'workspaces' | 'users' | 'groups' | 'integrations' | 'ldap' | 'mail' | 'fortigate' | 'appearance' | 'hr-orders'>('workspaces');
   const [newKeyName, setNewKeyName] = useState('');
   const [newKeySource, setNewKeySource] = useState<'derscanner' | 'siem' | 'custom'>('derscanner');
   const [newKeyAllowedDepts, setNewKeyAllowedDepts] = useState<string[]>(['all']);
@@ -344,11 +345,17 @@ export const AdminPanel: React.FC = () => {
               ✉️ Почта (IMAP)
             </button>
             <button 
-              className={`admin-tab-btn ${activeTab === 'fortigate' ? 'active' : ''}`}
-              onClick={() => setActiveTab('fortigate')}
-            >
-              🛡️ FortiGate (SOAR)
-            </button>
+                className={`admin-tab-btn ${activeTab === 'fortigate' ? 'active' : ''}`}
+                onClick={() => setActiveTab('fortigate')}
+              >
+                🛡️ FortiGate (SOAR)
+              </button>
+              <button 
+                className={`admin-tab-btn ${activeTab === 'hr-orders' ? 'active' : ''}`}
+                onClick={() => setActiveTab('hr-orders')}
+              >
+                📋 HR Приказы (JML)
+              </button>
               <button 
                 className={`admin-tab-btn ${activeTab === 'appearance' ? 'active' : ''}`}
                 onClick={() => setActiveTab('appearance')}
@@ -901,8 +908,12 @@ export const AdminPanel: React.FC = () => {
       )}
 
       {activeTab === 'fortigate' && (
-        <FortigateSettingsTab workspaceId={selectedIntegrationWsId}  />
-      )}
+          <FortigateSettingsTab workspaceId={selectedIntegrationWsId}  />
+        )}
+        
+        {activeTab === 'hr-orders' && (
+          <HrOrdersSettingsTab />
+        )}
 
       {/* Add / Edit USER Modal */}
       {isModalOpen && (
