@@ -130,7 +130,14 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [findings, setFindings] = useState<ExternalFinding[]>([]);
   const [apiKeys, setApiKeys] = useState<ApiKeySettings[]>([]);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(() => {
+    return localStorage.getItem('korpjira-active-workspace') || null;
+  });
+
+  useEffect(() => {
+    if (activeWorkspaceId) localStorage.setItem('korpjira-active-workspace', activeWorkspaceId);
+    else localStorage.removeItem('korpjira-active-workspace');
+  }, [activeWorkspaceId]);
   const [activeSprintId, setActiveSprintId] = useState<string>('all');
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
   const [viewMode, setViewModeState] = useState<ViewMode>(() => {
@@ -275,6 +282,28 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('korpjira-notifications', JSON.stringify(notifications));
   }, [notifications]);
 
+  
+  
+  const filteredNotifications = useMemo(() => {
+    if (!activeWorkspaceId) return notifications;
+    return notifications.filter(n => !n.workspaceId || n.workspaceId === activeWorkspaceId);
+  }, [notifications, activeWorkspaceId]);
+
+  const filteredSprints = useMemo(() => {
+    if (!activeWorkspaceId) return sprints;
+    return sprints.filter(s => !s.workspaceId || s.workspaceId === activeWorkspaceId);
+  }, [sprints, activeWorkspaceId]);
+
+  const filteredGroups = useMemo(() => {
+    if (!activeWorkspaceId) return groups;
+    return groups.filter(g => !g.workspaceId || g.workspaceId === activeWorkspaceId);
+  }, [groups, activeWorkspaceId]);
+
+  const filteredFindings = useMemo(() => {
+    if (!activeWorkspaceId) return findings;
+    return findings.filter(f => !f.workspaceId || f.workspaceId === activeWorkspaceId);
+  }, [findings, activeWorkspaceId]);
+
   // Filtered tasks
   const filteredTasks = useMemo(() => {
     return tasks.filter(task => {
@@ -311,6 +340,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addNotification = (notifData: Omit<NotificationItem, 'id' | 'createdAt' | 'read'>) => {
     const newNotif: NotificationItem = {
+      workspaceId: activeWorkspaceId || undefined,
       ...notifData,
       id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       createdAt: new Date().toISOString(),
@@ -326,6 +356,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const addTask = (newTaskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'comments'>) => {
+    if (activeWorkspaceId && !newTaskData.workspaceId) newTaskData.workspaceId = activeWorkspaceId;
     const newId = `NEX-${Math.floor(100 + Math.random() * 900)}`;
     const now = new Date().toISOString();
     const newTask: Task = {
@@ -801,14 +832,14 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       tasks,
       users,
-      groups,
-      onlineUserIds,
-      notifications,
-      findings,
-      apiKeys,
+      groups: filteredGroups,
+        onlineUserIds,
+        notifications: filteredNotifications,
+      findings: filteredFindings,
+        apiKeys,
       columns,
-      sprints,
-      activeSprintId,
+      sprints: filteredSprints,
+        activeSprintId,
       filters,
       viewMode,
       theme,
@@ -845,6 +876,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       deleteNotification,
       clearAllNotifications,
       addFinding: (findingData) => {
+          if (activeWorkspaceId && !(findingData as any).workspaceId) (findingData as any).workspaceId = activeWorkspaceId;
         const newId = `fnd-${Date.now()}`;
         const newFinding: ExternalFinding = { ...findingData, id: newId, createdAt: new Date().toISOString() };
         setFindings(prev => [newFinding, ...prev]);

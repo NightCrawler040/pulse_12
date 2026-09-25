@@ -846,7 +846,7 @@ io.on('connection', (socket) => {
   console.log(`⚡ New corporate laptop connected via Socket.io: ${socket.id}`);
   
   // Send sanitized current state immediately upon connection (1.A)
-  socket.emit('init-data', getSanitizedDbData());
+  // Removed init-data on raw connection (Bug #5). Will send after user-online.
   broadcastOnlineUsers();
 
   socket.on('user-online', async (userId) => {

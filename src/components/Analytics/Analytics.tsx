@@ -5,7 +5,8 @@ import { BarChart3, TrendingUp, Clock, AlertCircle, Award, Download, Loader2 } f
 import './Analytics.css';
 
 export const Analytics: React.FC = () => {
-  const { tasks, users, groups, activeSprintId, filters } = useTaskContext();
+  const { filteredTasks, users, groups, activeSprintId, filters } = useTaskContext();
+  const tasks = filteredTasks; // Bug #6 Fix: map tasks to filteredTasks for all calculations
   const { currentUser, isManagerOrAdmin } = useAuth();
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [selectedPdfUserId, setSelectedPdfUserId] = useState('all');

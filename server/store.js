@@ -110,22 +110,19 @@ export const broadcastUpdate = async (key) => {
     }
     
     if (ioInstance) {
-      if (key === 'users') {
-        ioInstance.sockets.sockets.forEach(socket => {
-          if (socket.userId) {
-            const u = dbData.users.find(usr => usr.id === socket.userId);
-            if (u) {
-              socket.emit('data-updated', getSanitizedDbDataForUser(u));
-            } else {
-              socket.emit('data-updated', getSanitizedDbData());
-            }
+      // 2. ?>?? ??> ??????? ??:???? ?'??>?? WebSockets
+      ioInstance.sockets.sockets.forEach(socket => {
+        if (socket.userId) {
+          const u = dbData.users.find(usr => usr.id === socket.userId);
+          if (u) {
+            socket.emit('data-updated', getSanitizedDbDataForUser(u));
           } else {
             socket.emit('data-updated', getSanitizedDbData());
           }
-        });
-      } else {
-        ioInstance.emit('data-updated', getSanitizedDbData());
-      }
+        } else {
+          socket.emit('data-updated', getSanitizedDbData());
+        }
+      });
     }
   } catch (err) {
     console.error('⚠️ Ошибка записи в БД, откат данных в памяти для:', key || 'ALL');

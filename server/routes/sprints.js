@@ -1,11 +1,20 @@
 import express from 'express';
+import { requireWorkspaceAccess } from '../middlewares/workspace.js';
 
 export default function createRouter(requireAuth, requireAdmin) {
   const router = express.Router();
 
-  router.post('/', requireAdmin, async (req, res) => {
+  router.post('/', requireAdmin, requireWorkspaceAccess, async (req, res) => {
   const sprintData = req.body;
-  const newId = sprintData.id || `sprint-${Date.now()}`;
+  if (req.body.workspaceId && req.currentUser && req.currentUser.roleType !== 'admin') {
+    if (!(req.currentUser.workspaceIds || []).includes(req.body.workspaceId)) {
+      return res.status(403).json({ error: 'Нет доступа к указанному workspace' });
+    }
+  }
+  if (!req.body.workspaceId && req.currentUser && req.currentUser.workspaceIds && req.currentUser.workspaceIds.length > 0) {
+      req.body.workspaceId = req.currentUser.workspaceIds[0];
+    }
+    const newId = sprintData.id || `sprint-${Date.now()}`;
   const newSprint = {
     ...sprintData,
     id: newId,
@@ -17,7 +26,7 @@ export default function createRouter(requireAuth, requireAdmin) {
   res.status(201).json(newSprint);
 });
 
-  router.put('/:id', requireAdmin, async (req, res) => {
+  router.put('/:id', requireAdmin, requireWorkspaceAccess, async (req, res) => {
   const { id } = req.params;
   const updates = req.body;
   if (!req.dbData.sprints) req.dbData.sprints = [];
@@ -31,7 +40,7 @@ export default function createRouter(requireAuth, requireAdmin) {
   res.json({ success: true });
 });
 
-  router.delete('/:id', requireAdmin, async (req, res) => {
+  router.delete('/:id', requireAdmin, requireWorkspaceAccess, async (req, res) => {
   const { id } = req.params;
   if (!req.dbData.sprints) req.dbData.sprints = [];
   req.dbData.sprints = req.dbData.sprints.filter(s => s.id !== id);

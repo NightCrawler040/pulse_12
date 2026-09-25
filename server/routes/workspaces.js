@@ -33,6 +33,30 @@ export default function createRouter(requireAuth, requireAdmin) {
 
   router.delete('/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
+  
+  // Cascade migration to WS-1
+  if (req.dbData.tasks) {
+    req.dbData.tasks = req.dbData.tasks.map(t => t.workspaceId === id ? { ...t, workspaceId: 'WS-1' } : t);
+  }
+  if (req.dbData.sprints) {
+    req.dbData.sprints = req.dbData.sprints.map(s => s.workspaceId === id ? { ...s, workspaceId: 'WS-1' } : s);
+  }
+  if (req.dbData.groups) {
+    req.dbData.groups = req.dbData.groups.map(g => g.workspaceId === id ? { ...g, workspaceId: 'WS-1' } : g);
+  }
+  if (req.dbData.api_keys) {
+    req.dbData.api_keys = req.dbData.api_keys.map(k => k.workspaceId === id ? { ...k, workspaceId: 'WS-1' } : k);
+  }
+  if (req.dbData.findings) {
+    req.dbData.findings = req.dbData.findings.map(f => f.workspaceId === id ? { ...f, workspaceId: 'WS-1' } : f);
+  }
+  if (req.dbData.users) {
+    req.dbData.users = req.dbData.users.map(u => ({
+      ...u,
+      workspaceIds: (u.workspaceIds || []).filter(wid => wid !== id)
+    }));
+  }
+
   req.dbData.workspaces = req.dbData.workspaces.filter(w => w.id !== id);
   
   try { await req.broadcastUpdate('workspaces'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }

@@ -1,15 +1,29 @@
 import express from 'express';
+import { requireWorkspaceAccess } from '../middlewares/workspace.js';
 
 export default function createRouter(requireAuth, requireAdmin) {
   const router = express.Router();
 
-  router.get('/', requireAuth, async (req, res) => {
-  res.json(req.dbData.groups || []);
-});
+  router.get('/', requireAuth, requireWorkspaceAccess, async (req, res) => {
+    let items = req.dbData.groups || [];
+    if (req.currentUser.roleType !== 'admin') {
+      const wsIds = req.currentUser.workspaceIds || [];
+      items = items.filter(t => !t.workspaceId || wsIds.includes(t.workspaceId));
+    }
+    res.json(items);
+  });
 
-  router.post('/', requireAdmin, async (req, res) => {
+  router.post('/', requireAdmin, requireWorkspaceAccess, async (req, res) => {
   const groupData = req.body;
-  const newId = `grp-${Date.now()}`;
+  if (req.body.workspaceId && req.currentUser && req.currentUser.roleType !== 'admin') {
+    if (!(req.currentUser.workspaceIds || []).includes(req.body.workspaceId)) {
+      return res.status(403).json({ error: 'Нет доступа к указанному workspace' });
+    }
+  }
+  if (!req.body.workspaceId && req.currentUser && req.currentUser.workspaceIds && req.currentUser.workspaceIds.length > 0) {
+      req.body.workspaceId = req.currentUser.workspaceIds[0];
+    }
+    const newId = `grp-${Date.now()}`;
   const newGroup = {
     ...groupData,
     id: newId,
@@ -21,7 +35,7 @@ export default function createRouter(requireAuth, requireAdmin) {
   res.status(201).json(newGroup);
 });
 
-  router.put('/:id', requireAdmin, async (req, res) => {
+  router.put('/:id', requireAdmin, requireWorkspaceAccess, async (req, res) => {
   const { id } = req.params;
   const updates = req.body;
   if (!req.dbData.groups) req.dbData.groups = [];
@@ -35,7 +49,7 @@ export default function createRouter(requireAuth, requireAdmin) {
   res.json({ success: true });
 });
 
-  router.delete('/:id', requireAdmin, async (req, res) => {
+  router.delete('/:id', requireAdmin, requireWorkspaceAccess, async (req, res) => {
   const { id } = req.params;
   if (!req.dbData.groups) req.dbData.groups = [];
   req.dbData.groups = req.dbData.groups.filter(g => g.id !== id);

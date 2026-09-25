@@ -107,6 +107,7 @@ export interface FilterState {
 export interface NotificationItem {
   id: string;
   userId: string;
+  workspaceId?: string;
   title: string;
   message: string;
   createdAt: string;
@@ -148,6 +149,7 @@ export interface Workspace {
   id: string;
   name: string;
   ownerId: string;
+  memberIds?: string[];
   adGroup: string;
   enabledModules: string[];
   createdAt: string;

@@ -1,15 +1,29 @@
 import express from 'express';
+import { requireWorkspaceAccess } from '../middlewares/workspace.js';
 
 export default function createFindingsRouter(requireAuth) {
   const router = express.Router();
 
-  router.get('/', requireAuth, async (req, res) => {
-  res.json(req.dbData.findings || []);
-});
+  router.get('/', requireAuth, requireWorkspaceAccess, async (req, res) => {
+    let items = req.dbData.findings || [];
+    if (req.currentUser.roleType !== 'admin') {
+      const wsIds = req.currentUser.workspaceIds || [];
+      items = items.filter(t => !t.workspaceId || wsIds.includes(t.workspaceId));
+    }
+    res.json(items);
+  });
 
-  router.post('/', requireAuth, async (req, res) => {
+  router.post('/', requireAuth, requireWorkspaceAccess, async (req, res) => {
   const findingData = req.body;
-  const newId = findingData.id || `fnd-${Date.now()}`;
+  if (req.body.workspaceId && req.currentUser && req.currentUser.roleType !== 'admin') {
+    if (!(req.currentUser.workspaceIds || []).includes(req.body.workspaceId)) {
+      return res.status(403).json({ error: 'Нет доступа к указанному workspace' });
+    }
+  }
+  if (!req.body.workspaceId && req.currentUser && req.currentUser.workspaceIds && req.currentUser.workspaceIds.length > 0) {
+      req.body.workspaceId = req.currentUser.workspaceIds[0];
+    }
+    const newId = findingData.id || `fnd-${Date.now()}`;
   const newFinding = {
     ...findingData,
     id: newId,
@@ -23,7 +37,7 @@ export default function createFindingsRouter(requireAuth) {
   res.status(201).json(newFinding);
 });
 
-  router.put('/:id', requireAuth, async (req, res) => {
+  router.put('/:id', requireAuth, requireWorkspaceAccess, async (req, res) => {
   const { id } = req.params;
   const updates = req.body;
   if (!req.dbData.findings) req.dbData.findings = [];
@@ -37,7 +51,7 @@ export default function createFindingsRouter(requireAuth) {
   res.json({ success: true });
 });
 
-  router.delete('/:id', requireAuth, async (req, res) => {
+  router.delete('/:id', requireAuth, requireWorkspaceAccess, async (req, res) => {
   const { id } = req.params;
   if (!req.dbData.findings) req.dbData.findings = [];
   req.dbData.findings = req.dbData.findings.filter(f => f.id !== id);
@@ -62,6 +76,7 @@ export default function createFindingsRouter(requireAuth) {
 
   const newTaskId = `NEX-${Math.floor(100 + Math.random() * 900)}`;
   const promotedTask = {
+      workspaceId: finding.workspaceId || 'WS-1', // Inherit workspace!
     id: newTaskId,
     title: `[${finding.source.toUpperCase()}] ${finding.title}`,
     description: `${finding.description || ''}\n\n🛡️ **Данные инцидента:**\n- **Проект:** ${finding.project || 'Не указано'}\n- **Файл/Расположение:** \`${finding.fileLocation || 'Не указано'}\`\n- **CWE/CVE:** ${finding.cwe || 'N/A'}\n- **Компонент:** ${finding.component || 'N/A'}\n- **Ответственный от сканера:** ${finding.assignee || 'Не назначен'}\n- **Критичность:** ${finding.severity}`,

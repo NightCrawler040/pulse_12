@@ -1,23 +1,38 @@
 import express from 'express';
+import { requireWorkspaceAccess } from '../middlewares/workspace.js';
 
 // NOTE: requireAuth is passed as a parameter to avoid breaking the current index.js monolithic structure
 export default function createTasksRouter(requireAuth) {
   const router = express.Router();
 
   // Get all tasks
-  router.get('/', requireAuth, async (req, res) => {
-    res.json(req.dbData.tasks || []);
+  router.get('/', requireAuth, requireWorkspaceAccess, async (req, res) => {
+    let tasks = req.dbData.tasks || [];
+    if (req.currentUser.roleType !== 'admin') {
+      const wsIds = req.currentUser.workspaceIds || [];
+      tasks = tasks.filter(t => !t.workspaceId || wsIds.includes(t.workspaceId));
+    }
+    res.json(tasks);
   });
 
   // Create new task
-  router.post('/', requireAuth, async (req, res) => {
+  router.post('/', requireAuth, requireWorkspaceAccess, async (req, res) => {
     const newTaskData = req.body;
+    if (!req.body.workspaceId && req.currentUser && req.currentUser.workspaceIds && req.currentUser.workspaceIds.length > 0) {
+      req.body.workspaceId = req.currentUser.workspaceIds[0];
+    }
     const newId = newTaskData.id || `NEX-${Math.floor(100 + Math.random() * 900)}`;
     const now = new Date().toISOString();
     const safeComments = Array.isArray(newTaskData.comments) 
       ? newTaskData.comments.map(c => ({ ...c, userId: req.currentUser ? req.currentUser.id : c.userId }))
       : [];
     let wsId = newTaskData.workspaceId;
+    if (wsId && req.currentUser && req.currentUser.roleType !== 'admin') {
+      if (!(req.currentUser.workspaceIds || []).includes(wsId)) {
+        return res.status(403).json({ error: 'Нет доступа к указанному workspace' });
+      }
+    }
+
     if (!wsId && req.currentUser) {
       wsId = (req.currentUser.workspaceIds && req.currentUser.workspaceIds.length > 0) ? 
       req.currentUser.workspaceIds[0] : 'WS-1';
@@ -40,13 +55,18 @@ export default function createTasksRouter(requireAuth) {
   });
 
   // Update task
-  router.put('/:id', requireAuth, async (req, res) => {
+  router.put('/:id', requireAuth, requireWorkspaceAccess, async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
     
     const existingTask = (req.dbData.tasks || []).find(t => t.id === id);
     if (!existingTask) {
       return res.status(404).json({ error: 'Задача не найдена' });
+    }
+    if (req.currentUser.roleType !== 'admin') {
+      if (existingTask.workspaceId && !(req.currentUser.workspaceIds || []).includes(existingTask.workspaceId)) {
+        return res.status(403).json({ error: 'Нет доступа к редактированию задачи из этого workspace' });
+      }
     }
 
     // IDOR Protection: Aligned with frontend AuthContext logic
@@ -108,11 +128,16 @@ export default function createTasksRouter(requireAuth) {
   });
 
   // Delete task
-  router.delete('/:id', requireAuth, async (req, res) => {
+  router.delete('/:id', requireAuth, requireWorkspaceAccess, async (req, res) => {
     const { id } = req.params;
     
     const existingTask = (req.dbData.tasks || []).find(t => t.id === id);
     if (existingTask) {
+      if (req.currentUser.roleType !== 'admin') {
+        if (existingTask.workspaceId && !(req.currentUser.workspaceIds || []).includes(existingTask.workspaceId)) {
+          return res.status(403).json({ error: 'Нет доступа к удалению задачи из этого workspace' });
+        }
+      }
       // IDOR Protection: Only admin or creator can delete the task
       if (req.currentUser?.roleType !== 'admin' && req.currentUser?.role !== 'admin' && 
           existingTask.creatorId !== req.currentUser?.id) {
