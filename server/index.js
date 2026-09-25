@@ -36,6 +36,7 @@ import createFindingsRouter from './routes/findings.js';
 import createGroupsRouter from './routes/groups.js';
 
 import createWorkspacesRouter from './routes/workspaces.js';
+import hrOrdersRouter from './routes/hrOrders.js';
 
 
 
@@ -430,6 +431,7 @@ const broadcastUpdate = async (key) => {
   app.use('/api/groups', createGroupsRouter(requireAuth, requireAdmin));
 
   app.use('/api/workspaces', createWorkspacesRouter(requireAuth, requireAdmin));
+    app.use('/api/hr-orders', hrOrdersRouter);
 
 
   const apiRateLimiter = (req, res, next) => {
