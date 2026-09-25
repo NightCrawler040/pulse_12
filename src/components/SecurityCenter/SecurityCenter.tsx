@@ -458,7 +458,7 @@ export const SecurityCenter: React.FC = () => {
       
           </>
         )}
-      { Modal for Promoting Finding to Task }
+      
 
       {/* Modal for Promoting Finding to Task */}
       {promotingFinding && (
