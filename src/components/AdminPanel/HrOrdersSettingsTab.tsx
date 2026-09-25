@@ -50,7 +50,7 @@ const HrOrdersSettingsTab: React.FC = () => {
     setIsLoading(false);
   };
 
-  const filteredGroups = groups.filter(g => g.workspaceId === workspaceId);
+  const filteredGroups = groups.filter(g => !g.workspaceId || g.workspaceId === workspaceId);
 
   return (
     <div className="admin-section animate-fade-in">
