@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTaskContext } from '../../context/TaskContext';
-import { Download, CheckCircle, XCircle, AlertCircle, Clock, Save } from 'lucide-react';
+import { Download, Save } from 'lucide-react';
 import './SecurityCenter.css'; // Reuse styles
 
 export const HrOrdersDashboard: React.FC = () => {
