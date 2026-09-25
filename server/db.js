@@ -74,7 +74,9 @@ let localDbData = {
   fortigateSettings: { ...defaultFortigateSettings },
   bannedIps: [],
   notificationEvents: {},
-    globalSettings: {}
+    globalSettings: {},
+        hrSettings: {},
+        hr_orders: []
 };
 
 const loadLocalFile = () => {
