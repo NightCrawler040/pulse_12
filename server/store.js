@@ -62,14 +62,9 @@ export const getSanitizedDbData = () => {
         name: fallbackName,
         role: safeUser.role || 'Специалист',
         roleType: safeUser.roleType || 'member'
-      
-    hr_orders: dbData.hr_orders || [],
-    hrSettings: dbData.hrSettings || {},
-  };
+      };
     });
-  };
-
-  const sanitizeLdapSettings = (settings) => {
+  };const sanitizeLdapSettings = (settings) => {
     if (!settings || typeof settings !== 'object') return {};
     return {
       ...settings,
@@ -80,6 +75,8 @@ export const getSanitizedDbData = () => {
   return {
     ...dbData,
     users: sanitizeUsers(dbData.users),
+    hr_orders: dbData.hr_orders || [],
+    hrSettings: dbData.hrSettings || {},
     api_keys: [], // Hide API keys
     ldap_settings: sanitizeLdapSettings(dbData.ldap_settings),
     mailSettings: dbData.mailSettings || {},
