@@ -106,7 +106,7 @@ const processEmail = async (message, uid) => {
         const filePath = path.join(UPLOADS_DIR, safeFilename);
         fs.writeFileSync(filePath, hrPdfAttachment.content);
         
-        hrOrderData.pdfUrl = '/api/uploads/' + safeFilename;
+        hrOrderData.pdfUrl = '/uploads/' + safeFilename;
 
         const hrSettings = currentDbData.hrSettings || { workspaceId: 'WS-1', groupId: null };
         const targetWsId = hrSettings.workspaceId;
@@ -132,7 +132,7 @@ const processEmail = async (message, uid) => {
           title: `JML Приказ: ${hrOrderData.type} - ${hrOrderData.fullName}`,
           description: `**HR Приказ JML**\nФИО: ${hrOrderData.fullName}\nДолжность: ${hrOrderData.newPosition || hrOrderData.oldPosition}\nДата: ${hrOrderData.date}\n
 Пожалуйста, выполните необходимые действия в системах.`,
-          status: 'to-do',
+          status: 'todo',
           priority: 'high',
           creatorId: pulseUser.id,
           assigneeId: null,
@@ -140,6 +140,11 @@ const processEmail = async (message, uid) => {
           workspaceId: targetWsId,
           createdAt: new Date().toISOString(),
           sprintId: 'unassigned',
+          comments: [],
+          storyPoints: 0,
+          estimatedHours: 0,
+          loggedHours: 0,
+          updatedAt: new Date().toISOString(),
           subtasks: [
             { id: `st-1-${Date.now()}`, title: 'Active Directory (Учетная запись)', completed: false },
             { id: `st-2-${Date.now()}`, title: 'Kaspersky Endpoint Security', completed: false },
@@ -147,7 +152,7 @@ const processEmail = async (message, uid) => {
             { id: `st-4-${Date.now()}`, title: 'DLP (Защита от утечек)', completed: false },
             { id: `st-5-${Date.now()}`, title: 'Cisco Duo (2FA)', completed: false }
           ],
-          attachments: hrPdfAttachment ? [{ id: `att-${Date.now()}`, name: hrPdfAttachment.filename, url: `/api/uploads/hr_order_${Date.now()}_${hrPdfAttachment.filename}` }] : [],
+          attachments: hrPdfAttachment ? [{ id: `att-${Date.now()}`, name: hrPdfAttachment.filename, url: `/uploads/${safeFilename}` }] : [],
           tags: ['JML', 'Security']
         };
 
@@ -164,15 +169,9 @@ const processEmail = async (message, uid) => {
         }
         
         // Push notification handling
-        if (hrSettings.groupId) {
-          const group = currentDbData.groups?.find(g => g.id === hrSettings.groupId);
-          if (group && currentBroadcast) {
-             group.members.forEach(memberId => {
-               currentBroadcast('data-updated', { hr_orders: currentDbData.hr_orders, tasks: currentDbData.tasks }, memberId);
-             });
-          }
-        } else if (currentBroadcast) {
-           currentBroadcast('data-updated', { hr_orders: currentDbData.hr_orders, tasks: currentDbData.tasks });
+        if (currentBroadcast) {
+          currentBroadcast('hr_orders');
+          currentBroadcast('tasks');
         }
         return;
       }
@@ -416,12 +415,17 @@ ${indicatorItemsXml}
       id: `task-${Date.now()}`,
       title: cleanSubject(parsedMail.subject),
       description: `${displayBody}<br/><br/><strong>Найденные индикаторы (IP/DNS) сохранены в прикрепленных файлах.</strong>${fortigateBanStatus}`,
-      status: 'to-do',
+      status: 'todo',
       priority: 'high',
       assigneeId: pulseUser.id,
       creatorId: pulseUser.id,
       createdAt: new Date().toISOString(),
       sprintId: 'unassigned',
+          comments: [],
+          storyPoints: 0,
+          estimatedHours: 0,
+          loggedHours: 0,
+          updatedAt: new Date().toISOString(),
       attachments: attachments
     };
 

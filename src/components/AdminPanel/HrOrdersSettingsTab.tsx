@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useTaskContext } from '../../context/TaskContext';
+import { useAuth } from '../../context/AuthContext';
 
 const HrOrdersSettingsTab: React.FC = () => {
   const { workspaces, groups } = useTaskContext();
+  const { currentUser } = useAuth();
   const [workspaceId, setWorkspaceId] = useState<string>('WS-1');
   const [groupId, setGroupId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
@@ -11,7 +13,7 @@ const HrOrdersSettingsTab: React.FC = () => {
   useEffect(() => {
     // Load existing settings
     fetch('/api/settings/hr', {
-      headers: { Authorization: `Bearer ${localStorage.getItem('pulse_api_token')}` }
+      headers: { 'x-auth-user': currentUser?.id || '', Authorization: `Bearer ${localStorage.getItem('korpjira-auth-token')}` }
     })
       .then(r => r.json())
       .then(data => {
@@ -29,10 +31,7 @@ const HrOrdersSettingsTab: React.FC = () => {
     try {
       const res = await fetch('/api/settings/hr', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('pulse_api_token')}` 
-        },
+        headers: { 'Content-Type': 'application/json', 'x-auth-user': currentUser?.id || '', Authorization: `Bearer ${localStorage.getItem('korpjira-auth-token')}` },
         body: JSON.stringify({
           hrSettings: { workspaceId, groupId: groupId || null }
         })

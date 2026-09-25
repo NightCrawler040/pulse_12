@@ -1,6 +1,6 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const { PDFParse } = require('pdf-parse');
+const pdfParse = require('pdf-parse');
 
 /**
  * Parses HR Order PDF buffer and extracts JML data
@@ -9,8 +9,7 @@ const { PDFParse } = require('pdf-parse');
  */
 export const parseHrOrderPDF = async (buffer) => {
   try {
-    const parser = new PDFParse({ data: buffer });
-    const data = await parser.getText();
+    const data = await pdfParse(buffer);
     const text = data.text;
     
     // Check if it's an HR Order by looking for "ПРИКАЗЫВАЮ" and "Строго конфиденциально"

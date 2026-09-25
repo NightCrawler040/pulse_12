@@ -219,7 +219,8 @@ const getSanitizedDbDataForUser = (user) => {
   const filteredFindings = (data.findings || []).filter(f => !f.workspaceId || userWorkspaces.includes(f.workspaceId));
   const filteredSprints = (data.sprints || []).filter(s => !s.workspaceId || userWorkspaces.includes(s.workspaceId));
   const filteredGroups = (data.groups || []).filter(g => !g.workspaceId || userWorkspaces.includes(g.workspaceId));
-  return { ...data, tasks: filteredTasks, findings: filteredFindings, sprints: filteredSprints, groups: filteredGroups };
+  const filteredHrOrders = (data.hr_orders || []).filter(o => !o.workspaceId || userWorkspaces.includes(o.workspaceId));
+  return { ...data, tasks: filteredTasks, findings: filteredFindings, sprints: filteredSprints, groups: filteredGroups, hr_orders: filteredHrOrders };
 };
 
 const getSanitizedDbData = () => {
