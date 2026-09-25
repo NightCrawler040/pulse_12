@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useTaskContext } from '../../context/TaskContext';
-import { Download, Save } from 'lucide-react';
+import { Download, Save, Trash2 } from 'lucide-react';
 import './SecurityCenter.css'; // Reuse styles
 
 export const HrOrdersDashboard: React.FC = () => {
-  const { hrOrders, updateHrOrder } = useTaskContext();
+  const { hrOrders, updateHrOrder, deleteHrOrder } = useTaskContext();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<any>({});
 

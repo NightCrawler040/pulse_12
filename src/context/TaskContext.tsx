@@ -57,6 +57,7 @@ interface TaskContextType {
   apiKeys: ApiKeySettings[];
   hrOrders: HrOrder[];
   updateHrOrder: (id: string, updates: Partial<HrOrder>) => void;
+  deleteHrOrder: (id: string) => void;
   addFinding: (finding: Omit<ExternalFinding, 'id' | 'createdAt'>) => ExternalFinding;
   updateFindingStatus: (id: string, status: ExternalFinding['status'], promotedTaskId?: string) => void;
   deleteFinding: (id: string) => void;
