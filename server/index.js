@@ -253,6 +253,7 @@ const getSanitizedDbData = () => {
     workspaces: dbData.workspaces || [],
     notifications: Array.isArray(dbData.notifications) ? dbData.notifications : [],
     findings: Array.isArray(dbData.findings) ? dbData.findings : [],
+    hr_orders: Array.isArray(dbData.hr_orders) ? dbData.hr_orders : [],
     api_keys: Array.isArray(dbData.api_keys) ? dbData.api_keys : [],
     kataHashes: Array.isArray(dbData.kataHashes) ? dbData.kataHashes : [],
     ldap_settings: sanitizeLdapSettings(dbData.ldap_settings),

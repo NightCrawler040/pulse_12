@@ -231,17 +231,19 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const onDisconnect = () => setIsServerConnected(false);
     const onDataUpdated = (data: any) => {
       console.log('🔄 Real-time update received from server!', data);
-      if (data && Array.isArray(data.tasks)) {
-        setTasks(data.tasks);
-        if (Array.isArray(data.sprints)) setSprints(data.sprints);
-        if (Array.isArray(data.users)) setUsers(deduplicateUsers(data.users));
-        if (Array.isArray(data.groups)) setGroups(data.groups);
-        if (Array.isArray(data.notifications)) setNotifications(data.notifications);
-        if (Array.isArray(data.findings)) setFindings(data.findings);
-        if (Array.isArray(data.api_keys)) setApiKeys(data.api_keys);
-        if ((data as any).globalSettings) setGlobalSettings((data as any).globalSettings);
-        if (Array.isArray(data.workspaces)) setWorkspaces(data.workspaces);
-      }
+      if (!data) return;
+      
+      // If it's a full init-data or a partial data-updated
+      if (Array.isArray(data.tasks)) setTasks(data.tasks);
+      if (Array.isArray(data.sprints)) setSprints(data.sprints);
+      if (Array.isArray(data.users)) setUsers(deduplicateUsers(data.users));
+      if (Array.isArray(data.groups)) setGroups(data.groups);
+      if (Array.isArray(data.notifications)) setNotifications(data.notifications);
+      if (Array.isArray(data.findings)) setFindings(data.findings);
+      if (Array.isArray(data.api_keys)) setApiKeys(data.api_keys);
+      if (Array.isArray(data.workspaces)) setWorkspaces(data.workspaces);
+      if (Array.isArray(data.hr_orders)) setHrOrders(data.hr_orders);
+      if (data.globalSettings) setGlobalSettings(data.globalSettings);
     };
     const onOnlineUsersUpdated = (ids: any) => {
       if (Array.isArray(ids)) {
