@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTaskContext } from '../../context/TaskContext';
-import { Download, Save, Trash2 } from 'lucide-react';
+import { Download, Save, Trash2, FileSpreadsheet } from 'lucide-react';
 import './SecurityCenter.css'; // Reuse styles
 
 export const HrOrdersDashboard: React.FC = () => {
@@ -20,6 +20,21 @@ export const HrOrdersDashboard: React.FC = () => {
     }
   };
 
+  const exportToCsv = () => {
+    const headers = ['ФИО', 'Тип', 'Дата', 'Старая должность', 'Новая должность', 'ПК', 'Kaspersky', 'DLP', 'Staffcop', 'Cisco Duo'];
+    const rows = hrOrders.map(o => [
+      o.fullName, o.type, o.date, o.oldPosition || '', o.newPosition || '', o.pcName || '', o.kaspersky || '', o.dlp || '', o.staffcop || '', o.cisco || ''
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [headers, ...rows].map(e => e.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `hr_orders_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const getStatusBadge = (status: string) => {
     const s = status?.toLowerCase() || '';
     if (s.includes('установлен') || s.includes('отключен') || s.includes('удален')) return 'badge-success';
@@ -34,6 +49,9 @@ export const HrOrdersDashboard: React.FC = () => {
     <div style={{ marginTop: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2 style={{ fontSize: '1.2rem', margin: 0 }}>Управление HR Приказами (JML)</h2>
+          <button className="btn-secondary" style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }} onClick={exportToCsv}>
+            <FileSpreadsheet size={16} /> Выгрузить в CSV
+          </button>
         <span style={{ color: 'hsl(var(--text-secondary))', fontSize: '0.9rem' }}>
           Всего приказов: {hrOrders.length}
         </span>

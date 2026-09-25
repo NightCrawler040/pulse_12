@@ -124,18 +124,55 @@ const processEmail = async (message, uid) => {
         currentDbData.hr_orders.push(hrOrderData);
         await saveCollection('hr_orders', currentDbData.hr_orders);
 
-        console.log('[IMAP] Создан новый HR Приказ (JML) для', hrOrderData.employeeName);
+        console.log('[IMAP] Создан новый HR Приказ (JML) для', hrOrderData.fullName);
+        
+        // CREATE KANBAN TASK FOR THE GROUP
+        const newTask = {
+          id: `task-${Date.now()}`,
+          title: `JML Приказ: ${hrOrderData.type} - ${hrOrderData.fullName}`,
+          description: `**HR Приказ JML**\nФИО: ${hrOrderData.fullName}\nДолжность: ${hrOrderData.newPosition || hrOrderData.oldPosition}\nДата: ${hrOrderData.date}\n
+Пожалуйста, выполните необходимые действия в системах.`,
+          status: 'to-do',
+          priority: 'high',
+          creatorId: pulseUser.id,
+          assigneeId: null,
+          assigneeGroupId: hrSettings.groupId || null,
+          workspaceId: targetWsId,
+          createdAt: new Date().toISOString(),
+          sprintId: 'unassigned',
+          subtasks: [
+            { id: `st-1-${Date.now()}`, title: 'Active Directory (Учетная запись)', completed: false },
+            { id: `st-2-${Date.now()}`, title: 'Kaspersky Endpoint Security', completed: false },
+            { id: `st-3-${Date.now()}`, title: 'Staffcop (Мониторинг)', completed: false },
+            { id: `st-4-${Date.now()}`, title: 'DLP (Защита от утечек)', completed: false },
+            { id: `st-5-${Date.now()}`, title: 'Cisco Duo (2FA)', completed: false }
+          ],
+          attachments: hrPdfAttachment ? [{ id: `att-${Date.now()}`, name: hrPdfAttachment.filename, url: `/api/uploads/hr_order_${Date.now()}_${hrPdfAttachment.filename}` }] : [],
+          tags: ['JML', 'Security']
+        };
+
+        if (!currentDbData.tasks) currentDbData.tasks = [];
+        currentDbData.tasks.push(newTask);
+        await saveCollection('tasks', currentDbData.tasks);
+
+        // MARK EMAIL AS PROCESSED
+        if (messageId) {
+          if (!currentDbData.processedEmails) currentDbData.processedEmails = [];
+          currentDbData.processedEmails.push(messageId);
+          if (currentDbData.processedEmails.length > 1000) currentDbData.processedEmails.shift();
+          await saveCollection('processedEmails', currentDbData.processedEmails);
+        }
         
         // Push notification handling
         if (hrSettings.groupId) {
           const group = currentDbData.groups?.find(g => g.id === hrSettings.groupId);
           if (group && currentBroadcast) {
              group.members.forEach(memberId => {
-               currentBroadcast('data-updated', { hr_orders: currentDbData.hr_orders }, memberId);
+               currentBroadcast('data-updated', { hr_orders: currentDbData.hr_orders, tasks: currentDbData.tasks }, memberId);
              });
           }
         } else if (currentBroadcast) {
-           currentBroadcast('data-updated', { hr_orders: currentDbData.hr_orders });
+           currentBroadcast('data-updated', { hr_orders: currentDbData.hr_orders, tasks: currentDbData.tasks });
         }
         return;
       }
