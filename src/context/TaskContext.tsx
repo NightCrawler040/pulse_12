@@ -849,14 +849,14 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setHrOrders(prev => prev.filter(o => o.id !== id));
         fetch(`/api/hr-orders/${id}`, {
           method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('pulse_api_token')}` }
+          headers: { 'x-auth-user': localStorage.getItem('korpjira-flowspace-auth-v1') || '', 'x-api-token': localStorage.getItem('korpjira-auth-token') || '', 'Authorization': `Bearer ${localStorage.getItem('korpjira-auth-token')}` }
         }).catch(console.error);
       },
       updateHrOrder: (id, updates) => {
         setHrOrders(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
         fetch(`/api/hr-orders/${id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('pulse_api_token')}` },
+          headers: { 'Content-Type': 'application/json', 'x-auth-user': localStorage.getItem('korpjira-flowspace-auth-v1') || '', 'x-api-token': localStorage.getItem('korpjira-auth-token') || '', 'Authorization': `Bearer ${localStorage.getItem('korpjira-auth-token')}` },
           body: JSON.stringify(updates)
         }).catch(console.error);
       },

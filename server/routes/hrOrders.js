@@ -41,7 +41,7 @@ router.post('/', async (req, res) => {
   dbData.hr_orders.unshift(newOrder);
   await saveCollection('hr_orders', dbData.hr_orders);
   
-  if (req.broadcastUpdate) req.broadcastUpdate('data-updated', dbData);
+  if (req.broadcastUpdate) req.broadcastUpdate('hr_orders');
   
   res.status(201).json(newOrder);
 });
@@ -61,7 +61,7 @@ router.put('/:id', async (req, res) => {
   dbData.hr_orders[index] = { ...order, ...req.body, updatedAt: new Date().toISOString() };
   await saveCollection('hr_orders', dbData.hr_orders);
   
-  if (req.broadcastUpdate) req.broadcastUpdate('data-updated', dbData);
+  if (req.broadcastUpdate) req.broadcastUpdate('hr_orders');
   
   res.json(dbData.hr_orders[index]);
 });
@@ -80,7 +80,7 @@ router.delete('/:id', async (req, res) => {
   dbData.hr_orders.splice(index, 1);
   await saveCollection('hr_orders', dbData.hr_orders);
   
-  if (req.broadcastUpdate) req.broadcastUpdate('data-updated', dbData);
+  if (req.broadcastUpdate) req.broadcastUpdate('hr_orders');
   
   res.status(204).send();
 });
