@@ -374,7 +374,9 @@ export const getAllData = async () => {
         bannedIps: [],
         imapSettings: {},
         processedEmails: [],
-        globalSettings: {}
+        globalSettings: {},
+        hrSettings: {},
+        hr_orders: []
       };
       res.rows.forEach(row => {
         if (result[row.key] !== undefined) {
