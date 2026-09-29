@@ -14,6 +14,7 @@ const __dirname = path.dirname(__filename);
 const UPLOADS_DIR = path.join(__dirname, '..', 'data', 'uploads');
 
 let client = null;
+let isIntentionalClose = false;
 let currentDbData = null;
 let currentBroadcast = null;
 
@@ -75,10 +76,11 @@ const processEmail = async (message, uid) => {
       u.login && u.login.toLowerCase() === senderEmail
     );
 
-    if (!pulseUser) {
-      console.log(`[IMAP] Пропуск письма от ${senderEmail}: пользователь не найден в базе Pulse (защита от спама).`);
+    if (!pulseUser && !senderEmail.endsWith('@enpf.kz')) {
+      console.log(`[IMAP] Пропуск письма от ${senderEmail}: пользователь не найден (защита от спама).`);
       return;
     }
+    const safePulseUser = pulseUser || { id: 'system', name: senderEmail };
       // ---- HR JML Processing (PDF) ----
       let hrOrderData = null;
       let hrPdfAttachment = null;
@@ -134,7 +136,7 @@ const processEmail = async (message, uid) => {
 Пожалуйста, выполните необходимые действия в системах.`,
           status: 'todo',
           priority: 'high',
-          creatorId: pulseUser.id,
+          creatorId: safePulseUser.id,
           assigneeId: null,
           assigneeGroupId: hrSettings.groupId || null,
           workspaceId: targetWsId,
@@ -418,7 +420,7 @@ ${indicatorItemsXml}
       status: 'todo',
       priority: 'high',
       assigneeId: pulseUser.id,
-      creatorId: pulseUser.id,
+      creatorId: safePulseUser.id,
       createdAt: new Date().toISOString(),
       sprintId: 'unassigned',
           comments: [],
@@ -459,6 +461,7 @@ ${indicatorItemsXml}
  * Остановка сервиса
  */
 export const stopImapService = async () => {
+  isIntentionalClose = true;
   if (client) {
     try {
       console.log('[IMAP] Остановка сервиса...');
@@ -489,6 +492,7 @@ export const startImapService = async (settings, dbData, broadcastUpdate) => {
   currentDbData = dbData;
   currentBroadcast = broadcastUpdate;
 
+  isIntentionalClose = false;
   client = new ImapFlow({
     host: settings.host,
     port: parseInt(settings.port, 10) || 993,
@@ -509,6 +513,7 @@ export const startImapService = async (settings, dbData, broadcastUpdate) => {
   });
 
   client.on('close', () => {
+    if (isIntentionalClose) return;
     console.log('⚠️ [IMAP] Соединение закрыто. Попытка переподключения через 15 секунд...');
     setTimeout(() => {
       startImapService(settings, currentDbData, currentBroadcast);
