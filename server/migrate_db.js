@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 const { Pool } = pg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DB_FILE = path.join(__dirname, 'server', 'data', 'db.json');
+const DB_FILE = path.join(__dirname, 'data', 'db.json');
 
 const connectionString = process.env.DATABASE_URL || 'postgresql://pulse12_admin:Pulse2026SecureDBPass@postgres_db:5432/pulse12';
 
