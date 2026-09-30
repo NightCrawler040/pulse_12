@@ -26,7 +26,7 @@ const migrate = async () => {
     process.exit(1);
   }
 
-  console.log(\`📦 Загружено \${migrationData.users.length} пользователей из db.json\`);
+  console.log(`📦 Загружено ${migrationData.users.length} пользователей из db.json`);
 
   const pool = new Pool({ connectionString });
   const client = await pool.connect();
@@ -41,14 +41,14 @@ const migrate = async () => {
     for (const key of Object.keys(migrationData)) {
       if (key === 'mailSettings' || key === 'notificationEvents') continue; // Это другие таблицы
       
-      const query = \`
+      const query = `
         INSERT INTO pulse_store (key, data, updated_at)
         VALUES ($1, $2, CURRENT_TIMESTAMP)
         ON CONFLICT (key) DO UPDATE
         SET data = $2, updated_at = CURRENT_TIMESTAMP;
-      \`;
+      `;
       await client.query(query, [key, JSON.stringify(migrationData[key])]);
-      console.log(\`✅ Восстановлена коллекция: \${key}\`);
+      console.log(`✅ Восстановлена коллекция: ${key}`);
     }
 
     await client.query('COMMIT');
