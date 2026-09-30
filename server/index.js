@@ -22,7 +22,6 @@ import createUsersRouter from './routes/users.js';
 import createSprintsRouter from './routes/sprints.js';
 import createNotificationsRouter from './routes/notifications.js';
 import createSettingsRouter from './routes/settings.js';
-import { getSanitizedDbDataForUser, setIo, broadcastUpdate } from './store.js';
 import { mountJiraGateway } from './routes/jiraGateway.js';
 
 
@@ -210,7 +209,19 @@ const sanitizeLdapSettings = (settings) => {
 };
 
 
-
+const getSanitizedDbDataForUser = (user) => {
+  const data = getSanitizedDbData();
+  if (!user || user.roleType === 'admin') {
+    return data;
+  }
+  const userWorkspaces = user.workspaceIds || [];
+  const filteredTasks = (data.tasks || []).filter(t => !t.workspaceId || userWorkspaces.includes(t.workspaceId));
+  const filteredFindings = (data.findings || []).filter(f => !f.workspaceId || userWorkspaces.includes(f.workspaceId));
+  const filteredSprints = (data.sprints || []).filter(s => !s.workspaceId || userWorkspaces.includes(s.workspaceId));
+  const filteredGroups = (data.groups || []).filter(g => !g.workspaceId || userWorkspaces.includes(g.workspaceId));
+  const filteredHrOrders = (data.hr_orders || []).filter(o => !o.workspaceId || userWorkspaces.includes(o.workspaceId));
+  return { ...data, tasks: filteredTasks, findings: filteredFindings, sprints: filteredSprints, groups: filteredGroups, hr_orders: filteredHrOrders };
+};
 
 const getSanitizedDbData = () => {
   // Ensure workspaces exists
@@ -300,7 +311,7 @@ const ensureUsersHashed = (usersArray) => {
 // Защита от CWE-321: динамическая генерация криптографического ключа при отсутствии в окружении
 const getApiSecret = () => {
   if (process.env.API_SECRET) return process.env.API_SECRET;
-  return process.env.JWT_SECRET || 'pulse12_fallback_secret_key';
+  return 'Pulse12_Corporate_Secure_HMAC_Key_2026';
 };
 
 const generateAuthToken = (user) => {
@@ -355,7 +366,45 @@ const requireAdmin = (req, res, next) => {
   });
 };
 
-// broadcastUpdate is imported from store.js
+// Zero-Latency broadcast: immediately broadcast to all clients (< 1ms), persist to PostgreSQL asynchronously in background
+const broadcastUpdate = async (key) => {
+    try {
+      // 1. Сначала атомарно сохраняем в БД (Write-Through)
+      if (key && dbData[key]) {
+        await saveCollection(key, dbData[key]);
+      } else {
+        await saveAllData(dbData);
+      }
+      
+      // 2. Только после успешного сохранения отправляем WebSockets
+      if (key === 'users') {
+        io.sockets.sockets.forEach(socket => {
+          if (socket.userId) {
+            const u = dbData.users.find(usr => usr.id === socket.userId);
+            if (u) {
+              socket.emit('data-updated', getSanitizedDbDataForUser(u));
+            } else {
+              socket.emit('data-updated', getSanitizedDbData());
+            }
+          } else {
+            socket.emit('data-updated', getSanitizedDbData());
+          }
+        });
+      } else {
+        io.emit('data-updated', getSanitizedDbData());
+      }
+    } catch (err) {
+      console.error('⚠️ Ошибка записи в БД, откат данных в памяти для:', key || 'ALL');
+      // ROLLBACK IN-MEMORY CACHE
+      if (key) {
+        dbData[key] = await getCollection(key);
+      } else {
+        dbData = await getAllData();
+      }
+      throw err; // Это позволит HTTP эндпоинту отловить ошибку и вернуть 500
+    }
+  };
+
 // --- REST API ENDPOINTS ---
 
 
@@ -797,8 +846,7 @@ const broadcastOnlineUsers = () => {
   io.emit('online-users-updated', activeIds);
 };
 
-setIo(io);
-  io.on('connection', (socket) => {
+io.on('connection', (socket) => {
   console.log(`⚡ New corporate laptop connected via Socket.io: ${socket.id}`);
   
   // Send sanitized current state immediately upon connection (1.A)

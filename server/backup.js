@@ -16,34 +16,15 @@ const ensureBackupDir = async () => {
   }
 };
 
-
-const redactSecrets = (obj) => {
-  if (Array.isArray(obj)) {
-    return obj.map(redactSecrets);
-  } else if (obj !== null && typeof obj === 'object') {
-    const newObj = {};
-    for (const [key, value] of Object.entries(obj)) {
-      if (['password', 'pin', 'apiToken', 'bindPassword'].includes(key)) {
-        newObj[key] = '[REDACTED]';
-      } else {
-        newObj[key] = redactSecrets(value);
-      }
-    }
-    return newObj;
-  }
-  return obj;
-};
-
 export const createSnapshot = async (dbData) => {
   try {
     await ensureBackupDir();
-    const redactedData = redactSecrets(dbData);
     const timestamp = new Date().toISOString().replace(/T/, '_').replace(/:/g, '-').split('.')[0];
     const filename = `snapshot_${timestamp}.json`;
     const filepath = path.join(BACKUP_DIR, filename);
     
     // Save backup
-    await fs.writeFile(filepath, JSON.stringify(redactedData, null, 2), 'utf8');
+    await fs.writeFile(filepath, JSON.stringify(dbData, null, 2), 'utf8');
     console.log(`[Backup] Создан авто-снапшот базы данных: ${filename}`);
 
     // Cleanup old backups

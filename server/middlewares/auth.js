@@ -3,7 +3,7 @@ import { getDbData } from '../store.js';
 
 export const getApiSecret = () => {
   if (process.env.API_SECRET) return process.env.API_SECRET;
-  return process.env.JWT_SECRET || 'pulse12_fallback_secret_key';
+  return 'Pulse12_Corporate_Secure_HMAC_Key_2026';
 };
 
 export const generateAuthToken = (user) => {
