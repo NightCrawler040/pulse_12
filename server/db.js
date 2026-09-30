@@ -332,25 +332,17 @@ export const getAllData = async () => {
       const resMail = await pool.query('SELECT data FROM mail_settings WHERE id = 1');
       const resNotif = await pool.query('SELECT data FROM notification_events WHERE id = 1');
       
-      const result = {
-        tasks: [],
-        sprints: [],
-        users: [],
-        groups: [],
-        notifications: [],
-        findings: [],
-        api_keys: [],
-        ldap_settings: { ...defaultLdapSettings },
-        mailSettings: resMail.rows.length > 0 ? resMail.rows[0].data : {},
-        notificationEvents: resNotif.rows.length > 0 ? resNotif.rows[0].data : {},
-        fortigateSettings: { ...defaultFortigateSettings },
-        bannedIps: [],
-        imapSettings: {},
-        processedEmails: [],
-        globalSettings: {},
-        hrSettings: {},
-        hr_orders: []
-      };
+      const result = JSON.parse(JSON.stringify(DEFAULT_DB_STATE));
+      if (resMail.rows.length > 0) result.mailSettings = resMail.rows[0].data;
+      if (resNotif.rows.length > 0) result.notificationEvents = resNotif.rows[0].data;
+      
+      res.rows.forEach(row => {
+        if (result[row.key] !== undefined) {
+          result[row.key] = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
+        }
+      });
+      console.log('✅ getAllData loaded. Users count:', result.users ? result.users.length : 0);
+      return result;
       res.rows.forEach(row => {
         if (result[row.key] !== undefined) {
           result[row.key] = row.data;
