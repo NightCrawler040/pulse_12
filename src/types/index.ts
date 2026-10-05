@@ -93,6 +93,9 @@ export interface Sprint {
   goal: string;
   isActive: boolean;
   workspaceId?: string;
+  isArchived?: boolean;
+  archivedAt?: string;
+  archivedBy?: string;
 }
 
 export interface FilterState {

@@ -56,5 +56,79 @@ export default function createRouter(requireAuth, requireAdmin) {
   res.json({ success: true });
 });
 
+  // === ЗАВЕРШИТЬ СПРИНТ: Архивировать + перенести незавершённые задачи ===
+  router.post('/:id/complete', requireAuth, (req, res, next) => {
+    const role = req.currentUser?.roleType;
+    if (role !== 'admin' && role !== 'manager') {
+      return res.status(403).json({ error: 'Завершать спринт могут только менеджеры и администраторы' });
+    }
+    next();
+  }, requireWorkspaceAccess, async (req, res) => {
+    const { id } = req.params;
+    const { targetSprintId } = req.body || {}; // ID спринта для переноса незавершённых задач
+    const isAdminUser = req.currentUser.roleType === 'admin';
+    const userWs = req.currentUser.workspaceIds || [];
+    const hasAccess = (s) => isAdminUser || (s && s.workspaceId && userWs.includes(s.workspaceId));
+    
+    if (!req.dbData.sprints) req.dbData.sprints = [];
+    const sprint = req.dbData.sprints.find(s => s.id === id);
+    if (!sprint) return res.status(404).json({ error: 'Спринт не найден' });
+    if (!hasAccess(sprint)) return res.status(403).json({ error: 'Нет доступа к workspace этого спринта' });
+    if (sprint.isArchived) return res.status(400).json({ error: 'Спринт уже завершён' });
+    
+    let targetSprint = null;
+    if (targetSprintId) {
+      targetSprint = req.dbData.sprints.find(s => s.id === targetSprintId);
+      if (!targetSprint || targetSprint.id === id || targetSprint.isArchived) {
+        return res.status(400).json({ error: 'Некорректный целевой спринт' });
+      }
+      if (!hasAccess(targetSprint) || (sprint.workspaceId && targetSprint.workspaceId !== sprint.workspaceId)) {
+        return res.status(403).json({ error: 'Целевой спринт в другом workspace' });
+      }
+    }
+    
+    // 1. Архивируем спринт
+    sprint.isActive = false;
+    sprint.isArchived = true;
+    sprint.archivedAt = new Date().toISOString();
+    sprint.archivedBy = req.currentUser.id;
+    
+    // 2. Считаем статистику задач
+    if (!req.dbData.tasks) req.dbData.tasks = [];
+    const sprintTasks = req.dbData.tasks.filter(t => t.sprintId === id);
+    const doneTasks = sprintTasks.filter(t => t.status === 'done');
+    const incompleteTasks = sprintTasks.filter(t => t.status !== 'done');
+    
+    // 3. Переносим незавершённые задачи в целевой спринт
+    let movedCount = 0;
+    if (incompleteTasks.length > 0 && targetSprintId) {
+      if (targetSprint) {
+        incompleteTasks.forEach(t => {
+          t.sprintId = targetSprintId;
+          t.updatedAt = new Date().toISOString();
+        });
+        movedCount = incompleteTasks.length;
+      }
+    }
+    
+    try { 
+      await req.broadcastUpdate('sprints'); 
+      await req.broadcastUpdate('tasks'); 
+    } catch (e) { 
+      return res.status(500).json({ error: 'Database save failed' }); 
+    }
+    
+    res.json({ 
+      success: true, 
+      archived: sprint.name,
+      stats: {
+        total: sprintTasks.length,
+        completed: doneTasks.length,
+        moved: movedCount,
+        targetSprintId: targetSprintId || null
+      }
+    });
+  });
+
   return router;
 }

@@ -202,13 +202,22 @@ export const generateSprintPdf = ({ dbData, sprintId, targetUserId, stream }) =>
     doc.y = drawTaskHeader(doc.y);
 
     userTasks.forEach(t => {
-      // Рассчитываем высоту строки на основе длины описания
+      // Рассчитываем высоту строки на основе длины описания + подзадач + вложений
       const title = String(t.title || 'Без названия').replace(/[\u1000-\uFFFF]/g, '');
       const desc = stripHtml(t.description || 'Описание отсутствует').replace(/[\u1000-\uFFFF]/g, '');
       
       const titleHeight = doc.font('CyrillicBold').fontSize(9).heightOfString(title, { width: taskColWidths[0] - 10 });
       const descHeight = doc.font('CyrillicRegular').fontSize(8).heightOfString(desc, { width: taskColWidths[0] - 10 });
-      const rowHeight = Math.max(40, titleHeight + descHeight + 15);
+      
+      // Расчёт высоты для подзадач
+      const subtasks = Array.isArray(t.subtasks) ? t.subtasks : [];
+      const subtasksHeight = subtasks.length > 0 ? (14 + subtasks.length * 13 + 6) : 0;
+      
+      // Расчёт высоты для вложений
+      const attachments = Array.isArray(t.attachments) ? t.attachments : [];
+      const attachmentsHeight = attachments.length > 0 ? (14 + attachments.length * 12 + 6) : 0;
+      
+      const rowHeight = Math.max(40, titleHeight + descHeight + subtasksHeight + attachmentsHeight + 15);
 
       if (doc.y + rowHeight > doc.page.height - 70) {
         doc.addPage();
@@ -221,10 +230,62 @@ export const generateSprintPdf = ({ dbData, sprintId, targetUserId, stream }) =>
       doc.moveTo(40, y + rowHeight).lineTo(doc.page.width - 40, y + rowHeight).strokeColor('#e2e8f0').lineWidth(0.5).stroke();
 
       let currX = 40;
+      let textY = y + 5;
       
       // Колонка 1: Название и Описание
-      doc.font('CyrillicBold').fontSize(9).fillColor('#1e293b').text(title, currX + 5, y + 5, { width: taskColWidths[0] - 10 });
-      doc.font('CyrillicRegular').fontSize(8).fillColor('#64748b').text(desc, currX + 5, y + 5 + titleHeight + 2, { width: taskColWidths[0] - 10 });
+      doc.font('CyrillicBold').fontSize(9).fillColor('#1e293b').text(title, currX + 5, textY, { width: taskColWidths[0] - 10 });
+      textY += titleHeight + 2;
+      doc.font('CyrillicRegular').fontSize(8).fillColor('#64748b').text(desc, currX + 5, textY, { width: taskColWidths[0] - 10 });
+      textY += descHeight + 4;
+      
+      // Чек-лист подзадач (в первой колонке)
+      if (subtasks.length > 0) {
+        const completedSubs = subtasks.filter(s => s.completed).length;
+        const subPercent = Math.round((completedSubs / subtasks.length) * 100);
+        
+        // Заголовок чек-листа с прогрессом
+        doc.font('CyrillicBold').fontSize(7.5).fillColor('#475569')
+           .text(`Чек-лист (${completedSubs}/${subtasks.length} — ${subPercent}%):`, currX + 5, textY, { width: taskColWidths[0] - 10 });
+        textY += 12;
+        
+        // Прогресс-бар
+        const barWidth = Math.min(taskColWidths[0] - 20, 200);
+        doc.rect(currX + 5, textY - 2, barWidth, 4).fill('#e2e8f0');
+        doc.rect(currX + 5, textY - 2, barWidth * (subPercent / 100), 4).fill('#10b981');
+        textY += 6;
+        
+        // Список подзадач с чекбоксами
+        subtasks.forEach(sub => {
+          const subTitle = String(sub.title || '').replace(/[\u1000-\uFFFF]/g, '');
+          const checkChar = sub.completed ? '☑' : '☐';
+          const subColor = sub.completed ? '#10b981' : '#64748b';
+          const subFontStyle = sub.completed ? 'CyrillicRegular' : 'CyrillicRegular';
+          
+          doc.font(subFontStyle).fontSize(7.5).fillColor(subColor)
+             .text(`${checkChar} ${subTitle}`, currX + 8, textY, { width: taskColWidths[0] - 18, lineBreak: false });
+          textY += 12;
+        });
+        textY += 2;
+      }
+      
+      // Список вложений (в первой колонке)
+      if (attachments.length > 0) {
+        doc.font('CyrillicBold').fontSize(7.5).fillColor('#475569')
+           .text(`Вложения (${attachments.length}):`, currX + 5, textY, { width: taskColWidths[0] - 10 });
+        textY += 12;
+        
+        attachments.forEach(att => {
+          const attName = String(att.filename || 'файл').replace(/[\u1000-\uFFFF]/g, '');
+          const sizeKb = att.size ? `${Math.round(att.size / 1024)} КБ` : '';
+          const attDate = att.uploadedAt ? new Date(att.uploadedAt).toLocaleDateString('ru-RU') : '';
+          const attInfo = [attName, sizeKb, attDate].filter(Boolean).join(' • ');
+          
+          doc.font('CyrillicRegular').fontSize(7).fillColor('#3b82f6')
+             .text(`📎 ${attInfo}`, currX + 8, textY, { width: taskColWidths[0] - 18, lineBreak: false });
+          textY += 11;
+        });
+      }
+      
       currX += taskColWidths[0];
 
       // Колонка 2: Статус

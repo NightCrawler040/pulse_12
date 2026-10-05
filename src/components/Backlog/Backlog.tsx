@@ -22,7 +22,8 @@ export const Backlog: React.FC<BacklogProps> = ({ onOpenNewTaskModal }) => {
     filteredTasks,
     addSprint,
     updateSprint,
-    deleteSprint
+    deleteSprint,
+    completeSprint
   } = useTaskContext();
 
   const { currentUser, isAdmin, isManagerOrAdmin } = useAuth();
@@ -130,6 +131,28 @@ export const Backlog: React.FC<BacklogProps> = ({ onOpenNewTaskModal }) => {
     }
   };
 
+  const handleCompleteSprint = async (sprintObj: any, eStop: React.MouseEvent) => {
+    eStop.stopPropagation();
+    if (!isManagerOrAdmin) return;
+    const candidates = sprints.filter(s => s.id !== sprintObj.id && !s.isArchived && s.workspaceId === sprintObj.workspaceId);
+    let targetId: string | null = null;
+    if (candidates.length > 0) {
+      const list = candidates.map((s, i) => `${i + 1} — ${s.name}`).join('\n');
+      const ans = window.prompt(`Завершить спринт "${sprintObj.name}"?\nКуда перенести незавершённые задачи? Введите номер (пусто — оставить в архиве без переноса):\n${list}`);
+      if (ans === null) return;
+      const idx = parseInt(ans, 10) - 1;
+      if (!isNaN(idx) && candidates[idx]) targetId = candidates[idx].id;
+    } else if (!window.confirm(`Завершить и архивировать спринт "${sprintObj.name}"?`)) {
+      return;
+    }
+    try {
+      const r = await completeSprint(sprintObj.id, targetId);
+      alert(`Спринт завершён. Выполнено: ${r.stats.completed}/${r.stats.total}, перенесено: ${r.stats.moved}`);
+    } catch (err: any) {
+      alert(err?.message || 'Не удалось завершить спринт');
+    }
+  };
+
   const renderTaskTable = (taskList: Task[], groupName: string, sprintId: string | null, sprintObj?: any) => {
     const isCollapsed = collapsedSprints[sprintId || 'backlog'];
     const totalSP = taskList.reduce((sum, t) => sum + (t.storyPoints || 0), 0);
@@ -165,6 +188,15 @@ export const Backlog: React.FC<BacklogProps> = ({ onOpenNewTaskModal }) => {
                 >
                   ✏️
                 </button>
+                {isManagerOrAdmin && !sprintObj.isArchived && (
+                  <button
+                    className="btn-secondary btn-sm"
+                    onClick={e => handleCompleteSprint(sprintObj, e)}
+                    title="Завершить спринт"
+                  >
+                    ✅ Завершить
+                  </button>
+                )}
                 <button 
                   className="btn-danger btn-sm" 
                   onClick={e => handleDeleteSprint(sprintObj.id, sprintObj.name, e)}

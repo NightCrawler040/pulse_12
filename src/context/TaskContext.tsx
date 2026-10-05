@@ -48,6 +48,7 @@ interface TaskContextType {
   addSprint: (sprint: Omit<Sprint, 'id'>) => Sprint;
   updateSprint: (id: string, updates: Partial<Sprint>) => void;
   deleteSprint: (id: string) => void;
+  completeSprint: (id: string, targetSprintId?: string | null) => Promise<{ archived: string; stats: { total: number; completed: number; moved: number } }>;
   addNotification: (notif: Omit<NotificationItem, 'id' | 'createdAt' | 'read'>) => void;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
@@ -798,6 +799,16 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     apiService.deleteSprint(id).catch(err => console.error('Delete sprint failed:', err));
   };
 
+  const completeSprint = async (id: string, targetSprintId?: string | null) => {
+    const res = await apiService.completeSprint(id, targetSprintId);
+    const now = new Date().toISOString();
+    setSprints(prev => prev.map(s => s.id === id ? { ...s, isActive: false, isArchived: true, archivedAt: now } : s));
+    if (targetSprintId) {
+      setTasks(prev => prev.map(t => t.sprintId === id && t.status !== 'done' ? { ...t, sprintId: targetSprintId } : t));
+    }
+    return res;
+  };
+
   const markNotificationRead = (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
     apiService.markNotificationsRead(id).catch(() => {});
@@ -893,6 +904,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       addSprint,
       updateSprint,
       deleteSprint,
+      completeSprint,
       addNotification,
       markNotificationRead,
       markAllNotificationsRead,

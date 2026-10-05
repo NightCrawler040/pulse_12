@@ -178,6 +178,10 @@ export const apiService = {
     
   deleteSprint: (id: string) => 
     apiRequest<{ success: boolean }>(`/api/sprints/${id}`, { method: 'DELETE' }),
+
+  completeSprint: (id: string, targetSprintId?: string | null) =>
+    apiRequest<{ success: boolean; archived: string; stats: { total: number; completed: number; moved: number; targetSprintId: string | null } }>(
+      `/api/sprints/${id}/complete`, { method: 'POST', body: JSON.stringify({ targetSprintId: targetSprintId || null }) }),
     
   uploadAvatar: async (fileBase64: string, filename: string): Promise<{ success: boolean; url: string }> => {
     const res = await apiRequest<{ success: boolean; url: string }>('/api/upload', {
