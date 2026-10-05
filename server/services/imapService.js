@@ -528,9 +528,20 @@ export const startImapService = async (settings, dbData, broadcastUpdate) => {
     
     // Функция для проверки непрочитанных писем
     let isProcessing = false;
+    let processingStartTime = 0;
     const checkUnread = async () => {
-      if (isProcessing) return;
+      if (isProcessing) {
+        if (Date.now() - processingStartTime > 60000) {
+          console.error('⚠️ [IMAP] Проверка почты зависла (мертвый сокет). Принудительный рестарт...');
+          if (client) {
+            try { client.close(); } catch(e) {}
+            client.emit('error', new Error('Socket hang detected'));
+          }
+        }
+        return;
+      }
       isProcessing = true;
+      processingStartTime = Date.now();
       try {
         const searchOptions = { seen: false };
         for await (let msg of client.fetch(searchOptions, { source: true, uid: true, headers: ['message-id'] })) {
