@@ -59,8 +59,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
       const shouldFilterByMe = (!isManagerOrAdmin && currentUser) || (isManagerOrAdmin && currentUser && filters.myTasksOnly);
         if (shouldFilterByMe) {
           const isAssignee = task.assigneeId === currentUser.id;
-          const inGroup = task.assigneeGroupId && groups ? groups.some(g => g.id === task.assigneeGroupId && g.memberIds?.includes(currentUser.id)) : false;
-          const isCommenter = task.comments ? task.comments.some(c => c.userId === currentUser.id) : false;
+          const inGroup = task.assigneeGroupId && Array.isArray(groups) ? groups.some(g => g.id === task.assigneeGroupId && Array.isArray(g.memberIds) && g.memberIds.includes(currentUser?.id)) : false;
+          const isCommenter = Array.isArray(task.comments) ? task.comments.some(c => c.userId === currentUser?.id) : false;
           const isCreator = task.creatorId === currentUser.id;
           if (!isAssignee && !inGroup && !isCommenter && !isCreator) {
             return false;
