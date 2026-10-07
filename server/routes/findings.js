@@ -51,6 +51,14 @@ export default function createFindingsRouter(requireAuth) {
   res.json({ success: true });
 });
 
+  router.post('/bulk-delete', requireAuth, async (req, res) => {
+    const { ids } = req.body;
+    if (!Array.isArray(ids)) return res.status(400).json({ error: 'ids array required' });
+    req.dbData.findings = req.dbData.findings.filter(f => !ids.includes(f.id));
+    try { await req.broadcastUpdate('findings'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
+    res.json({ success: true });
+  });
+
   router.delete('/:id', requireAuth, requireWorkspaceAccess, async (req, res) => {
   const { id } = req.params;
   if (!req.dbData.findings) req.dbData.findings = [];

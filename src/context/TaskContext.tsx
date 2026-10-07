@@ -62,6 +62,7 @@ interface TaskContextType {
   addFinding: (finding: Omit<ExternalFinding, 'id' | 'createdAt'>) => ExternalFinding;
   updateFindingStatus: (id: string, status: ExternalFinding['status'], promotedTaskId?: string) => void;
   deleteFinding: (id: string) => void;
+  bulkDeleteFindings: (ids: string[]) => void;
   promoteFindingToTask: (id: string, assigneeId?: string, sprintId?: string, priority?: string) => Promise<any>;
   addApiKey: (name: string, source?: string, workspaceId?: string) => Promise<ApiKeySettings>;
   deleteApiKey: (id: string) => void;
@@ -921,6 +922,10 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updateFindingStatus: (id, status, promotedTaskId) => {
         setFindings(prev => prev.map(f => f.id === id ? { ...f, status, promotedTaskId: promotedTaskId || f.promotedTaskId } : f));
         apiService.updateFindingStatus(id, { status, promotedTaskId }).catch(e => console.error(e));
+      },
+      bulkDeleteFindings: (ids) => {
+        setFindings(prev => prev.filter(f => !ids.includes(f.id)));
+        apiService.bulkDeleteFindings(ids).catch(e => console.error(e));
       },
       deleteFinding: (id) => {
         setFindings(prev => prev.filter(f => f.id !== id));

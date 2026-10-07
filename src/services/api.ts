@@ -210,6 +210,9 @@ export const apiService = {
   updateFindingStatus: (id: string, updates: Partial<ExternalFinding>) => 
     apiRequest<{ success: boolean }>(`/api/findings/${id}`, { method: 'PUT', body: JSON.stringify(updates) }),
 
+  bulkDeleteFindings: (ids: string[]) => 
+    apiRequest<{ success: boolean }>('/api/findings/bulk-delete', { method: 'POST', body: JSON.stringify({ ids }) }),
+
   deleteFinding: (id: string) => 
     apiRequest<{ success: boolean }>(`/api/findings/${id}`, { method: 'DELETE' }),
 

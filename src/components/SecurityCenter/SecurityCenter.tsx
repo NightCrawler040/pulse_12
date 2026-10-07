@@ -25,6 +25,7 @@ export const SecurityCenter: React.FC = () => {
     findings, 
     updateFindingStatus, 
     deleteFinding, 
+    bulkDeleteFindings,
     promoteFindingToTask, 
     users, 
     sprints, 
@@ -333,7 +334,7 @@ export const SecurityCenter: React.FC = () => {
             style={{ background: '#ef4444', color: 'white', border: 'none' }}
             onClick={() => {
               if (window.confirm(`Вы уверены, что хотите безвозвратно удалить ${selectedFindings.length} выбранных инцидентов?`)) {
-                selectedFindings.forEach(id => deleteFinding(id));
+                bulkDeleteFindings(selectedFindings);
                 setSelectedFindings([]);
               }
             }}
