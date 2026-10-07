@@ -31,7 +31,18 @@ export const Sidebar: React.FC = () => {
   };
   
   const employeeUsersCount = users.filter(u => u.id !== 'usr-1' && u.login?.toLowerCase() !== 'admin').length;
-  const activeFindingsCount = findings.filter(f => f.status === 'new' || f.status === 'analyzing').length;
+    const canAccessSystem = (source: string) => {
+    if (isAdmin || !currentUser) return true;
+    const userDept = currentUser.department || '';
+    if (source === 'derscanner') {
+      return ['Engineering', 'Security', 'QA Engineering', 'Product & Agile', 'Инженерный', 'Разработка', 'Кибербезопасность'].some(d => userDept.includes(d) || d.includes(userDept));
+    }
+    return true;
+  };
+  
+  const activeFindingsCount = findings.filter(f => 
+    (f.status === 'new' || f.status === 'analyzing') && canAccessSystem(f.source || '')
+  ).length;
 
   const navItems: { mode: ViewMode; label: string; icon: React.ReactNode; badge?: string }[] = [
     { mode: 'board', label: 'Доска', icon: <LayoutDashboard size={18} /> },
