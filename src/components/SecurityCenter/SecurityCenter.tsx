@@ -308,7 +308,7 @@ export const SecurityCenter: React.FC = () => {
             Права доступа к внешним сканерам и алертам безопасности настраиваются Администратором в разделе <strong>«⚙️ Панель Администратора &gt; 🔌 Интеграции & API-ключи»</strong>.
           </p>
         </div>
-      ) : systemTab === "fortigate" ? <FortigateTable /> : (
+      ) : systemTab === "fortigate" ? <FortigateTable /> : (<>
       
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', background: 'hsl(var(--card-bg))', padding: '12px 16px', borderRadius: '12px', border: '1px solid hsl(var(--border-color))' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -489,6 +489,7 @@ export const SecurityCenter: React.FC = () => {
           </div>
         )}
       </div>
+      </>
       )}
 
       
