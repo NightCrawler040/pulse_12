@@ -22,7 +22,7 @@ import createUsersRouter from './routes/users.js';
 import createSprintsRouter from './routes/sprints.js';
 import createNotificationsRouter from './routes/notifications.js';
 import createSettingsRouter from './routes/settings.js';
-import { getSanitizedDbDataForUser, setIo, broadcastUpdate } from './store.js';
+import { getSanitizedDbDataForUser, setIo, broadcastUpdate, setDbData } from './store.js';
 import { mountJiraGateway } from './routes/jiraGateway.js';
 
 
@@ -316,7 +316,7 @@ const requireAuth = async (req, res, next) => {
   if (!userId) {
     return res.status(401).json({ error: 'Отказано в доступе: требуется идентификатор пользователя' });
   }
-  const dbData = await getAllData();
+  const dbData = await getAllData(); setDbData(dbData);
   const user = (dbData.users || []).find(u => u.id === userId && u.isActive !== false);
   if (!user) {
     return res.status(401).json({ error: 'Учетная запись не найдена или заблокирована' });
@@ -466,7 +466,7 @@ app.get('/api/reports/pdf', requireAuth, async (req, res) => {
     if (targetUserId) {
       filename = `Pulse12_Employee_Report_${targetUserId}.pdf`;
     }
-    const dbData = await getAllData();
+    const dbData = await getAllData(); setDbData(dbData);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     generateSprintPdf({ dbData, sprintId, targetUserId, stream: res });
@@ -917,7 +917,7 @@ if (fs.existsSync(DIST_DIR)) {
 
 const startServer = async () => {
   await initDb();
-  dbData = await getAllData();
+  dbData = await getAllData(); setDbData(dbData);
 
   // Auto-migrate massive IMAP tasks that blow up the PDF report
   let tasksModified = false;
