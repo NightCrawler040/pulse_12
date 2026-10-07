@@ -16,7 +16,7 @@ if (!fs.existsSync(DATA_DIR)) {
 }
 
 // Настройка подключения к PostgreSQL с оптимизированным пулом и защитой от падений
-const connectionString = process.env.DATABASE_URL || 'postgresql://pulse12_admin:corporate_secret_password@localhost:5432/pulse12';
+const connectionString = process.env.DATABASE_URL; // Required in production
 const pool = new Pool({
   connectionString,
   max: 20,
@@ -57,27 +57,15 @@ const defaultFortigateSettings = {
 };
 
 // Локальное файловое хранилище (для Fallback-режима без Docker/Postgres)
-let localDbData = {
-  tasks: [],
-  sprints: [],
-  users: [],
-  groups: [],
-  notifications: [],
-  findings: [],
-  api_keys: [],
-        hr_orders: [],
-        hrSettings: {},
-  hr_orders: [],
-  hrSettings: {},
-  ldap_settings: { ...defaultLdapSettings },
-  mailSettings: {},
-  fortigateSettings: { ...defaultFortigateSettings },
-  bannedIps: [],
-  notificationEvents: {},
-    globalSettings: {}, hrSettings: {}, hr_orders: [],
-        hrSettings: {},
-        hr_orders: []
+const DEFAULT_DB_STATE = {
+  tasks: [], sprints: [], users: [], groups: [], workspaces: [],
+  hr_orders: [], notifications: [], findings: [], api_keys: [],
+  bannedIps: [], kataHashes: [], processedEmails: [],
+  ldap_settings: { ...defaultLdapSettings }, mailSettings: {},
+  fortigateSettings: { ...defaultFortigateSettings }, imapSettings: {},
+  hrSettings: {}, notificationEvents: {}, globalSettings: {}
 };
+let localDbData = JSON.parse(JSON.stringify(DEFAULT_DB_STATE));
 
 const loadLocalFile = () => {
   if (fs.existsSync(DB_FILE)) {
@@ -105,22 +93,7 @@ const loadLocalFile = () => {
       console.warn('⚠️ Ошибка чтения db.json, возврат к демо-данным...', err);
     }
   }
-  localDbData = {
-    tasks: initialTasks,
-    sprints: initialSprints,
-    users: initialUsers,
-    groups: initialGroups,
-    workspaces: initialWorkspaces,
-    notifications: [],
-    findings: initialFindings,
-    api_keys: initialApiKeys,
-    ldap_settings: { ...defaultLdapSettings },
-    mailSettings: {},
-    fortigateSettings: { ...defaultFortigateSettings },
-    bannedIps: [],
-    notificationEvents: {},
-    globalSettings: {}
-  };
+  localDbData = JSON.parse(JSON.stringify(DEFAULT_DB_STATE));
   saveLocalFile();
 };
 
@@ -359,25 +332,17 @@ export const getAllData = async () => {
       const resMail = await pool.query('SELECT data FROM mail_settings WHERE id = 1');
       const resNotif = await pool.query('SELECT data FROM notification_events WHERE id = 1');
       
-      const result = {
-        tasks: [],
-        sprints: [],
-        users: [],
-        groups: [],
-        notifications: [],
-        findings: [],
-        api_keys: [],
-        ldap_settings: { ...defaultLdapSettings },
-        mailSettings: resMail.rows.length > 0 ? resMail.rows[0].data : {},
-        notificationEvents: resNotif.rows.length > 0 ? resNotif.rows[0].data : {},
-        fortigateSettings: { ...defaultFortigateSettings },
-        bannedIps: [],
-        imapSettings: {},
-        processedEmails: [],
-        globalSettings: {},
-        hrSettings: {},
-        hr_orders: []
-      };
+      const result = JSON.parse(JSON.stringify(DEFAULT_DB_STATE));
+      if (resMail.rows.length > 0) result.mailSettings = resMail.rows[0].data;
+      if (resNotif.rows.length > 0) result.notificationEvents = resNotif.rows[0].data;
+      
+      res.rows.forEach(row => {
+        if (result[row.key] !== undefined) {
+          result[row.key] = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
+        }
+      });
+      console.log('✅ getAllData loaded. Users count:', result.users ? result.users.length : 0);
+      return result;
       res.rows.forEach(row => {
         if (result[row.key] !== undefined) {
           result[row.key] = row.data;
@@ -423,17 +388,12 @@ export const saveAllData = async (dataObj) => {
           await client.query(query, [key, JSON.stringify(val)]);
         }
         await client.query('COMMIT');
-        localDbData = {
-          tasks: dataObj.tasks || [],
-          sprints: dataObj.sprints || [],
-          users: dataObj.users || [],
-          groups: dataObj.groups || [],
-          notifications: dataObj.notifications || [],
-          findings: dataObj.findings || [],
-          api_keys: dataObj.api_keys || [],
-          ldap_settings: dataObj.ldap_settings || { ...defaultLdapSettings },
-        globalSettings: dataObj.globalSettings || {}
-        };
+        
+        const newData = JSON.parse(JSON.stringify(DEFAULT_DB_STATE));
+        for (const key of Object.keys(DEFAULT_DB_STATE)) {
+          newData[key] = dataObj[key] !== undefined ? dataObj[key] : DEFAULT_DB_STATE[key];
+        }
+        localDbData = newData;
         saveLocalFile();
       } catch (err) {
         await client.query('ROLLBACK');
