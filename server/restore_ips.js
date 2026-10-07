@@ -40,7 +40,7 @@ const restoreBannedIps = () => {
     process.exit(1);
   }
 
-  console.log(\`📦 Найдено \${foundBannedIps.length} заблокированных IP в бэкапе: \${sourceFile}\`);
+  console.log('📦 Найдено ' + foundBannedIps.length + ' заблокированных IP в бэкапе: ' + sourceFile);
 
   if (!fs.existsSync(DB_FILE)) {
     console.error('❌ Текущий файл db.json не найден!');
