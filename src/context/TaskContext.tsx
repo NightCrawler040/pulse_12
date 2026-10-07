@@ -620,7 +620,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const mentionByName = `@${u.name.toLowerCase()}`;
         const mentionByFirstName = `@${u.name.split(' ')[0].toLowerCase()}`;
         const mentionByLogin = u.login ? `@${u.login.toLowerCase()}` : '';
-        const textLow = texString(t || '').toLowerCase();
+        const textLow = String(text || '').toLowerCase();
         if (textLow.includes(mentionByName) || textLow.includes(mentionByFirstName) || (mentionByLogin && textLow.includes(mentionByLogin))) {
           mentionedIds.add(u.id);
           addNotification({
