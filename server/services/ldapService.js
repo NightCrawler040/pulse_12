@@ -374,11 +374,15 @@ export const reconcileAndSaveLdapUsers = async (dbData, saveCollection, adUsers,
   const ensureWorkspace = (dept) => {
     const safeName = (dept || '����� �� ������').trim();
     if (!dbData.workspaces) dbData.workspaces = [];
-    let ws = dbData.workspaces.find(w => w.name.toLowerCase() === safeName.toLowerCase());
+    let ws = dbData.workspaces.find(w => 
+      (w.adGroup && w.adGroup.toLowerCase() === safeName.toLowerCase()) || 
+      w.name.toLowerCase() === safeName.toLowerCase()
+    );
     if (!ws) {
       ws = {
         id: 'WS-DEP-' + Date.now() + '-' + Math.floor(Math.random() * 10000),
         name: safeName,
+        adGroup: safeName,
         createdAt: new Date().toISOString()
       };
       dbData.workspaces.push(ws);

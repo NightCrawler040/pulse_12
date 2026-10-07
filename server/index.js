@@ -558,7 +558,8 @@ app.post('/api/login', loginRateLimiter, async (req, res) => {
           if (!user.workspaceIds) user.workspaceIds = [];
           if (user.department && dbData.workspaces) {
             const matchingWorkspaces = dbData.workspaces.filter(ws => 
-              ws.adGroup && ws.adGroup.toLowerCase() === user.department.toLowerCase()
+              (ws.adGroup && ws.adGroup.toLowerCase() === user.department.toLowerCase()) ||
+              (ws.name && ws.name.toLowerCase() === user.department.toLowerCase())
             );
             matchingWorkspaces.forEach(ws => {
               if (!user.workspaceIds.includes(ws.id)) {
