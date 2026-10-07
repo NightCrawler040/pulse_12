@@ -108,7 +108,24 @@ export const getSanitizedDbDataForUser = (user) => {
   const filteredSprints = (data.sprints || []).filter(s => userWorkspaces.includes(s.workspaceId));
   const filteredGroups = (data.groups || []).filter(g => userWorkspaces.includes(g.workspaceId));
   const filteredHrOrders = (data.hr_orders || []).filter(o => userWorkspaces.includes(o.workspaceId));
-  return { ...data, tasks: filteredTasks, findings: filteredFindings, sprints: filteredSprints, groups: filteredGroups, hr_orders: filteredHrOrders };
+  
+  const filteredWorkspaces = (data.workspaces || []).filter(w => userWorkspaces.includes(w.id));
+  const filteredUsers = (data.users || []).filter(u => 
+    u.roleType === 'admin' || 
+    (u.workspaceIds || []).some(wid => userWorkspaces.includes(wid)) || 
+    u.id === user.id
+  );
+  
+  return { 
+    ...data, 
+    tasks: filteredTasks, 
+    findings: filteredFindings, 
+    sprints: filteredSprints, 
+    groups: filteredGroups, 
+    hr_orders: filteredHrOrders,
+    workspaces: filteredWorkspaces,
+    users: filteredUsers
+  };
 };
 
 export const broadcastUpdate = async (key) => {
