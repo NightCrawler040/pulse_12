@@ -213,33 +213,35 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '1.4rem' }}>🚀</span>
               <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'hsl(var(--text-primary))' }}>
-                {currentSprint.name}
+                {currentSprint ? currentSprint.name : 'Нет активного спринта'}
               </h3>
-              {currentSprint.isActive && (
+              {currentSprint?.isActive && (
                 <span style={{ background: '#10b981', color: 'white', fontSize: '0.75rem', padding: '2px 8px', borderRadius: '12px', fontWeight: 'bold' }}>
                   Активный спринт
                 </span>
               )}
-              <span style={{
-                background: sprintStats.diffDays > 2 ? 'rgba(59, 130, 246, 0.15)' : sprintStats.diffDays >= 0 ? 'rgba(245, 158, 11, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                color: sprintStats.diffDays > 2 ? '#3b82f6' : sprintStats.diffDays >= 0 ? '#f59e0b' : '#ef4444',
-                border: `1px solid ${sprintStats.diffDays > 2 ? '#3b82f6' : sprintStats.diffDays >= 0 ? '#f59e0b' : '#ef4444'}`,
-                padding: '2px 10px',
-                borderRadius: '12px',
-                fontSize: '0.8rem',
-                fontWeight: 600
-              }}>
-                ⏳ {sprintStats.diffDays > 0 ? `Осталось дней: ${sprintStats.diffDays}` : sprintStats.diffDays === 0 ? 'Последний день!' : `Завершен (${Math.abs(sprintStats.diffDays)} дн. назад)`}
-              </span>
+              {sprintStats && (
+                <span style={{
+                  background: sprintStats.diffDays > 2 ? 'rgba(59, 130, 246, 0.15)' : sprintStats.diffDays >= 0 ? 'rgba(245, 158, 11, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                  color: sprintStats.diffDays > 2 ? '#3b82f6' : sprintStats.diffDays >= 0 ? '#f59e0b' : '#ef4444',
+                  border: `1px solid ${sprintStats.diffDays > 2 ? '#3b82f6' : sprintStats.diffDays >= 0 ? '#f59e0b' : '#ef4444'}`,
+                  padding: '2px 10px',
+                  borderRadius: '12px',
+                  fontSize: '0.8rem',
+                  fontWeight: 600
+                }}>
+                  ⏳ {sprintStats.diffDays > 0 ? `Осталось дней: ${sprintStats.diffDays}` : sprintStats.diffDays === 0 ? 'Последний день!' : `Завершен (${Math.abs(sprintStats.diffDays)} дн. назад)`}
+                </span>
+              )}
             </div>
-            {currentSprint.goal && (
+            {currentSprint?.goal && (
               <p style={{ margin: 0, fontSize: '0.9rem', color: 'hsl(var(--text-secondary))', fontStyle: 'italic' }}>
-                🎯 <strong>Цель:</strong> {currentSprint.goal}
+                🎯 <strong>Цель:</strong> {currentSprint?.goal}
               </p>
             )}
           </div>
 
-          {/* Progress Bar & Stats */}
+          {/* Progress Bar & Stats */}\n          {sprintStats && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '240px', flex: '0 1 320px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 600, color: 'hsl(var(--text-secondary))' }}>
               <span>Прогресс (Burn-down)</span>
@@ -257,7 +259,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
               <span>Задачи: <strong>{sprintStats.completedTasksCount} / {sprintStats.sprintTasksCount}</strong></span>
               <span>Story Points: <strong>{sprintStats.completedPoints} / {sprintStats.totalPoints} SP</strong></span>
             </div>
-          </div>
+          </div>)}
         </div>
       )}
 

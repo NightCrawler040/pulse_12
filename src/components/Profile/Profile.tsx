@@ -414,7 +414,7 @@ export const Profile: React.FC = () => {
                 </div>
                 <div className="my-task-title">{t.title}</div>
                 <div className="my-task-footer">
-                  <span>Приоритет: <strong>{t.priority.toUpperCase()}</strong></span>
+                  <span>Приоритет: <strong>{String(t.priority || 'low').toUpperCase()}</strong></span>
                   <span>⚡ {t.storyPoints} SP • ⏳ {t.loggedHours}/{t.estimatedHours} ч</span>
                 </div>
               </div>
@@ -456,7 +456,7 @@ export const Profile: React.FC = () => {
                   </div>
                   <div className="my-task-title">{t.title}</div>
                   <div className="my-task-footer">
-                    <span>Приоритет: <strong>{t.priority.toUpperCase()}</strong></span>
+                    <span>Приоритет: <strong>{String(t.priority || 'low').toUpperCase()}</strong></span>
                     <span>⚡ {t.storyPoints} SP • ⏳ {t.loggedHours}/{t.estimatedHours} ч</span>
                   </div>
                 </div>

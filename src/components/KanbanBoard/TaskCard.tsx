@@ -43,7 +43,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, users, groups, 
           <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span className="task-id">{task.id}</span>
-              {(task.externalFindingId || task.tags?.some(t => t.toLowerCase() === 'derscanner')) && !task.tags?.some(t => t.toLowerCase() === 'siem' || t.toLowerCase() === 'waf') && (
+              {(task.externalFindingId || task.tags?.some(t => String(t).toLowerCase() === 'derscanner')) && !task.tags?.some(t => String(t).toLowerCase() === 'siem' || String(t).toLowerCase() === 'waf') && (
                 <span style={{
                   background: 'rgba(239, 68, 68, 0.15)',
                   color: '#ef4444',
@@ -59,7 +59,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, users, groups, 
                   🛡️ DerScanner
                 </span>
               )}
-              {task.tags?.some(t => t.toLowerCase() === 'siem') && (
+              {task.tags?.some(t => String(t).toLowerCase() === 'siem') && (
                 <span style={{
                   background: 'rgba(59, 130, 246, 0.15)',
                   color: '#3b82f6',
@@ -75,7 +75,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, users, groups, 
                   🛡️ SIEM
                 </span>
               )}
-              {task.tags?.some(t => t.toLowerCase() === 'waf') && (
+              {task.tags?.some(t => String(t).toLowerCase() === 'waf') && (
                 <span style={{
                   background: 'rgba(249, 115, 22, 0.15)',
                   color: '#f97316',

@@ -334,10 +334,10 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       if (filters.search.trim()) {
         const query = filters.search.toLowerCase();
-        const matchTitle = task.title.toLowerCase().includes(query);
-        const matchDesc = task.description.toLowerCase().includes(query);
-        const matchId = task.id.toLowerCase().includes(query);
-        const matchTag = task.tags.some(t => t.toLowerCase().includes(query));
+        const matchTitle = String(task.title || '').toLowerCase().includes(query);
+        const matchDesc = String(task.description || '').toLowerCase().includes(query);
+        const matchId = String(task.id || '').toLowerCase().includes(query);
+        const matchTag = task.tags.some(t => String(t || '').toLowerCase().includes(query));
         if (!matchTitle && !matchDesc && !matchId && !matchTag) {
           return false;
         }
@@ -513,7 +513,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         auditComments.push({
           id: `com-log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
           userId: actor.id,
-          text: `🔥 [Аудит]: Приоритет изменен на: ${updates.priority.toUpperCase()}`,
+          text: `🔥 [Аудит]: Приоритет изменен на: ${String(updates.priority || 'low').toUpperCase()}`,
           createdAt: new Date().toISOString(),
           isSystemLog: true
         });
@@ -620,7 +620,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const mentionByName = `@${u.name.toLowerCase()}`;
         const mentionByFirstName = `@${u.name.split(' ')[0].toLowerCase()}`;
         const mentionByLogin = u.login ? `@${u.login.toLowerCase()}` : '';
-        const textLow = text.toLowerCase();
+        const textLow = texString(t || '').toLowerCase();
         if (textLow.includes(mentionByName) || textLow.includes(mentionByFirstName) || (mentionByLogin && textLow.includes(mentionByLogin))) {
           mentionedIds.add(u.id);
           addNotification({
