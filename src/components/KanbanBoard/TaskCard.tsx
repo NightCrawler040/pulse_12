@@ -16,8 +16,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, users, groups, 
   const assignee = users.find(u => u.id === task.assigneeId);
   const groupAssignee = groups?.find(g => g.id === task.assigneeGroupId);
 
-  const completedSubtasks = task.subtasks.filter(s => s.completed).length;
-  const totalSubtasks = task.subtasks.length;
+  const completedSubtasks = (task.subtasks || []).filter(s => s.completed).length;
+  const totalSubtasks = (task.subtasks || []).length;
 
   const priorityLabels: Record<string, string> = {
     low: 'Низкий',
@@ -109,7 +109,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, users, groups, 
           <h4 className="task-title">{task.title}</h4>
 
           {/* Tags */}
-          {task.tags && task.tags.length > 0 && (
+          {Array.isArray(task.tags) && task.tags.length > 0 && (
             <div className="task-tags">
               {task.tags.map((tag, idx) => (
                 <span key={idx} className="tag-pill">#{tag}</span>
