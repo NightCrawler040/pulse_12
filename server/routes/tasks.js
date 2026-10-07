@@ -87,13 +87,14 @@ export default function createTasksRouter(requireAuth) {
         let safeUpdates = { ...updates };
         if (safeUpdates.comments && Array.isArray(safeUpdates.comments)) {
           // Smart Merge
-          const currentCommentsMap = new Map((t.comments || []).map(c => [c.id, c]));
-          safeUpdates.comments.forEach(c => {
-            if (!currentCommentsMap.has(c.id)) {
-              currentCommentsMap.set(c.id, { ...c, userId: req.currentUser ? req.currentUser.id : c.userId });
-            }
-          });
-          safeUpdates.comments = Array.from(currentCommentsMap.values());
+          const frontendCommentIds = new Set(safeUpdates.comments.map(c => c.id));
+          const existingComments = t.comments || [];
+          const missingComments = existingComments.filter(c => !frontendCommentIds.has(c.id));
+          const restoredComments = missingComments.filter(c => c.userId !== (req.currentUser && req.currentUser.id));
+          safeUpdates.comments = [...safeUpdates.comments, ...restoredComments].map(c => ({
+            ...c, 
+            userId: c.userId || (req.currentUser ? req.currentUser.id : undefined)
+          }));
           safeUpdates.comments.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
         }
 
