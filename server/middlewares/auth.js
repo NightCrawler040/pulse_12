@@ -29,19 +29,21 @@ export const requireAuth = async (req, res, next) => {
 
   const authHeader = req.headers['authorization'] || '';
   const tokenHeader = req.headers['x-api-token'] || (authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '');
-  if (tokenHeader) {
-    const validToken = generateAuthToken(user);
-    let isMatch = false;
-    if (validToken && tokenHeader.length === validToken.length) {
-      try {
-        isMatch = crypto.timingSafeEqual(Buffer.from(tokenHeader, 'utf8'), Buffer.from(validToken, 'utf8'));
-      } catch (e) {
-        isMatch = false;
-      }
+  if (!tokenHeader) {
+    return res.status(401).json({ error: 'Отсутствует цифровой токен подписи API' });
+  }
+
+  const validToken = generateAuthToken(user);
+  let isMatch = false;
+  if (validToken && tokenHeader.length === validToken.length) {
+    try {
+      isMatch = crypto.timingSafeEqual(Buffer.from(tokenHeader, 'utf8'), Buffer.from(validToken, 'utf8'));
+    } catch (e) {
+      isMatch = false;
     }
-    if (!isMatch) {
-      return res.status(401).json({ error: 'Недействительный цифровой токен подписи API' });
-    }
+  }
+  if (!isMatch) {
+    return res.status(401).json({ error: 'Недействительный цифровой токен подписи API' });
   }
 
   req.currentUser = user;

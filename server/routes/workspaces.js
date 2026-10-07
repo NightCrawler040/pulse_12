@@ -36,19 +36,19 @@ export default function createRouter(requireAuth, requireAdmin) {
   
   // Cascade migration to WS-1
   if (req.dbData.tasks) {
-    req.dbData.tasks = req.dbData.tasks.map(t => t.workspaceId === id ? { ...t, workspaceId: 'WS-1' } : t);
+    req.dbData.tasks = req.dbData.tasks.map(t => t.workspaceId === id ? { ...t, workspaceId: null } : t);
   }
   if (req.dbData.sprints) {
-    req.dbData.sprints = req.dbData.sprints.map(s => s.workspaceId === id ? { ...s, workspaceId: 'WS-1' } : s);
+    req.dbData.sprints = req.dbData.sprints.map(s => s.workspaceId === id ? { ...s, workspaceId: null } : s);
   }
   if (req.dbData.groups) {
-    req.dbData.groups = req.dbData.groups.map(g => g.workspaceId === id ? { ...g, workspaceId: 'WS-1' } : g);
+    req.dbData.groups = req.dbData.groups.map(g => g.workspaceId === id ? { ...g, workspaceId: null } : g);
   }
   if (req.dbData.api_keys) {
-    req.dbData.api_keys = req.dbData.api_keys.map(k => k.workspaceId === id ? { ...k, workspaceId: 'WS-1' } : k);
+    req.dbData.api_keys = req.dbData.api_keys.map(k => k.workspaceId === id ? { ...k, workspaceId: null } : k);
   }
   if (req.dbData.findings) {
-    req.dbData.findings = req.dbData.findings.map(f => f.workspaceId === id ? { ...f, workspaceId: 'WS-1' } : f);
+    req.dbData.findings = req.dbData.findings.map(f => f.workspaceId === id ? { ...f, workspaceId: null } : f);
   }
   if (req.dbData.users) {
     req.dbData.users = req.dbData.users.map(u => ({

@@ -45,7 +45,7 @@ export default function createUsersRouter(requireAuth, requireAdmin) {
       password: hashPasswordIfNeeded(rawPassword),
       pin: hashPasswordIfNeeded(rawPin),
       isActive: true,
-  workspaceIds: userData.workspaceIds || ['WS-1'] // Bug #9
+  workspaceIds: userData.workspaceIds || []
     };
     req.dbData.users.push(newUser);
     try { 

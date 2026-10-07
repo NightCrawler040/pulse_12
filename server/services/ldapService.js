@@ -370,6 +370,24 @@ export const reconcileAndSaveLdapUsers = async (dbData, saveCollection, adUsers,
   const usersMapByEmail = new Map();
   const usersMapByLogin = new Map();
 
+  let newWorkspacesAdded = false;
+  const ensureWorkspace = (dept) => {
+    const safeName = (dept || '����� �� ������').trim();
+    if (!dbData.workspaces) dbData.workspaces = [];
+    let ws = dbData.workspaces.find(w => w.name.toLowerCase() === safeName.toLowerCase());
+    if (!ws) {
+      ws = {
+        id: 'WS-DEP-' + Date.now() + '-' + Math.floor(Math.random() * 10000),
+        name: safeName,
+        createdAt: new Date().toISOString()
+      };
+      dbData.workspaces.push(ws);
+      newWorkspacesAdded = true;
+    }
+    return ws.id;
+  };
+
+
   // 1. Индексируем существующих пользователей Pulse12 по почте и логину
   dbData.users.forEach(u => {
     if (u.email && u.email.trim()) {
@@ -407,6 +425,7 @@ export const reconcileAndSaveLdapUsers = async (dbData, saveCollection, adUsers,
       matchedUser.ldapDn = adUser.dn;
       matchedUser.authSource = 'LDAP';
       matchedUser.isActive = true;
+      matchedUser.workspaceIds = [ensureWorkspace(matchedUser.department)];
       
       // Обновляем индексы
       if (matchedUser.email) usersMapByEmail.set(matchedUser.email.trim().toLowerCase(), matchedUser);
@@ -426,6 +445,7 @@ export const reconcileAndSaveLdapUsers = async (dbData, saveCollection, adUsers,
         authSource: 'LDAP',
         ldapDn: adUser.dn,
         isActive: true,
+        workspaceIds: [ensureWorkspace(adUser.department || '����� �� ������')],
         createdAt: new Date().toISOString()
       };
       dbData.users.push(newUser);
@@ -495,6 +515,9 @@ export const reconcileAndSaveLdapUsers = async (dbData, saveCollection, adUsers,
     }
   });
 
+  if (newWorkspacesAdded) {
+    await saveCollection('workspaces', dbData.workspaces);
+  }
   await saveCollection('users', dbData.users);
   if (reconciledTasksCount > 0) {
     await saveCollection('tasks', dbData.tasks);

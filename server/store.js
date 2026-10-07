@@ -90,15 +90,24 @@ export const getSanitizedDbData = () => {
 
 export const getSanitizedDbDataForUser = (user) => {
   const data = getSanitizedDbData();
-  if (!user || user.roleType === 'admin') {
+  if (!user) {
+    // Unauthenticated users get ONLY safe public data
+    return {
+      tasks: [], findings: [], sprints: [], groups: [], hr_orders: [],
+      users: data.users.map(u => ({ id: u.id, name: u.name, department: u.department })),
+      api_keys: [], notifications: [], bannedIps: [], kataHashes: []
+    };
+  }
+  if (user.roleType === 'admin') {
     return data;
   }
   const userWorkspaces = user.workspaceIds || [];
-  const filteredTasks = (data.tasks || []).filter(t => !t.workspaceId || userWorkspaces.includes(t.workspaceId));
-  const filteredFindings = (data.findings || []).filter(f => !f.workspaceId || userWorkspaces.includes(f.workspaceId));
-  const filteredSprints = (data.sprints || []).filter(s => !s.workspaceId || userWorkspaces.includes(s.workspaceId));
-  const filteredGroups = (data.groups || []).filter(g => !g.workspaceId || userWorkspaces.includes(g.workspaceId));
-  const filteredHrOrders = (data.hr_orders || []).filter(o => !o.workspaceId || userWorkspaces.includes(o.workspaceId));
+  // strict isolation: only tasks matching workspaces (no fallback for unassigned/orphaned)
+  const filteredTasks = (data.tasks || []).filter(t => userWorkspaces.includes(t.workspaceId));
+  const filteredFindings = (data.findings || []).filter(f => userWorkspaces.includes(f.workspaceId));
+  const filteredSprints = (data.sprints || []).filter(s => userWorkspaces.includes(s.workspaceId));
+  const filteredGroups = (data.groups || []).filter(g => userWorkspaces.includes(g.workspaceId));
+  const filteredHrOrders = (data.hr_orders || []).filter(o => userWorkspaces.includes(o.workspaceId));
   return { ...data, tasks: filteredTasks, findings: filteredFindings, sprints: filteredSprints, groups: filteredGroups, hr_orders: filteredHrOrders };
 };
 
@@ -113,15 +122,11 @@ export const broadcastUpdate = async (key) => {
     if (ioInstance) {
       // 2. ?>?? ??> ??????? ??:???? ?'??>?? WebSockets
       ioInstance.sockets.sockets.forEach(socket => {
-        if (socket.userId) {
+        if (socket.userId && socket.userVerified) {
           const u = dbData.users.find(usr => usr.id === socket.userId);
           if (u) {
             socket.emit('data-updated', getSanitizedDbDataForUser(u));
-          } else {
-            socket.emit('data-updated', getSanitizedDbData());
           }
-        } else {
-          socket.emit('data-updated', getSanitizedDbData());
         }
       });
     }

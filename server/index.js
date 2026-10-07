@@ -424,7 +424,7 @@ app.get('/api/data', async (req, res) => { try {
     const tokenHeader = req.headers['x-api-token'] || (authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '');
     const user = userId ? dbData.users.find(u => u.id === userId && u.isActive !== false) : null;
 
-    if (user && (!tokenHeader || tokenHeader === generateAuthToken(user))) {
+    if (user && tokenHeader && tokenHeader === generateAuthToken(user)) {
       return res.json(getSanitizedDbDataForUser(user));
     }
 
@@ -805,16 +805,37 @@ setIo(io);
   // Removed init-data on raw connection (Bug #5). Will send after user-online.
   broadcastOnlineUsers();
 
-  socket.on('user-online', async (userId) => {
+  socket.on('user-online', async (payload) => {
+    let userId, token;
+    if (typeof payload === 'object' && payload !== null) {
+      userId = payload.userId;
+      token = payload.token;
+    } else {
+      userId = payload;
+    }
+    
     if (userId) {
       onlineSockets.set(socket.id, userId);
-      console.log(`🟢 User ${userId} is online on socket ${socket.id}`);
+      const u = getDbData().users.find(usr => usr.id === userId && usr.isActive !== false);
+      if (u && token && token === generateAuthToken(u)) {
+        socket.userId = userId;
+        socket.userVerified = true;
+        console.log(`🟢 User ${userId} authenticated securely on socket ${socket.id}`);
+        socket.emit('data-updated', getSanitizedDbDataForUser(u));
+      } else {
+        console.log(`🟢 User ${userId} is online (unverified) on socket ${socket.id}`);
+      }
       broadcastOnlineUsers();
     }
   });
 
   socket.on('request-sync', async () => {
-    socket.emit('data-updated', getSanitizedDbData());
+    if (socket.userId && socket.userVerified) {
+      const u = getDbData().users.find(usr => usr.id === socket.userId);
+      if (u) {
+        socket.emit('data-updated', getSanitizedDbDataForUser(u));
+      }
+    }
     broadcastOnlineUsers();
   });
 
