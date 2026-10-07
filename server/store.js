@@ -37,7 +37,7 @@ export const getSanitizedDbData = () => {
   
   // Migrate tasks
   if (dbData.tasks) {
-    dbData.tasks.forEach(t => { if (!t.workspaceId) t.workspaceId = 'WS-1'; });
+    dbData.tasks.forEach(t => { if (!t.workspaceId) t.workspaceId = 'WS-1'; if (!Array.isArray(t.comments)) t.comments = []; if (!Array.isArray(t.subtasks)) t.subtasks = []; if (!Array.isArray(t.tags)) t.tags = []; if (!Array.isArray(t.attachments)) t.attachments = []; });
   }
   // Migrate findings
   if (dbData.findings) {
@@ -49,7 +49,7 @@ export const getSanitizedDbData = () => {
   }
   // Migrate groups
   if (dbData.groups) {
-    dbData.groups.forEach(g => { if (!g.workspaceId) g.workspaceId = 'WS-1'; });
+    dbData.groups.forEach(g => { if (!g.workspaceId) g.workspaceId = 'WS-1'; if (!Array.isArray(g.memberIds)) g.memberIds = []; });
   }
   
   const sanitizeUsers = (usersArray) => {
