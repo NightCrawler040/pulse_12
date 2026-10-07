@@ -54,6 +54,7 @@ export const SecurityCenter: React.FC = () => {
   const [selectedSprint, setSelectedSprint] = useState<string>('unassigned');
   const [selectedPriority, setSelectedPriority] = useState<string>('high');
   const [isPromoting, setIsPromoting] = useState<boolean>(false);
+  const [selectedFindings, setSelectedFindings] = useState<string[]>([]);
 
   const accessibleFindings = findings.filter(f => {
     if (isAdmin || !currentUser) return true;
@@ -73,6 +74,7 @@ export const SecurityCenter: React.FC = () => {
   const criticalCount = currentSystemFindings.filter(f => (f.severity === 'Critical' || f.severity === 'High') && (f.status === 'new' || f.status === 'analyzing')).length;
   const promotedCount = currentSystemFindings.filter(f => f.status === 'promoted').length;
 
+  // Clear selection when tabs change (handled implicitly by UI, but good practice)
   const filteredFindings = currentSystemFindings.filter(f => {
     if (statusFilter === 'active' && f.status !== 'new' && f.status !== 'analyzing') return false;
     if (statusFilter === 'new' && f.status !== 'new') return false;
@@ -307,6 +309,40 @@ export const SecurityCenter: React.FC = () => {
           </p>
         </div>
       ) : systemTab === "fortigate" ? <FortigateTable /> : (
+      
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', background: 'hsl(var(--card-bg))', padding: '12px 16px', borderRadius: '12px', border: '1px solid hsl(var(--border-color))' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <input 
+            type="checkbox" 
+            checked={filteredFindings.length > 0 && selectedFindings.length === filteredFindings.length}
+            onChange={(e) => {
+              if (e.target.checked) {
+                setSelectedFindings(filteredFindings.map(f => f.id));
+              } else {
+                setSelectedFindings([]);
+              }
+            }}
+            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+          />
+          <span style={{ fontSize: '14px', fontWeight: 600, color: 'hsl(var(--text-primary))' }}>Выбрать все инциденты на текущей вкладке</span>
+        </div>
+        
+        {selectedFindings.length > 0 && isAdmin && (
+          <button 
+            className="btn-primary" 
+            style={{ background: '#ef4444', color: 'white', border: 'none' }}
+            onClick={() => {
+              if (window.confirm(`Вы уверены, что хотите безвозвратно удалить ${selectedFindings.length} выбранных инцидентов?`)) {
+                selectedFindings.forEach(id => deleteFinding(id));
+                setSelectedFindings([]);
+              }
+            }}
+          >
+            🗑️ Удалить выбранные ({selectedFindings.length})
+          </button>
+        )}
+      </div>
+
       <div className="findings-list">
         {filteredFindings.map(finding => (
           <div key={finding.id} className={`finding-card severity-${finding.severity}`}>
