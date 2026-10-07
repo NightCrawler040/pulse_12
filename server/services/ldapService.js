@@ -376,7 +376,7 @@ export const reconcileAndSaveLdapUsers = async (dbData, saveCollection, adUsers,
     if (!dbData.workspaces) dbData.workspaces = [];
     let ws = dbData.workspaces.find(w => 
       (w.adGroup && w.adGroup.toLowerCase() === safeName.toLowerCase()) || 
-      w.name.toLowerCase() === safeName.toLowerCase()
+      (w.name && w.name.toLowerCase() === safeName.toLowerCase())
     );
     if (!ws) {
       ws = {

@@ -6,15 +6,11 @@ export const runMigration = async () => {
   let newWorkspacesAdded = false;
   
   const ensureWorkspace = (dept) => {
-    const safeName = (dept || 'Отдел не указан').trim();
+    const safeName = (dept || 'РћС‚РґРµР» РЅРµ СѓРєР°Р·Р°РЅ').trim();
     if (!dbData.workspaces) dbData.workspaces = [];
-    let ws = dbData.workspaces.find(w => w.name.toLowerCase() === safeName.toLowerCase());
+    let ws = dbData.workspaces.find(w => (w.adGroup && w.adGroup.toLowerCase() === safeName.toLowerCase()) || (w.name && w.name.toLowerCase() === safeName.toLowerCase()));
     if (!ws) {
-      ws = {
-        id: 'WS-DEP-' + Date.now() + '-' + Math.floor(Math.random() * 10000),
-        name: safeName,
-        createdAt: new Date().toISOString()
-      };
+      ws = { id: 'WS-DEP-' + Date.now() + '-' + Math.floor(Math.random() * 10000), name: safeName, adGroup: safeName, createdAt: new Date().toISOString() };
       dbData.workspaces.push(ws);
       newWorkspacesAdded = true;
     }
@@ -37,10 +33,10 @@ export const runMigration = async () => {
           if (u && u.workspaceIds && u.workspaceIds.length > 0) {
             t.workspaceId = u.workspaceIds[0];
           } else {
-            t.workspaceId = ensureWorkspace('Нераспределенные');
+            t.workspaceId = ensureWorkspace('РЎРёСЃС‚РµРјРЅС‹Р№');
           }
         } else {
-          t.workspaceId = ensureWorkspace('Нераспределенные');
+          t.workspaceId = ensureWorkspace('РЎРёСЃС‚РµРјРЅС‹Р№');
         }
       }
     });
