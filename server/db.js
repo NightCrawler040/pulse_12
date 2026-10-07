@@ -73,20 +73,7 @@ const loadLocalFile = () => {
       const raw = fs.readFileSync(DB_FILE, 'utf-8');
       const parsed = JSON.parse(raw);
       if (parsed && Array.isArray(parsed.tasks)) {
-        localDbData = {
-          tasks: parsed.tasks || [],
-          sprints: parsed.sprints || [],
-          users: parsed.users || [],
-          groups: parsed.groups || [],
-          notifications: parsed.notifications || [],
-          findings: parsed.findings || [],
-          api_keys: parsed.api_keys || [],
-          ldap_settings: parsed.ldap_settings || { ...defaultLdapSettings },
-          mailSettings: parsed.mailSettings || {},
-          fortigateSettings: parsed.fortigateSettings || { ...defaultFortigateSettings },
-          bannedIps: parsed.bannedIps || [],
-          notificationEvents: parsed.notificationEvents || {}
-        };
+        const newData = JSON.parse(JSON.stringify(DEFAULT_DB_STATE)); for (const key of Object.keys(DEFAULT_DB_STATE)) { newData[key] = parsed[key] !== undefined ? parsed[key] : DEFAULT_DB_STATE[key]; } localDbData = newData;
         return;
       }
     } catch (err) {
@@ -159,21 +146,7 @@ export const initDb = async () => {
     // Мгновенно синхронизируем локальный fallback (localDbData и db.json) с актуальными данными из PostgreSQL
     const allPgData = await getAllData();
     if (allPgData && allPgData.users && allPgData.users.length > 0) {
-      localDbData = {
-        tasks: allPgData.tasks || [],
-        sprints: allPgData.sprints || [],
-        users: allPgData.users || [],
-        groups: allPgData.groups || [],
-        workspaces: allPgData.workspaces || [],
-        notifications: allPgData.notifications || [],
-        findings: allPgData.findings || [],
-        api_keys: allPgData.api_keys || [],
-        ldap_settings: allPgData.ldap_settings || { ...defaultLdapSettings },
-        mailSettings: allPgData.mailSettings || {},
-        notificationEvents: allPgData.notificationEvents || {},
-        imapSettings: allPgData.imapSettings || {},
-        processedEmails: allPgData.processedEmails || []
-      };
+      const newData = JSON.parse(JSON.stringify(DEFAULT_DB_STATE)); for (const key of Object.keys(DEFAULT_DB_STATE)) { newData[key] = allPgData[key] !== undefined ? allPgData[key] : DEFAULT_DB_STATE[key]; } localDbData = newData;
       saveLocalFile();
     }
   } catch (err) {
@@ -192,20 +165,7 @@ export const initDb = async () => {
         console.log('🔄 [Auto-Healing] PostgreSQL снова доступен! Восстановление онлайн-режима...');
         const allPgData = await getAllData();
         if (allPgData && allPgData.users && allPgData.users.length > 0) {
-          localDbData = {
-            tasks: allPgData.tasks || [],
-            sprints: allPgData.sprints || [],
-            users: allPgData.users || [],
-            groups: allPgData.groups || [],
-            notifications: allPgData.notifications || [],
-            findings: allPgData.findings || [],
-            api_keys: allPgData.api_keys || [],
-            ldap_settings: allPgData.ldap_settings || { ...defaultLdapSettings },
-            mailSettings: allPgData.mailSettings || {},
-            notificationEvents: allPgData.notificationEvents || {},
-            imapSettings: allPgData.imapSettings || {},
-            processedEmails: allPgData.processedEmails || []
-          };
+          const newData = JSON.parse(JSON.stringify(DEFAULT_DB_STATE)); for (const key of Object.keys(DEFAULT_DB_STATE)) { newData[key] = allPgData[key] !== undefined ? allPgData[key] : DEFAULT_DB_STATE[key]; } localDbData = newData;
           saveLocalFile();
         }
       } catch (e) {
@@ -404,31 +364,11 @@ export const saveAllData = async (dataObj) => {
     } catch (err) {
       console.error('❌ Ошибка PostgreSQL при сохранении всех данных в транзакции:', err.message);
       isPgConnected = false;
-      localDbData = {
-        tasks: dataObj.tasks || [],
-        sprints: dataObj.sprints || [],
-        users: dataObj.users || [],
-        groups: dataObj.groups || [],
-        notifications: dataObj.notifications || [],
-        findings: dataObj.findings || [],
-        api_keys: dataObj.api_keys || [],
-        ldap_settings: dataObj.ldap_settings || { ...defaultLdapSettings },
-        globalSettings: dataObj.globalSettings || {}
-      };
+      const newData = JSON.parse(JSON.stringify(DEFAULT_DB_STATE)); for (const key of Object.keys(DEFAULT_DB_STATE)) { newData[key] = dataObj[key] !== undefined ? dataObj[key] : DEFAULT_DB_STATE[key]; } localDbData = newData;
       saveLocalFile();
     }
   } else {
-    localDbData = {
-      tasks: dataObj.tasks || [],
-      sprints: dataObj.sprints || [],
-      users: dataObj.users || [],
-      groups: dataObj.groups || [],
-      notifications: dataObj.notifications || [],
-      findings: dataObj.findings || [],
-      api_keys: dataObj.api_keys || [],
-      ldap_settings: dataObj.ldap_settings || { ...defaultLdapSettings },
-        globalSettings: dataObj.globalSettings || {}
-    };
+    const newData = JSON.parse(JSON.stringify(DEFAULT_DB_STATE)); for (const key of Object.keys(DEFAULT_DB_STATE)) { newData[key] = dataObj[key] !== undefined ? dataObj[key] : DEFAULT_DB_STATE[key]; } localDbData = newData;
     saveLocalFile();
   }
   } finally {

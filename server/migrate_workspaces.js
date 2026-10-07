@@ -75,5 +75,6 @@ export const runMigration = async () => {
 
   await saveAllData(dbData);
   console.log('Migration successfully completed!');
-  process.exit(0);
+  setTimeout(() => process.exit(0), 1000);
 };
+
