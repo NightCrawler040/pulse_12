@@ -297,14 +297,7 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
       const found = issueTypes.find(t => t.id === matchedId) || issueTypes[2];
       return res.status(200).json(found);
     }
-    return res.status(200).json({
-      maxResults: 50,
-      startAt: 0,
-      total: issueTypes.length,
-      isLast: true,
-      values: issueTypes,
-      issueTypes: issueTypes
-    });
+    return res.status(200).json(issueTypes);
   };
   
   const handleJiraPriorities = async (req, res) => {
@@ -320,14 +313,7 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
       const found = priorities.find(p => p.id === matchedId) || priorities[0];
       return res.status(200).json(found);
     }
-    return res.status(200).json({
-      maxResults: 50,
-      startAt: 0,
-      total: priorities.length,
-      isLast: true,
-      values: priorities,
-      priorities: priorities
-    });
+    return res.status(200).json(priorities);
   };
   
   const handleJiraFields = async (req, res) => {
