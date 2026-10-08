@@ -178,24 +178,12 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
     const pName = p ? p.name : 'Pulse Corporate Security & Dev Project';
   
     return {
-      expand: "description,lead,url,projectKeys,permissions,issueTypes",
       self: `${req.protocol}://${req.get('host')}/rest/api/2/project/${pId}`,
       id: pId,
       key: pKey,
       name: pName,
-      description: "Единый контур управления разработкой и информационной безопасностью Pulse",
+      description: "Corporate Jira Project for Security Findings",
       projectTypeKey: "software",
-      projectCategory: { id: "10000", name: "Security", description: "Security Scans" },
-      simplified: false,
-      style: "classic",
-      isPrivate: false,
-      properties: {},
-      avatarUrls: {
-        "48x48": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`,
-        "24x24": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`,
-        "16x16": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`,
-        "32x32": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`
-      },
       lead: { self: `${req.protocol}://${req.get('host')}/rest/api/2/user?username=admin`, key: "admin", accountId: "usr-1", accountType: "atlassian", name: "admin", displayName: "admin (Security Lead)", active: true },
       components: [
         { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10001`, id: "10001", name: "Backend SAST", description: "Backend services" },
@@ -212,9 +200,7 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
   
   const handleJiraProjects = async (req, res) => {
     const url = req.originalUrl || req.url || req.path || '';
-    const rawList = (dbData.projects && dbData.projects.length > 0)
-      ? dbData.projects.map(p => getProjectObject(req, p.key || p.id))
-      : [getProjectObject(req, 'PULSE')];
+    const rawList = [getProjectObject(req, 'PULSE')];
       
     const list = rawList.map(p => {
       // В списке проектов отдаем облегченный issueTypes, без тяжелых fields и statuses (иначе Java парсер падает)
