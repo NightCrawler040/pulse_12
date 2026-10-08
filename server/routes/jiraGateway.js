@@ -24,7 +24,7 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
     const matchedKey = dbData.api_keys.find(k => k.key === token || k.name === token);
   
     const isDefaultKey = token.startsWith('ds-live-') || token === 'admin' || token === 'derscanner' ;
-    if (!matchedKey && !isDefaultKey && !req.path.includes('/rest/api/')) {
+    if (!matchedKey && !isDefaultKey) {
       console.warn(`🚨 [Webhook Auth Error] Неверный API-ключ от внешнего сканера: ${token || 'отсутствует'}`);
       return res.status(401).json({ error: 'Отказано в доступе: неверный или отсутствующий X-API-Key или заголовок Authorization' });
     }
@@ -70,6 +70,25 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
   };
   
   // --- JIRA REST API COMPATIBILITY GATEWAY (Для привязки аккаунта в DerScanner: Аккаунт > Доступы > Таск-менеджер / Jira) ---
+  
+  const requireJiraAuth = (req, res, next) => {
+    const token = extractTokenFromRequest(req);
+    const matchedKey = (dbData.api_keys || []).find(k => k.key === token || k.name === token);
+    const isDefaultKey = token.startsWith('ds-live-') || token === 'admin' || token === 'derscanner';
+    
+    if (!matchedKey && !isDefaultKey) {
+      console.warn(`🚨 [Jira Auth Error] Отказ в доступе к ${req.method} ${req.path}. Токен: ${token || 'отсутствует'}`);
+      return res.status(401).json({ error: 'Unauthorized', message: 'Неверный логин или токен доступа' });
+    }
+    
+    if (matchedKey) {
+      matchedKey.lastUsedAt = new Date().toISOString();
+      saveCollection('api_keys', dbData.api_keys).catch(() => {});
+    }
+    req.jiraUserToken = token;
+    next();
+  };
+
   const handleJiraServerInfo = async (req, res) => {
     res.status(200).json({
       baseUrl: req.protocol + '://' + req.get('host'),
@@ -106,7 +125,7 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
       key: u.login || u.name || u.id,
       name: u.login || u.name || u.id,
       emailAddress: u.email || `${u.login || 'user'}@pulse12.local`,
-      avatarUrls: { "48x48": u.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop" },
+      avatarUrls: { "48x48": u.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop", "24x24": u.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop", "16x16": u.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop", "32x32": u.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop" },
       displayName: `${u.name || u.login || u.id} (${u.role || u.department || 'Employee'})`,
       active: u.isActive !== false,
       timeZone: "Asia/Almaty",
@@ -121,9 +140,9 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
     const defaultUser = usersList.find(u => u.key === 'admin' || u.name === 'admin') || usersList[0] || { self: `${req.protocol}://${req.get('host')}/rest/api/2/user?username=admin`, name: "admin", key: "admin", accountId: "usr-1", accountType: "atlassian", displayName: "admin (Security Lead)" };
     
     const typeMap = {
-      "10001": { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", name: "Bug", subtask: false },
-      "10002": { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", name: "Task", subtask: false },
-      "10003": { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", subtask: false }
+      "10001": { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", name: "Bug", subtask: false, iconUrl: `${req.protocol}://${req.get('host')}/images/icons/issuetypes/bug.png` },
+      "10002": { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", name: "Task", subtask: false, iconUrl: `${req.protocol}://${req.get('host')}/images/icons/issuetypes/task.png` },
+      "10003": { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", subtask: false, iconUrl: `${req.protocol}://${req.get('host')}/images/icons/issuetypes/vuln.png` }
     };
     const defaultIssueTypeObj = typeMap[String(targetIssueTypeId)] || typeMap["10003"];
   
@@ -131,8 +150,8 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
       summary: { id: "summary", key: "summary", fieldId: "summary", name: "Summary", required: true, hasDefaultValue: true, defaultValue: "DerScanner Security Finding", schema: { type: "string", system: "summary" }, operations: ["set"] },
       description: { id: "description", key: "description", fieldId: "description", name: "Description", required: false, hasDefaultValue: true, defaultValue: "Уязвимость, обнаруженная сканером DerScanner", schema: { type: "string", system: "description" }, operations: ["set"] },
       issuetype: { id: "issuetype", key: "issuetype", fieldId: "issuetype", name: "Issue Type", required: true, hasDefaultValue: true, defaultValue: defaultIssueTypeObj, schema: { type: "issuetype", system: "issuetype" }, operations: [], allowedValues: [ typeMap["10001"], typeMap["10002"], typeMap["10003"] ] },
-      project: { id: "project", key: "project", fieldId: "project", name: "Project", required: true, hasDefaultValue: true, defaultValue: { self: `${req.protocol}://${req.get('host')}/rest/api/2/project/10001`, id: "10001", key: "PULSE", name: "Pulse Corporate Security & Dev Project" }, schema: { type: "project", system: "project" }, operations: [], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/project/10001`, id: "10001", key: "PULSE", name: "Pulse Corporate Security & Dev Project" } ] },
-      priority: { id: "priority", key: "priority", fieldId: "priority", name: "Priority", required: false, hasDefaultValue: true, defaultValue: { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/2`, iconUrl: "", name: "High", id: "2" }, schema: { type: "priority", system: "priority" }, operations: ["set"], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/1`, iconUrl: "", name: "Highest", id: "1" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/2`, iconUrl: "", name: "High", id: "2" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/3`, iconUrl: "", name: "Medium", id: "3" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/4`, iconUrl: "", name: "Low", id: "4" } ] },
+      project: { id: "project", key: "project", fieldId: "project", name: "Project", required: true, hasDefaultValue: true, defaultValue: { self: `${req.protocol}://${req.get('host')}/rest/api/2/project/10001`, id: "10001", key: "PULSE", name: "Pulse Corporate Security & Dev Project", avatarUrls: { "48x48": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`, "24x24": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`, "16x16": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`, "32x32": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400` } }, schema: { type: "project", system: "project" }, operations: [], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/project/10001`, id: "10001", key: "PULSE", name: "Pulse Corporate Security & Dev Project", avatarUrls: { "48x48": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`, "24x24": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`, "16x16": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`, "32x32": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400` } } ] },
+      priority: { id: "priority", key: "priority", fieldId: "priority", name: "Priority", required: false, hasDefaultValue: true, defaultValue: { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/2`, iconUrl: `${req.protocol}://${req.get('host')}/images/icons/priority.png`, name: "High", id: "2" }, schema: { type: "priority", system: "priority" }, operations: ["set"], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/1`, iconUrl: `${req.protocol}://${req.get('host')}/images/icons/priority.png`, name: "Highest", id: "1" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/2`, iconUrl: `${req.protocol}://${req.get('host')}/images/icons/priority.png`, name: "High", id: "2" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/3`, iconUrl: `${req.protocol}://${req.get('host')}/images/icons/priority.png`, name: "Medium", id: "3" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/4`, iconUrl: `${req.protocol}://${req.get('host')}/images/icons/priority.png`, name: "Low", id: "4" } ] },
       assignee: { id: "assignee", key: "assignee", fieldId: "assignee", name: "Assignee", required: false, hasDefaultValue: true, defaultValue: defaultUser, schema: { type: "user", system: "assignee" }, operations: ["set"], allowedValues: usersList },
       components: { id: "components", key: "components", fieldId: "components", name: "Components", required: false, hasDefaultValue: true, defaultValue: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10004`, id: "10004", name: "General Security" } ], schema: { type: "array", items: "component", system: "components" }, operations: ["add", "set", "remove"], allowedValues: [ { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10001`, id: "10001", name: "Backend SAST" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10002`, id: "10002", name: "Frontend SAST" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10003`, id: "10003", name: "DevOps Infrastructure" }, { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10004`, id: "10004", name: "General Security" } ] },
       parent: { id: "parent", key: "parent", fieldId: "parent", name: "Parent", required: false, hasDefaultValue: false, schema: { type: "issuelink", system: "parent" }, operations: ["set"], allowedValues: [] }
@@ -141,50 +160,72 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
   
   const getEnrichedIssueTypes = (req) => {
     const statusList = [
-      { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/1`, description: "Новый инцидент", iconUrl: "", name: "New", id: "1", statusCategory: { id: 2, key: "new", colorName: "blue-gray", name: "To Do" } },
-      { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/2`, description: "В работе", iconUrl: "", name: "In Progress", id: "2", statusCategory: { id: 4, key: "indeterminate", colorName: "yellow", name: "In Progress" } },
-      { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/3`, description: "Решено", iconUrl: "", name: "Done", id: "3", statusCategory: { id: 3, key: "done", colorName: "green", name: "Done" } }
+      { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/1`, description: "Новый инцидент", iconUrl: `${req.protocol}://${req.get('host')}/images/icons/priority.png`, name: "New", id: "1", statusCategory: { id: 2, key: "new", colorName: "blue-gray", name: "To Do" } },
+      { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/2`, description: "В работе", iconUrl: `${req.protocol}://${req.get('host')}/images/icons/priority.png`, name: "In Progress", id: "2", statusCategory: { id: 4, key: "indeterminate", colorName: "yellow", name: "In Progress" } },
+      { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/3`, description: "Решено", iconUrl: `${req.protocol}://${req.get('host')}/images/icons/priority.png`, name: "Done", id: "3", statusCategory: { id: 3, key: "done", colorName: "green", name: "Done" } }
     ];
     return [
-      { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", name: "Bug", description: "Уязвимость безопасности или баг", iconUrl: "", subtask: false, avatarId: 1, statuses: statusList, fields: getEnrichedJiraFields(req, "10001") },
-      { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", name: "Task", description: "Задача разработки", iconUrl: "", subtask: false, avatarId: 2, statuses: statusList, fields: getEnrichedJiraFields(req, "10002") },
-      { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", description: "Уязвимость SAST/DAST", iconUrl: "", subtask: false, avatarId: 3, statuses: statusList, fields: getEnrichedJiraFields(req, "10003") }
+      { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", name: "Bug", description: "Уязвимость безопасности или баг", iconUrl: `${req.protocol}://${req.get('host')}/images/icons/priority.png`, subtask: false, avatarId: 1, statuses: statusList, fields: getEnrichedJiraFields(req, "10001") },
+      { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", name: "Task", description: "Задача разработки", iconUrl: `${req.protocol}://${req.get('host')}/images/icons/priority.png`, subtask: false, avatarId: 2, statuses: statusList, fields: getEnrichedJiraFields(req, "10002") },
+      { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", name: "Vulnerability", description: "Уязвимость SAST/DAST", iconUrl: `${req.protocol}://${req.get('host')}/images/icons/priority.png`, subtask: false, avatarId: 3, statuses: statusList, fields: getEnrichedJiraFields(req, "10003") }
     ];
   };
   
-  const getProjectObject = (req, keyOrId = 'PULSE') => {
-    const p = (dbData.projects || []).find(x => String(x.key).toUpperCase() === String(keyOrId).toUpperCase() || String(x.id) === String(keyOrId));
-    const pKey = p ? (p.key || 'PULSE').toUpperCase() : 'PULSE';
-    const pId = p ? String(p.id || '10001') : '10001';
-    const pName = p ? p.name : 'Pulse Corporate Security & Dev Project';
-  
+    const getProjectObject = (req, keyOrId = 'PULSE', compact = false) => {
+    const pKey = 'PULSE';
+    const pId = '10001';
+    const pName = 'Pulse Corporate Security & Dev Project';
+
     return {
       expand: "description,lead,url,projectKeys,permissions,issueTypes",
       self: `${req.protocol}://${req.get('host')}/rest/api/2/project/${pId}`,
       id: pId,
       key: pKey,
       name: pName,
-      description: "Единый контур управления разработкой и информационной безопасностью Pulse",
+      description: "Corporate Jira Project for Security Findings",
       projectTypeKey: "software",
-      lead: { self: `${req.protocol}://${req.get('host')}/rest/api/2/user?username=admin`, key: "admin", accountId: "usr-1", accountType: "atlassian", name: "admin", displayName: "admin (Security Lead)", active: true },
+      projectCategory: { id: "10000", name: "Security", description: "Security Scans" },
+      simplified: false,
+      style: "classic",
+      isPrivate: false,
+      properties: {},
+      avatarUrls: {
+        "48x48": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`,
+        "24x24": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`,
+        "16x16": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`,
+        "32x32": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`
+      },
+      lead: { self: `${req.protocol}://${req.get('host')}/rest/api/2/user?username=admin`, key: "admin", accountId: "usr-1", accountType: "atlassian", name: "admin", displayName: "Security Admin", active: true },
       components: [
         { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10001`, id: "10001", name: "Backend SAST", description: "Backend services" },
         { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10002`, id: "10002", name: "Frontend SAST", description: "UI components" },
         { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10003`, id: "10003", name: "DevOps Infrastructure", description: "CI/CD & Docker" },
         { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10004`, id: "10004", name: "General Security", description: "Overall audit" }
       ],
-      issueTypes: getEnrichedIssueTypes(req),
+      issueTypes: [
+        { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", description: "Уязвимость безопасности или баг", iconUrl: `${req.protocol}://${req.get('host')}/images/icons/issuetypes/bug.png`, name: "Bug", subtask: false, avatarId: 1 },
+        { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", description: "Задача разработки", iconUrl: `${req.protocol}://${req.get('host')}/images/icons/issuetypes/task.png`, name: "Task", subtask: false, avatarId: 2 },
+        { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", description: "Уязвимость SAST/DAST", iconUrl: `${req.protocol}://${req.get('host')}/images/icons/issuetypes/vuln.png`, name: "Vulnerability", subtask: false, avatarId: 3 }
+      ],
       assigneeType: "PROJECT_LEAD",
       versions: [],
       roles: { "Administrators": `${req.protocol}://${req.get('host')}/rest/api/2/project/${pKey}/role/10002` }
     };
   };
-  
+
   const handleJiraProjects = async (req, res) => {
     const url = req.originalUrl || req.url || req.path || '';
-    const list = (dbData.projects && dbData.projects.length > 0)
-      ? dbData.projects.map(p => getProjectObject(req, p.key || p.id))
-      : [getProjectObject(req, 'PULSE')];
+    const rawList = [getProjectObject(req, 'PULSE')];
+      
+    const list = rawList.map(p => {
+      // В списке проектов отдаем облегченный issueTypes, без тяжелых fields и statuses (иначе Java парсер падает)
+      const cleanIssueTypes = (p.issueTypes || []).map(it => {
+        const { fields, statuses, ...itCompact } = it;
+        return itCompact;
+      });
+      return { ...p, issueTypes: cleanIssueTypes };
+    });
+
     if (url.includes('/project/search') || url.includes('/project?')) {
       return res.status(200).json({ maxResults: 50, startAt: 0, total: list.length, isLast: true, values: list, projects: list });
     }
@@ -257,37 +298,23 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
       const found = issueTypes.find(t => t.id === matchedId) || issueTypes[2];
       return res.status(200).json(found);
     }
-    return res.status(200).json({
-      maxResults: 50,
-      startAt: 0,
-      total: issueTypes.length,
-      isLast: true,
-      values: issueTypes,
-      issueTypes: issueTypes
-    });
+    return res.status(200).json(issueTypes);
   };
   
   const handleJiraPriorities = async (req, res) => {
     const url = req.originalUrl || req.url || req.path || '';
     const priorities = [
-      { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/1`, statusColor: "#ef4444", description: "Critical / Highest", iconUrl: "", name: "Highest", id: "1" },
-      { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/2`, statusColor: "#f97316", description: "High", iconUrl: "", name: "High", id: "2" },
-      { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/3`, statusColor: "#eab308", description: "Medium", iconUrl: "", name: "Medium", id: "3" },
-      { self: `${req.protocol}://${req.get('host')}/rest/api/4/priority/4`, statusColor: "#3b82f6", description: "Low", iconUrl: "", name: "Low", id: "4" }
+      { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/1`, statusColor: "#ef4444", description: "Critical / Highest", iconUrl: `${req.protocol}://${req.get('host')}/images/icons/priority.png`, name: "Highest", id: "1" },
+      { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/2`, statusColor: "#f97316", description: "High", iconUrl: `${req.protocol}://${req.get('host')}/images/icons/priority.png`, name: "High", id: "2" },
+      { self: `${req.protocol}://${req.get('host')}/rest/api/2/priority/3`, statusColor: "#eab308", description: "Medium", iconUrl: `${req.protocol}://${req.get('host')}/images/icons/priority.png`, name: "Medium", id: "3" },
+      { self: `${req.protocol}://${req.get('host')}/rest/api/4/priority/4`, statusColor: "#3b82f6", description: "Low", iconUrl: `${req.protocol}://${req.get('host')}/images/icons/priority.png`, name: "Low", id: "4" }
     ];
     if (url.match(/\/priority\/([1-4])$/)) {
       const matchedId = url.match(/\/priority\/([1-4])$/)[1];
       const found = priorities.find(p => p.id === matchedId) || priorities[0];
       return res.status(200).json(found);
     }
-    return res.status(200).json({
-      maxResults: 50,
-      startAt: 0,
-      total: priorities.length,
-      isLast: true,
-      values: priorities,
-      priorities: priorities
-    });
+    return res.status(200).json(priorities);
   };
   
   const handleJiraFields = async (req, res) => {
@@ -313,9 +340,9 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
   const handleJiraStatuses = async (req, res) => {
     const url = req.originalUrl || req.url || req.path || '';
     const statusList = [
-      { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/1`, description: "Новый инцидент", iconUrl: "", name: "New", id: "1", statusCategory: { id: 2, key: "new", colorName: "blue-gray", name: "To Do" } },
-      { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/2`, description: "В работе", iconUrl: "", name: "In Progress", id: "2", statusCategory: { id: 4, key: "indeterminate", colorName: "yellow", name: "In Progress" } },
-      { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/3`, description: "Решено", iconUrl: "", name: "Done", id: "3", statusCategory: { id: 3, key: "done", colorName: "green", name: "Done" } }
+      { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/1`, description: "Новый инцидент", iconUrl: `${req.protocol}://${req.get('host')}/images/icons/priority.png`, name: "New", id: "1", statusCategory: { id: 2, key: "new", colorName: "blue-gray", name: "To Do" } },
+      { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/2`, description: "В работе", iconUrl: `${req.protocol}://${req.get('host')}/images/icons/priority.png`, name: "In Progress", id: "2", statusCategory: { id: 4, key: "indeterminate", colorName: "yellow", name: "In Progress" } },
+      { self: `${req.protocol}://${req.get('host')}/rest/api/2/status/3`, description: "Решено", iconUrl: `${req.protocol}://${req.get('host')}/images/icons/priority.png`, name: "Done", id: "3", statusCategory: { id: 3, key: "done", colorName: "green", name: "Done" } }
     ];
   
     if (url.includes('/project/') && url.includes('/statuses')) {
@@ -382,9 +409,17 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
   
     let projectsList = [
       {
+        expand: "issuetypes",
+        self: `${req.protocol}://${req.get('host')}/rest/api/2/project/10001`,
         id: "10001",
         key: "PULSE",
         name: "Pulse Corporate Security & Dev Project",
+        avatarUrls: {
+          "48x48": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`,
+          "24x24": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`,
+          "16x16": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`,
+          "32x32": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`
+        },
         issuetypes: issueTypesList
       }
     ];
@@ -396,9 +431,17 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
       if (projectsList.length === 0) {
         projectsList = [
           {
+            expand: "issuetypes",
+            self: `${req.protocol}://${req.get('host')}/rest/api/2/project/${req.query.projectIds ? String(req.query.projectIds).split(',')[0] : "10001"}`,
             id: req.query.projectIds ? String(req.query.projectIds).split(',')[0] : "10001",
             key: req.query.projectKeys ? String(req.query.projectKeys).split(',')[0].toUpperCase() : "PULSE",
             name: "Pulse Corporate Security & Dev Project",
+            avatarUrls: {
+              "48x48": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`,
+              "24x24": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`,
+              "16x16": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`,
+              "32x32": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`
+            },
             issuetypes: issueTypesList
           }
         ];
@@ -479,8 +522,8 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
   app.get(['/rest/api/2/issuetype', '/rest/api/2/issuetype/project', '/rest/api/3/issuetype/project', '/api/v1/webhooks/derscanner/rest/api/2/issuetype', '/api/v1/webhooks/derscanner/rest/api/2/issuetype/project'], handleJiraIssueTypes);
   app.get(['/rest/api/2/priority', '/rest/api/2/priority/project', '/api/v1/webhooks/derscanner/rest/api/2/priority', '/api/v1/webhooks/derscanner/rest/api/2/priority/project'], handleJiraPriorities);
   app.get(['/rest/api/2/field', '/rest/api/2/field/project', '/api/v1/webhooks/derscanner/rest/api/2/field', '/api/v1/webhooks/derscanner/rest/api/2/field/project'], handleJiraFields);
-  app.use('/rest/api/2/issue/createmeta', handleJiraCreateMeta);
-  app.use('/api/v1/webhooks/derscanner/rest/api/2/issue/createmeta', handleJiraCreateMeta);
+  app.use(['/rest/api/2/issue/createmeta', '/api/v1/webhooks/derscanner/rest/api/2/issue/createmeta'], handleJiraCreateMeta);
+
   app.post(['/rest/api/2/issue', '/api/v1/webhooks/derscanner/rest/api/2/issue'], handleJiraCreateIssue);
   const handleWildcard = async (req, res) => {
     const url = req.originalUrl || req.url || req.path || '';
