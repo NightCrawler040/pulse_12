@@ -789,7 +789,7 @@ app.delete('/api/api-keys/:id', requireAdmin, async (req, res) => {
 
 
 
-  mountJiraGateway(app, dbData, broadcastUpdate, saveCollection);
+  mountJiraGateway(app, () => dbData, broadcastUpdate, saveCollection);
 
 // --- WEBSOCKET REAL-TIME SYNC & ONLINE PRESENCE ---
 const onlineSockets = new Map(); // socket.id -> userId
