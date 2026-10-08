@@ -357,33 +357,31 @@ ${indicatorItemsXml}
 
     // --- Интеграция с FortiGate (Auto-Ban) ---
     if (uniqueIps.length > 0 && currentDbData.fortigateSettings?.enabled && currentDbData.fortigateSettings?.autoBanEnabled) {
-      let bannedCount = 0;
-      const oldBannedLength = currentDbData.bannedIps ? currentDbData.bannedIps.length : 0;
+      fortigateBanStatus = `<br/><br/><strong>[SOAR Auto-Ban]</strong> Запущен фоновый процесс блокировки ${uniqueIps.length} адресов на FortiGate...`;
       
-      for (const ip of uniqueIps) {
-        const success = await banIpAddress(currentDbData.fortigateSettings, ip);
-        if (success) {
-          bannedCount++;
-          // Сохраняем в bannedIps с таймером 3 месяца или бессрочно или до конкретной даты
-          const banDuration = currentDbData.fortigateSettings.banDurationDays || 90;
-          let expiresAt = Date.now() + (banDuration * 24 * 60 * 60 * 1000);
-          
-          if (isPermanent) {
-            expiresAt = Date.now() + 100 * 365 * 24 * 60 * 60 * 1000;
-          } else if (parsedExpirationDate) {
-            expiresAt = parsedExpirationDate;
+      // Запускаем процесс блокировки в фоне, чтобы не вешать IMAP парсер (особенно при таймаутах)
+      (async () => {
+        let bannedCount = 0;
+        const oldBannedLength = currentDbData.bannedIps ? currentDbData.bannedIps.length : 0;
+        
+        for (const ip of uniqueIps) {
+          const success = await banIpAddress(currentDbData.fortigateSettings, ip);
+          if (success) {
+            bannedCount++;
+            const banDuration = currentDbData.fortigateSettings.banDurationDays || 90;
+            let expiresAt = Date.now() + (banDuration * 24 * 60 * 60 * 1000);
+            
+            if (isPermanent) expiresAt = Date.now() + 100 * 365 * 24 * 60 * 60 * 1000;
+            else if (parsedExpirationDate) expiresAt = parsedExpirationDate;
+            
+            if (!currentDbData.bannedIps) currentDbData.bannedIps = [];
+            currentDbData.bannedIps = currentDbData.bannedIps.filter(b => b.ip !== ip);
+            currentDbData.bannedIps.push({ ip, bannedAt: Date.now(), expiresAt, isPermanent });
           }
-          
-          if (!currentDbData.bannedIps) currentDbData.bannedIps = [];
-          currentDbData.bannedIps = currentDbData.bannedIps.filter(b => b.ip !== ip);
-          currentDbData.bannedIps.push({ ip, bannedAt: Date.now(), expiresAt, isPermanent });
         }
-      }
-      
-      
-      if (bannedCount > 0) {
-        fortigateBanStatus = `<br/><br/><strong>[SOAR Auto-Ban]</strong> ${bannedCount} IP-адресов автоматически заблокированы на FortiGate!`;
-        await saveCollection('bannedIps', currentDbData.bannedIps);
+        
+        if (bannedCount > 0) {
+          await saveCollection('bannedIps', currentDbData.bannedIps);
         
         // Проверка лимитов группы FortiGate (например, 500 адресов)
         const newBannedLength = currentDbData.bannedIps.length;
@@ -409,6 +407,7 @@ ${indicatorItemsXml}
           }
         }
       }
+      })();
     }
 
           let displayBody = cleanBody;
@@ -534,7 +533,7 @@ export const startImapService = async (settings, dbData, broadcastUpdate) => {
     let processingStartTime = 0;
     const checkUnread = async () => {
       if (isProcessing) {
-        if (Date.now() - processingStartTime > 60000) {
+        if (Date.now() - processingStartTime > 180000) { // 3 minutes timeout per email
           console.error('⚠️ [IMAP] Проверка почты зависла (мертвый сокет). Принудительный рестарт...');
           if (client) {
             try { client.close(); } catch(e) {}
@@ -548,8 +547,18 @@ export const startImapService = async (settings, dbData, broadcastUpdate) => {
       try {
         const searchOptions = { seen: false };
         for await (let msg of client.fetch(searchOptions, { source: true, uid: true, headers: ['message-id'] })) {
-          await processEmail(msg, msg.uid);
-          await client.messageFlagsAdd(msg.uid, ['\\Seen'], { uid: true });
+          processingStartTime = Date.now(); // Reset timeout for each email
+          try {
+            await processEmail(msg, msg.uid);
+          } catch (err) {
+            console.error(`⚠️ [IMAP] Ошибка при обработке письма UID ${msg.uid}:`, err);
+          }
+          // Всегда помечаем прочитанным, даже если была ошибка, чтобы не зациклиться на одном битом письме
+          try {
+            await client.messageFlagsAdd(msg.uid, ['\\Seen'], { uid: true });
+          } catch (flagErr) {
+            console.error(`⚠️ [IMAP] Не удалось пометить письмо UID ${msg.uid} прочитанным:`, flagErr);
+          }
         }
       } catch (e) {
         console.error('⚠️ [IMAP] Ошибка в процессе чтения:', e.message);
