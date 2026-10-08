@@ -216,8 +216,13 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
       
     // Strip heavy and detail-only fields to avoid crashing strict Java parsers
     const list = rawList.map(p => {
-      const { description, lead, components, assigneeType, versions, roles, expand, ...compact } = p;
-      return { ...compact, expand: "description,lead,url,projectKeys,issueTypes" };
+      const { description, lead, components, assigneeType, versions, roles, expand, issueTypes, ...compact } = p;
+      // В списке проектов отдаем облегченный issueTypes, без тяжелых fields и statuses (иначе Java парсер падает с UnrecognizedPropertyException)
+      const cleanIssueTypes = (issueTypes || []).map(it => {
+        const { fields, statuses, ...itCompact } = it;
+        return itCompact;
+      });
+      return { ...compact, issueTypes: cleanIssueTypes, expand: "description,lead,url,projectKeys,issueTypes" };
     });
 
     if (url.includes('/project/search') || url.includes('/project?')) {
