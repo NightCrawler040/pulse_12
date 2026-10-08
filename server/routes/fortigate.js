@@ -1,6 +1,6 @@
 import { saveCollection } from '../db.js';
 import express from 'express';
-import { banIpAddress, unbanIpAddress } from '../services/fortigateService.js';
+import { banIpAddress, unbanIpAddress, allocateFortigateGroup } from '../services/fortigateService.js';
 
 export default function createFortigateRouter(requireAuth, requireAdmin) {
   const router = express.Router();
@@ -43,10 +43,11 @@ export default function createFortigateRouter(requireAuth, requireAdmin) {
   }
   try {
     const testIp = '1.1.1.1';
-    const success = await banIpAddress(current, testIp);
+    const testGroup = current.permGroup || 'Pulse_Perm';
+    const success = await banIpAddress(current, testIp, testGroup);
     if (success) {
       if (current.unbanUrl) {
-        await unbanIpAddress(current, testIp);
+        await unbanIpAddress(current, testIp, testGroup);
       }
       res.json({ success: true, message: 'Тестовый IP заблокирован и разблокирован в FortiGate.' });
     } else {
@@ -69,8 +70,9 @@ export default function createFortigateRouter(requireAuth, requireAdmin) {
     const settings = workspaceId && req.dbData.fortigateSettings ? (req.dbData.fortigateSettings[workspaceId] || {}) : (req.dbData.fortigateSettings || {});
     try {
       let success = true;
+      const assignedGroup = allocateFortigateGroup(req.dbData.bannedIps || [], isPermanent, settings);
       if (settings.enabled && settings.banUrl) {
-        success = await banIpAddress(settings, ip);
+        success = await banIpAddress(settings, ip, assignedGroup);
       }
       
       if (success) {
@@ -86,7 +88,7 @@ export default function createFortigateRouter(requireAuth, requireAdmin) {
            finalExpiresAt = Date.now() + (banDuration * 24 * 60 * 60 * 1000);
         }
 
-        const newBan = { ip, bannedAt: Date.now(), expiresAt: finalExpiresAt, isPermanent: !!isPermanent };
+        const newBan = { ip, bannedAt: Date.now(), expiresAt: finalExpiresAt, isPermanent: !!isPermanent, fortigateGroup: assignedGroup };
         req.dbData.bannedIps.push(newBan);
         await saveCollection('bannedIps', req.dbData.bannedIps);
         
@@ -106,8 +108,10 @@ export default function createFortigateRouter(requireAuth, requireAdmin) {
     const settings = workspaceId && req.dbData.fortigateSettings ? (req.dbData.fortigateSettings[workspaceId] || {}) : (req.dbData.fortigateSettings || {});
     try {
       let success = true;
+      const banRecord = (req.dbData.bannedIps || []).find(b => b.ip === ip);
+      const groupToUnban = banRecord ? banRecord.fortigateGroup : (settings.permGroup || 'Pulse_Perm');
       if (settings.enabled && settings.unbanUrl) {
-        success = await unbanIpAddress(settings, ip);
+        success = await unbanIpAddress(settings, ip, groupToUnban);
       }
       
       if (success) {
