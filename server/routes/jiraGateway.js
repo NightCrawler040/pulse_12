@@ -20,8 +20,8 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
   
   const handleExternalWebhook = async (req, res) => {
     const token = extractTokenFromRequest(req);
-    if (!dbData.api_keys) dbData.api_keys = [];
-    const matchedKey = dbData.api_keys.find(k => k.key === token || k.name === token);
+    if (!dbData().api_keys) dbData().api_keys = [];
+    const matchedKey = dbData().api_keys.find(k => k.key === token || k.name === token);
   
     const isDefaultKey = token.startsWith('ds-live-') || token === 'admin' || token === 'derscanner' ;
     if (!matchedKey && !isDefaultKey) {
@@ -31,7 +31,7 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
   
     if (matchedKey) {
       matchedKey.lastUsedAt = new Date().toISOString();
-      saveCollection('api_keys', dbData.api_keys).catch(() => {});
+      saveCollection('api_keys', dbData().api_keys).catch(() => {});
     }
   
     const payload = req.body || {};
@@ -73,7 +73,7 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
   
   const requireJiraAuth = (req, res, next) => {
     const token = extractTokenFromRequest(req);
-    const matchedKey = (dbData.api_keys || []).find(k => k.key === token || k.name === token);
+    const matchedKey = (dbData().api_keys || []).find(k => k.key === token || k.name === token);
     const isDefaultKey = token.startsWith('ds-live-') || token === 'admin' || token === 'derscanner';
     
     if (!matchedKey && !isDefaultKey) {
@@ -83,7 +83,7 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
     
     if (matchedKey) {
       matchedKey.lastUsedAt = new Date().toISOString();
-      saveCollection('api_keys', dbData.api_keys).catch(() => {});
+      saveCollection('api_keys', dbData().api_keys).catch(() => {});
     }
     req.jiraUserToken = token;
     next();
@@ -119,7 +119,7 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
   };
   
   const getJiraUsersList = (req) => {
-    const list = (dbData.users && dbData.users.length > 0) ? dbData.users : (dbData.employees && dbData.employees.length > 0 ? dbData.employees : []);
+    const list = (dbData().users && dbData().users.length > 0) ? dbData().users : (dbData().employees && dbData().employees.length > 0 ? dbData().employees : []);
     return list.map(u => ({
       self: `${req.protocol}://${req.get('host')}/rest/api/2/user?username=${encodeURIComponent(u.login || u.name || u.id)}`,
       key: u.login || u.name || u.id,
@@ -269,7 +269,7 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
   };
   
   const handleJiraSearch = async (req, res) => {
-    const issues = (dbData.tasks || []).slice(0, 20).map(t => ({
+    const issues = (dbData().tasks || []).slice(0, 20).map(t => ({
       expand: "operations,versionedRepresentations,editmeta,changelog,renderedFields",
       id: String(t.id),
       self: `${req.protocol}://${req.get('host')}/rest/api/2/issue/${t.id}`,
@@ -455,7 +455,7 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
   
   const handleJiraCreateIssue = async (req, res) => {
     const token = extractTokenFromRequest(req);
-    const matchedKey = dbData.api_keys?.find(k => k.key === token || k.name === token);
+    const matchedKey = dbData().api_keys?.find(k => k.key === token || k.name === token);
     
     const fields = (req.body && req.body.fields) || req.body || {};
     const summary = fields.summary || fields.title || "DerScanner Security Finding";
@@ -530,7 +530,7 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
     console.log(`⚠️ [Jira Gateway Wildcard] ${req.method} ${url}`);
     res.status(200).json({ success: true, warning: 'Wildcard mocked response' });
   };
-  app.get('/api/debug-users', (req, res) => res.json({ usersCount: dbData.users ? dbData.users.length : 0, employeesCount: dbData.employees ? dbData.employees.length : 0 }));
+  app.get('/api/debug-users', (req, res) => res.json({ usersCount: dbData().users ? dbData().users.length : 0, employeesCount: dbData().employees ? dbData().employees.length : 0 }));
   app.use('/rest', handleWildcard);
   app.use('/api/v1/webhooks/derscanner', handleWildcard);
   
