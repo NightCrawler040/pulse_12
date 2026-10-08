@@ -22,7 +22,7 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
     const matchedKey = dbData.api_keys.find(k => k.key === token || k.name === token);
   
     const isDefaultKey = token.startsWith('ds-live-') || token === 'admin' || token === 'derscanner' ;
-    if (!matchedKey && !isDefaultKey && !req.path.includes('/rest/api/')) {
+    if (!matchedKey && !isDefaultKey) {
       console.warn(`🚨 [Webhook Auth Error] Неверный API-ключ от внешнего сканера: ${token || 'отсутствует'}`);
       return res.status(401).json({ error: 'Отказано в доступе: неверный или отсутствующий X-API-Key или заголовок Authorization' });
     }
@@ -68,6 +68,25 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
   };
   
   // --- JIRA REST API COMPATIBILITY GATEWAY (Для привязки аккаунта в DerScanner: Аккаунт > Доступы > Таск-менеджер / Jira) ---
+  
+  const requireJiraAuth = (req, res, next) => {
+    const token = extractTokenFromRequest(req);
+    const matchedKey = (dbData.api_keys || []).find(k => k.key === token || k.name === token);
+    const isDefaultKey = token.startsWith('ds-live-') || token === 'admin' || token === 'derscanner';
+    
+    if (!matchedKey && !isDefaultKey) {
+      console.warn(`🚨 [Jira Auth Error] Отказ в доступе к ${req.method} ${req.path}. Токен: ${token || 'отсутствует'}`);
+      return res.status(401).json({ error: 'Unauthorized', message: 'Неверный логин или токен доступа' });
+    }
+    
+    if (matchedKey) {
+      matchedKey.lastUsedAt = new Date().toISOString();
+      saveCollection('api_keys', dbData.api_keys).catch(() => {});
+    }
+    req.jiraUserToken = token;
+    next();
+  };
+
   const handleJiraServerInfo = async (req, res) => {
     res.status(200).json({
       baseUrl: req.protocol + '://' + req.get('host'),
