@@ -550,7 +550,10 @@ export const startImapService = async (settings, dbData, broadcastUpdate) => {
       processingStartTime = Date.now();
       try {
         const searchOptions = { seen: false };
-        for await (let msg of client.fetch(searchOptions, { source: true, uid: true, headers: ['message-id'] })) {
+        const uids = await client.search(searchOptions);
+        if (uids.length > 0) console.log(`[IMAP] Найдено непрочитанных писем в INBOX: ${uids.length}`);
+        if (uids.length === 0) { isProcessing = false; return; }
+        for await (let msg of client.fetch(uids, { source: true, uid: true, headers: ['message-id'] })) {
           processingStartTime = Date.now(); // Reset timeout for each email
           try {
             await processEmail(msg, msg.uid);
