@@ -119,8 +119,7 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
   };
   
   const getJiraUsersList = (req) => {
-    let list = (dbData.users && dbData.users.length > 0) ? dbData.users : (dbData.employees && dbData.employees.length > 0 ? dbData.employees : []);
-    if (list.length === 0) list = [{ login: 'admin', name: 'System Admin', email: 'admin@pulse12.local', role: 'Security Lead' }];
+    const list = (dbData.users && dbData.users.length > 0) ? dbData.users : (dbData.employees && dbData.employees.length > 0 ? dbData.employees : []);
     return list.map(u => ({
       self: `${req.protocol}://${req.get('host')}/rest/api/2/user?username=${encodeURIComponent(u.login || u.name || u.id)}`,
       key: u.login || u.name || u.id,
