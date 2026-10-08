@@ -216,15 +216,13 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
       ? dbData.projects.map(p => getProjectObject(req, p.key || p.id))
       : [getProjectObject(req, 'PULSE')];
       
-    // Strip heavy and detail-only fields to avoid crashing strict Java parsers
     const list = rawList.map(p => {
-      const { description, lead, components, assigneeType, versions, roles, expand, issueTypes, ...compact } = p;
-      // В списке проектов отдаем облегченный issueTypes, без тяжелых fields и statuses (иначе Java парсер падает с UnrecognizedPropertyException)
-      const cleanIssueTypes = (issueTypes || []).map(it => {
+      // В списке проектов отдаем облегченный issueTypes, без тяжелых fields и statuses (иначе Java парсер падает)
+      const cleanIssueTypes = (p.issueTypes || []).map(it => {
         const { fields, statuses, ...itCompact } = it;
         return itCompact;
       });
-      return { ...compact, issueTypes: cleanIssueTypes, expand: "description,lead,url,projectKeys,issueTypes" };
+      return { ...p, issueTypes: cleanIssueTypes };
     });
 
     if (url.includes('/project/search') || url.includes('/project?')) {
