@@ -81,8 +81,12 @@ const loadLocalFile = () => {
           notifications: parsed.notifications || [],
           findings: parsed.findings || [],
           api_keys: parsed.api_keys || [],
+          workspaces: parsed.workspaces || [],
+          hr_orders: parsed.hr_orders || [],
+          globalSettings: parsed.globalSettings || {},
           ldap_settings: parsed.ldap_settings || { ...defaultLdapSettings },
           mailSettings: parsed.mailSettings || {},
+          imapSettings: parsed.imapSettings || {},
           fortigateSettings: parsed.fortigateSettings || { ...defaultFortigateSettings },
           bannedIps: parsed.bannedIps || [],
           notificationEvents: parsed.notificationEvents || {}
@@ -197,13 +201,17 @@ export const initDb = async () => {
             sprints: allPgData.sprints || [],
             users: allPgData.users || [],
             groups: allPgData.groups || [],
+            workspaces: allPgData.workspaces || [],
             notifications: allPgData.notifications || [],
             findings: allPgData.findings || [],
             api_keys: allPgData.api_keys || [],
+            hr_orders: allPgData.hr_orders || [],
+            globalSettings: allPgData.globalSettings || {},
             ldap_settings: allPgData.ldap_settings || { ...defaultLdapSettings },
             mailSettings: allPgData.mailSettings || {},
             notificationEvents: allPgData.notificationEvents || {},
             imapSettings: allPgData.imapSettings || {},
+            fortigateSettings: allPgData.fortigateSettings || { ...defaultFortigateSettings },
             processedEmails: allPgData.processedEmails || []
           };
           saveLocalFile();

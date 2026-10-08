@@ -91,6 +91,8 @@ export const getSanitizedDbData = () => {
 export const getSanitizedDbDataForUser = (user) => {
   const data = getSanitizedDbData();
   if (!user || user.roleType === 'admin') {
+    data.api_keys = dbData.api_keys || [];
+    data.fortigateSettings = dbData.fortigateSettings || {};
     return data;
   }
   const userWorkspaces = user.workspaceIds || [];
