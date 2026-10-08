@@ -171,12 +171,11 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
     ];
   };
   
-  const getProjectObject = (req, keyOrId = 'PULSE', compact = false) => {
-    const p = (dbData.projects || []).find(x => String(x.key).toUpperCase() === String(keyOrId).toUpperCase() || String(x.id) === String(keyOrId));
-    const pKey = p ? (p.key || 'PULSE').toUpperCase() : 'PULSE';
-    const pId = p ? String(p.id || '10001') : '10001';
-    const pName = p ? p.name : 'Pulse Corporate Security & Dev Project';
-  
+    const getProjectObject = (req, keyOrId = 'PULSE', compact = false) => {
+    const pKey = 'PULSE';
+    const pId = '10001';
+    const pName = 'Pulse Corporate Security & Dev Project';
+
     return {
       self: `${req.protocol}://${req.get('host')}/rest/api/2/project/${pId}`,
       id: pId,
@@ -184,20 +183,24 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
       name: pName,
       description: "Corporate Jira Project for Security Findings",
       projectTypeKey: "software",
-      lead: { self: `${req.protocol}://${req.get('host')}/rest/api/2/user?username=admin`, key: "admin", accountId: "usr-1", accountType: "atlassian", name: "admin", displayName: "admin (Security Lead)", active: true },
+      lead: { self: `${req.protocol}://${req.get('host')}/rest/api/2/user?username=admin`, key: "admin", name: "admin", displayName: "Security Admin", active: true },
       components: [
         { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10001`, id: "10001", name: "Backend SAST", description: "Backend services" },
         { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10002`, id: "10002", name: "Frontend SAST", description: "UI components" },
         { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10003`, id: "10003", name: "DevOps Infrastructure", description: "CI/CD & Docker" },
         { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10004`, id: "10004", name: "General Security", description: "Overall audit" }
       ],
-      issueTypes: getEnrichedIssueTypes(req).map(t => ({ self: t.self, id: t.id, name: t.name, description: t.description, iconUrl: t.iconUrl, subtask: t.subtask, avatarId: t.avatarId })),
+      issueTypes: [
+        { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", description: "Уязвимость безопасности или баг", iconUrl: "", name: "Bug", subtask: false, avatarId: 1 },
+        { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", description: "Задача разработки", iconUrl: "", name: "Task", subtask: false, avatarId: 2 },
+        { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", description: "Уязвимость SAST/DAST", iconUrl: "", name: "Vulnerability", subtask: false, avatarId: 3 }
+      ],
       assigneeType: "PROJECT_LEAD",
       versions: [],
       roles: { "Administrators": `${req.protocol}://${req.get('host')}/rest/api/2/project/${pKey}/role/10002` }
     };
   };
-  
+
   const handleJiraProjects = async (req, res) => {
     const url = req.originalUrl || req.url || req.path || '';
     const rawList = [getProjectObject(req, 'PULSE')];
