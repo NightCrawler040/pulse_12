@@ -805,11 +805,15 @@ setIo(io);
   // Removed init-data on raw connection (Bug #5). Will send after user-online.
   broadcastOnlineUsers();
 
-  socket.on('user-online', async (userId) => {
-    if (userId) {
-      onlineSockets.set(socket.id, userId);
-      console.log(`🟢 User ${userId} is online on socket ${socket.id}`);
+  socket.on('user-online', async (payload) => {
+    const uid = typeof payload === 'string' ? payload : (payload?.userId);
+    if (uid) {
+      onlineSockets.set(socket.id, uid);
+      console.log(`🟢 User ${uid} is online on socket ${socket.id}`);
       broadcastOnlineUsers();
+      
+      const user = dbData.users.find(u => u.id === uid && u.isActive !== false);
+      socket.emit('init-data', getSanitizedDbDataForUser(user || null));
     }
   });
 
