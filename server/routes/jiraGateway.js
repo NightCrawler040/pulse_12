@@ -164,6 +164,11 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
       name: pName,
       description: "Единый контур управления разработкой и информационной безопасностью Pulse",
       projectTypeKey: "software",
+      projectCategory: { id: "10000", name: "Security", description: "Security Scans" },
+      simplified: false,
+      style: "classic",
+      isPrivate: false,
+      properties: {},
       avatarUrls: {
         "48x48": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`,
         "24x24": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`,
@@ -177,7 +182,7 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
         { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10003`, id: "10003", name: "DevOps Infrastructure", description: "CI/CD & Docker" },
         { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10004`, id: "10004", name: "General Security", description: "Overall audit" }
       ],
-      issueTypes: getEnrichedIssueTypes(req),
+      issueTypes: getEnrichedIssueTypes(req).map(t => ({ self: t.self, id: t.id, name: t.name, description: t.description, iconUrl: t.iconUrl, subtask: t.subtask })),
       assigneeType: "PROJECT_LEAD",
       versions: [],
       roles: { "Administrators": `${req.protocol}://${req.get('host')}/rest/api/2/project/${pKey}/role/10002` }
