@@ -150,7 +150,7 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
     ];
   };
   
-  const getProjectObject = (req, keyOrId = 'PULSE') => {
+  const getProjectObject = (req, keyOrId = 'PULSE', compact = false) => {
     const p = (dbData.projects || []).find(x => String(x.key).toUpperCase() === String(keyOrId).toUpperCase() || String(x.id) === String(keyOrId));
     const pKey = p ? (p.key || 'PULSE').toUpperCase() : 'PULSE';
     const pId = p ? String(p.id || '10001') : '10001';
@@ -191,9 +191,16 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
   
   const handleJiraProjects = async (req, res) => {
     const url = req.originalUrl || req.url || req.path || '';
-    const list = (dbData.projects && dbData.projects.length > 0)
+    const rawList = (dbData.projects && dbData.projects.length > 0)
       ? dbData.projects.map(p => getProjectObject(req, p.key || p.id))
       : [getProjectObject(req, 'PULSE')];
+      
+    // Strip heavy and detail-only fields to avoid crashing strict Java parsers
+    const list = rawList.map(p => {
+      const { description, lead, components, assigneeType, versions, roles, expand, ...compact } = p;
+      return { ...compact, expand: "description,lead,url,projectKeys,issueTypes" };
+    });
+
     if (url.includes('/project/search') || url.includes('/project?')) {
       return res.status(200).json({ maxResults: 50, startAt: 0, total: list.length, isLast: true, values: list, projects: list });
     }
@@ -391,9 +398,17 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
   
     let projectsList = [
       {
+        expand: "issuetypes",
+        self: `${req.protocol}://${req.get('host')}/rest/api/2/project/10001`,
         id: "10001",
         key: "PULSE",
         name: "Pulse Corporate Security & Dev Project",
+        avatarUrls: {
+          "48x48": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`,
+          "24x24": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`,
+          "16x16": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`,
+          "32x32": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`
+        },
         issuetypes: issueTypesList
       }
     ];
@@ -405,9 +420,17 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
       if (projectsList.length === 0) {
         projectsList = [
           {
+            expand: "issuetypes",
+            self: `${req.protocol}://${req.get('host')}/rest/api/2/project/${req.query.projectIds ? String(req.query.projectIds).split(',')[0] : "10001"}`,
             id: req.query.projectIds ? String(req.query.projectIds).split(',')[0] : "10001",
             key: req.query.projectKeys ? String(req.query.projectKeys).split(',')[0].toUpperCase() : "PULSE",
             name: "Pulse Corporate Security & Dev Project",
+            avatarUrls: {
+              "48x48": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`,
+              "24x24": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`,
+              "16x16": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`,
+              "32x32": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`
+            },
             issuetypes: issueTypesList
           }
         ];
