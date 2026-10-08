@@ -164,6 +164,12 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
       name: pName,
       description: "Единый контур управления разработкой и информационной безопасностью Pulse",
       projectTypeKey: "software",
+      avatarUrls: {
+        "48x48": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`,
+        "24x24": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`,
+        "16x16": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`,
+        "32x32": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`
+      },
       lead: { self: `${req.protocol}://${req.get('host')}/rest/api/2/user?username=admin`, key: "admin", accountId: "usr-1", accountType: "atlassian", name: "admin", displayName: "admin (Security Lead)", active: true },
       components: [
         { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10001`, id: "10001", name: "Backend SAST", description: "Backend services" },
