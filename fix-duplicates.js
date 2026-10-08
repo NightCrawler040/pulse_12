@@ -27,12 +27,12 @@ try {
     process.exit(0);
   }
 
-  console.log(\`⚠️ Найдено \${duplicates.length} дубликатов задач. Исправляем...\`);
+  console.log(`⚠️ Найдено ${duplicates.length} дубликатов задач. Исправляем...`);
 
   // Находим максимальный ID для генерации новых
   let maxIdNum = 100;
   tasks.forEach(t => {
-    const m = t.id && String(t.id).match(/^NEX-(\\d+)$/);
+    const m = t.id && String(t.id).match(/^NEX-(\d+)$/);
     if (m) {
       const num = parseInt(m[1], 10);
       if (num > maxIdNum) maxIdNum = num;
@@ -47,15 +47,15 @@ try {
     if (seenIds.has(t.id)) {
       maxIdNum++;
       const oldId = t.id;
-      t.id = \`NEX-\${maxIdNum}\`;
-      console.log(\`🔄 Исправлено: \${oldId} -> \${t.id} ("\${t.title}")\`);
+      t.id = `NEX-${maxIdNum}`;
+      console.log(`🔄 Исправлено: ${oldId} -> ${t.id} ("${t.title}")`);
       fixedCount++;
     }
     seenIds.add(t.id);
   });
 
   fs.writeFileSync(dbPath, JSON.stringify(dbData, null, 2), 'utf8');
-  console.log(\`✅ Успешно исправлено задач: \${fixedCount}\`);
+  console.log(`✅ Успешно исправлено задач: ${fixedCount}`);
 } catch (e) {
   console.error('❌ Ошибка при исправлении базы:', e);
 }
