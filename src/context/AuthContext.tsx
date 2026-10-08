@@ -24,7 +24,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const AUTH_STORAGE_KEY = 'korpjira-flowspace-auth-v1';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { users, groups, updateUser } = useTaskContext();
+  const { users, groups, updateUser, isServerConnected } = useTaskContext();
   const [currentUserId, setCurrentUserId] = useState<string | null>(() => {
     try {
       const saved = localStorage.getItem(AUTH_STORAGE_KEY);
@@ -49,7 +49,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [currentUserId]);
 
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser?.id && isServerConnected) {
       try {
         const socket = getSocket();
         socket.emit('user-online', currentUser.id);
@@ -57,7 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Socket emit error:', err);
       }
     }
-  }, [currentUser]);
+  }, [currentUser?.id, isServerConnected]);
 
   const [sessionExpired, setSessionExpired] = useState(false);
 
