@@ -5,6 +5,12 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pulse - Corporate Task Tracker</title>
+    <script>
+      (function() {
+        var savedTheme = localStorage.getItem('korpjira-theme');
+        document.documentElement.setAttribute('data-theme', savedTheme || 'cyber-theme');
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

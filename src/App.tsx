@@ -19,7 +19,7 @@ import type { Status } from './types';
 import './App.css';
 
 const AppContent: React.FC = () => {
-  const { viewMode, activeTaskModalId, setActiveTaskModalId, setFilters } = useTaskContext();
+  const { viewMode, activeTaskModalId, setActiveTaskModalId, setFilters, isDataLoading } = useTaskContext();
   const { isLoggedIn, isAdmin, currentUser, sessionExpired, clearSessionExpired } = useAuth();
   
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
@@ -63,6 +63,8 @@ const AppContent: React.FC = () => {
         <main className="main-content-area">
           {!isLoggedIn ? (
             <WelcomePage onOpenLogin={() => setIsLoginModalOpen(true)} />
+          ) : isDataLoading ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'hsl(var(--text-secondary))' }}><div className="spinner" style={{ marginRight: '12px' }}></div> Подключение к ядру системы...</div>
           ) : (
             <>
               <React.Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'hsl(var(--text-secondary))' }}><div className="spinner" style={{ marginRight: '12px' }}></div> Загрузка модуля...</div>}>

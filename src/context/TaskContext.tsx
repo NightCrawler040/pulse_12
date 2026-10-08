@@ -24,6 +24,7 @@ interface TaskContextType {
   filteredTasks: Task[];
   activeTaskModalId: string | null;
   isServerConnected: boolean;
+  isDataLoading: boolean;
   isNetworkModalOpen: boolean;
   setIsNetworkModalOpen: (open: boolean) => void;
   setFilters: React.Dispatch<React.SetStateAction<FilterState>>;
@@ -178,6 +179,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [activeTaskModalId, setActiveTaskModalId] = useState<string | null>(null);
   const [isServerConnected, setIsServerConnected] = useState<boolean>(false);
+  const [isDataLoading, setIsDataLoading] = useState<boolean>(true);
   const [socketVersion, setSocketVersion] = useState<number>(0);
 
   useEffect(() => {
@@ -188,7 +190,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const [globalSettings, setGlobalSettings] = useState<any>({});
   const [theme, setThemeState] = useState<string>(() => {
-    const savedTheme = localStorage.getItem(THEME_KEY) || 'light';
+    const savedTheme = localStorage.getItem(THEME_KEY) || 'cyber-theme';
     return savedTheme;
   });
 
@@ -220,10 +222,14 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (Array.isArray(data.workspaces)) { setWorkspaces(data.workspaces); if (data.workspaces.length > 0) setActiveWorkspaceId(data.workspaces[0].id); }
         if (Array.isArray((data as any).hr_orders)) setHrOrders((data as any).hr_orders);
         setIsServerConnected(true);
+        setIsDataLoading(false);
+      } else {
+        setIsDataLoading(false);
       }
     }).catch(() => {
       console.warn('⚠️ Central server unreachable, running in offline/localStorage mode');
       setIsServerConnected(false);
+      setIsDataLoading(false);
     });
 
     const socket = getSocket();
@@ -247,6 +253,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (Array.isArray(data.workspaces)) setWorkspaces(data.workspaces);
       if (Array.isArray(data.hr_orders)) setHrOrders(data.hr_orders);
       if (data.globalSettings) setGlobalSettings(data.globalSettings);
+      setIsDataLoading(false);
     };
     const onOnlineUsersUpdated = (ids: any) => {
       if (Array.isArray(ids)) {
@@ -880,6 +887,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       filteredTasks,
       activeTaskModalId,
       isServerConnected,
+      isDataLoading,
       isNetworkModalOpen,
       setIsNetworkModalOpen,
       setFilters,
