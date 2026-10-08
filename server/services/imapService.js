@@ -586,10 +586,17 @@ export const startImapService = async (settings, dbData, broadcastUpdate) => {
 
       // 3. Запускаем резервный таймер (каждые 60 секунд), так как корпоративный Exchange часто рвет IMAP IDLE
       const fetchInterval = setInterval(async () => {
-        if (client && client.usable) {
+        if (isProcessing) {
+          await checkUnread();
+        } else if (client && client.usable) {
           await checkUnread();
         } else {
+          console.error('⚠️ [IMAP] Клиент не активен (usable=false). Принудительный рестарт...');
           clearInterval(fetchInterval);
+          if (client) {
+            try { client.close(); } catch(e) {}
+            client.emit('error', new Error('Client not usable'));
+          }
         }
       }, 60000);
 
