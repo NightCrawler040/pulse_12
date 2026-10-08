@@ -177,13 +177,25 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
     const pName = 'Pulse Corporate Security & Dev Project';
 
     return {
+      expand: "description,lead,url,projectKeys,permissions,issueTypes",
       self: `${req.protocol}://${req.get('host')}/rest/api/2/project/${pId}`,
       id: pId,
       key: pKey,
       name: pName,
       description: "Corporate Jira Project for Security Findings",
       projectTypeKey: "software",
-      lead: { self: `${req.protocol}://${req.get('host')}/rest/api/2/user?username=admin`, key: "admin", name: "admin", displayName: "Security Admin", active: true },
+      projectCategory: { id: "10000", name: "Security", description: "Security Scans" },
+      simplified: false,
+      style: "classic",
+      isPrivate: false,
+      properties: {},
+      avatarUrls: {
+        "48x48": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`,
+        "24x24": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`,
+        "16x16": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`,
+        "32x32": `${req.protocol}://${req.get('host')}/rest/api/2/universal_avatar/view/type/project/avatar/10400`
+      },
+      lead: { self: `${req.protocol}://${req.get('host')}/rest/api/2/user?username=admin`, key: "admin", accountId: "usr-1", accountType: "atlassian", name: "admin", displayName: "Security Admin", active: true },
       components: [
         { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10001`, id: "10001", name: "Backend SAST", description: "Backend services" },
         { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10002`, id: "10002", name: "Frontend SAST", description: "UI components" },
@@ -191,9 +203,9 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
         { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10004`, id: "10004", name: "General Security", description: "Overall audit" }
       ],
       issueTypes: [
-        { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", description: "Уязвимость безопасности или баг", iconUrl: "", name: "Bug", subtask: false, avatarId: 1 },
-        { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", description: "Задача разработки", iconUrl: "", name: "Task", subtask: false, avatarId: 2 },
-        { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", description: "Уязвимость SAST/DAST", iconUrl: "", name: "Vulnerability", subtask: false, avatarId: 3 }
+        { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10001`, id: "10001", description: "Уязвимость безопасности или баг", iconUrl: `${req.protocol}://${req.get('host')}/images/icons/issuetypes/bug.png`, name: "Bug", subtask: false, avatarId: 1 },
+        { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10002`, id: "10002", description: "Задача разработки", iconUrl: `${req.protocol}://${req.get('host')}/images/icons/issuetypes/task.png`, name: "Task", subtask: false, avatarId: 2 },
+        { self: `${req.protocol}://${req.get('host')}/rest/api/2/issuetype/10003`, id: "10003", description: "Уязвимость SAST/DAST", iconUrl: `${req.protocol}://${req.get('host')}/images/icons/issuetypes/vuln.png`, name: "Vulnerability", subtask: false, avatarId: 3 }
       ],
       assigneeType: "PROJECT_LEAD",
       versions: [],
