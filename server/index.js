@@ -96,7 +96,11 @@ const loginRateLimiter = (req, res, next) => {
 };
 
 // Strict or configurable CORS policy (1.F)
-app.use(cors({ origin: true, credentials: true }));
+app.use(cors({ 
+  origin: true, 
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Requested-With', 'Accept', 'Origin']
+}));
 app.use(express.json({ limit: '2mb' })); // Ограничение размера JSON до безопасных 2 МБ (защита от Payload DoS)
 
 // Global HTTP Request Logger (для отслеживания любых обращений от внешних систем и DerScanner)
