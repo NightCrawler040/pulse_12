@@ -13,8 +13,9 @@ export const parseHrOrderPDF = async (buffer) => {
     const data = await parser.getText();
     const text = data.text;
     
-    // Check if it's an HR Order by looking for "ПРИКАЗЫВАЮ" and "Строго конфиденциально"
-    if (!text.includes('ПРИКАЗЫВАЮ') || !text.includes('Строго конфиденциально')) {
+    const lowerText = text.toLowerCase();
+    if (!lowerText.includes('приказываю') || (!lowerText.includes('о приеме') && !lowerText.includes('расторжении') && !lowerText.includes('отпуска') && !lowerText.includes('перевести') && !lowerText.includes('переводе'))) {
+      console.log('[HR Parser] Пропуск: не найдены ключевые слова приказа');
       return null;
     }
 
