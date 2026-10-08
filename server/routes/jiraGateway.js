@@ -8,7 +8,9 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
       try {
         const decoded = Buffer.from(token.slice(6).trim(), 'base64').toString('utf8');
         const parts = decoded.split(':');
-        return parts[0].trim() || token.trim();
+        const user = parts[0] ? parts[0].trim() : '';
+        const pass = parts.length > 1 ? parts[1].trim() : '';
+        return user.startsWith('ds-') ? user : (pass.startsWith('ds-') ? pass : (user || pass || token.trim()));
       } catch {
         return token.trim();
       }
