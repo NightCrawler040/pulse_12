@@ -530,6 +530,7 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
     console.log(`⚠️ [Jira Gateway Wildcard] ${req.method} ${url}`);
     res.status(200).json({ success: true, warning: 'Wildcard mocked response' });
   };
+  app.get('/api/debug-users', (req, res) => res.json({ usersCount: dbData.users ? dbData.users.length : 0, employeesCount: dbData.employees ? dbData.employees.length : 0 }));
   app.use('/rest', handleWildcard);
   app.use('/api/v1/webhooks/derscanner', handleWildcard);
   
