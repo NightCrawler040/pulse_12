@@ -241,7 +241,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
             )}
           </div>
 
-          {/* Progress Bar & Stats */}\n          {sprintStats && (
+          {/* Progress Bar & Stats */}
+          {sprintStats && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '240px', flex: '0 1 320px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 600, color: 'hsl(var(--text-secondary))' }}>
               <span>Прогресс (Burn-down)</span>
