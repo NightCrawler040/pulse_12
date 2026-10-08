@@ -27,6 +27,7 @@ export interface Attachment {
 
 export interface Task {
   id: string;
+  hrOrderId?: string;
   title: string;
   description: string;
   status: Status;
@@ -161,6 +162,7 @@ export interface Workspace {
 
 export interface HrOrder {
   id: string;
+  taskId?: string;
   workspaceId: string;
   type: 'Прием' | 'Расторжение' | 'Декрет' | 'Перевод' | 'Unknown';
   fullName: string;
