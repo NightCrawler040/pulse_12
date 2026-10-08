@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useTaskContext } from '../../context/TaskContext';
-import { Download, Save, Trash2, FileSpreadsheet } from 'lucide-react';
+import { Download, Save, Trash2, FileSpreadsheet, ExternalLink } from 'lucide-react';
 import './SecurityCenter.css'; // Reuse styles
 
 export const HrOrdersDashboard: React.FC = () => {
-  const { hrOrders, updateHrOrder, deleteHrOrder } = useTaskContext();
+  const { hrOrders, updateHrOrder, deleteHrOrder, setActiveTaskModalId } = useTaskContext();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<any>({});
 
@@ -122,6 +122,11 @@ export const HrOrdersDashboard: React.FC = () => {
                     </button>
                   ) : (
                     <div style={{ display: 'flex', gap: '4px' }}>
+                    {order.taskId && (
+                      <button className="btn-secondary" style={{ padding: '4px 8px', minHeight: 'auto', background: 'hsl(var(--primary) / 0.1)', color: 'hsl(var(--primary))', border: 'none' }} onClick={() => setActiveTaskModalId(order.taskId)} title="Открыть задачу на доске">
+                        <ExternalLink size={14} />
+                      </button>
+                    )}
                     <button className="btn-secondary" style={{ padding: '4px 12px', minHeight: 'auto' }} onClick={() => handleEdit(order)}>
                       Изменить
                     </button>

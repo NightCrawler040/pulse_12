@@ -114,6 +114,8 @@ const processEmail = async (message, uid) => {
         const targetWsId = hrSettings.workspaceId;
 
         hrOrderData.id = crypto.randomUUID();
+        const generatedTaskId = `task-${Date.now()}`;
+        hrOrderData.taskId = generatedTaskId;
         hrOrderData.createdAt = new Date().toISOString();
         hrOrderData.statusKaspersky = 'pending';
         hrOrderData.statusDlpDg = 'pending';
@@ -130,7 +132,8 @@ const processEmail = async (message, uid) => {
         
         // CREATE KANBAN TASK FOR THE GROUP
         const newTask = {
-          id: `task-${Date.now()}`,
+          id: generatedTaskId,
+          hrOrderId: hrOrderData.id,
           title: `JML Приказ: ${hrOrderData.type} - ${hrOrderData.fullName}`,
           description: `**HR Приказ JML**\nФИО: ${hrOrderData.fullName}\nДолжность: ${hrOrderData.newPosition || hrOrderData.oldPosition}\nДата: ${hrOrderData.date}\n
 Пожалуйста, выполните необходимые действия в системах.`,

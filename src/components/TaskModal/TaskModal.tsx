@@ -52,6 +52,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
     addTask, 
     updateTask, 
     deleteTask, 
+    setViewMode,
     addComment
   } = useTaskContext();
 
@@ -440,6 +441,28 @@ export const TaskModal: React.FC<TaskModalProps> = ({ taskId, isOpenNew, default
                 className="input-field title-input"
               />
             </div>
+            {existingTask?.hrOrderId && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(59, 130, 246, 0.08))',
+                border: '1px solid rgba(16, 185, 129, 0.35)',
+                borderRadius: '12px',
+                padding: '16px',
+                marginBottom: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: 'hsl(var(--primary))', fontSize: '0.95rem' }}>
+                    <span>👥</span>
+                    <span>Связанный HR Приказ (JML Интеграция)</span>
+                  </div>
+                  <button className="btn-secondary" style={{ padding: '4px 12px', minHeight: 'auto', fontSize: '0.8rem' }} onClick={(e) => { e.preventDefault(); setViewMode('security'); onClose(); }}>
+                    Открыть панель ИБ
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Security & Project Summary Box */}
             {existingTask && (existingTask.project || existingTask.externalFindingId || existingTask.cwe || existingTask.fileLocation || existingTask.tags?.some(t => ['derscanner', 'siem', 'waf', 'security'].includes(t.toLowerCase()))) && (
