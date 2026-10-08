@@ -522,7 +522,7 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
   app.get(['/rest/api/2/issuetype', '/rest/api/2/issuetype/project', '/rest/api/3/issuetype/project', '/api/v1/webhooks/derscanner/rest/api/2/issuetype', '/api/v1/webhooks/derscanner/rest/api/2/issuetype/project'], handleJiraIssueTypes);
   app.get(['/rest/api/2/priority', '/rest/api/2/priority/project', '/api/v1/webhooks/derscanner/rest/api/2/priority', '/api/v1/webhooks/derscanner/rest/api/2/priority/project'], handleJiraPriorities);
   app.get(['/rest/api/2/field', '/rest/api/2/field/project', '/api/v1/webhooks/derscanner/rest/api/2/field', '/api/v1/webhooks/derscanner/rest/api/2/field/project'], handleJiraFields);
-  app.get(['/rest/api/2/issue/createmeta', '/api/v1/webhooks/derscanner/rest/api/2/issue/createmeta'], handleJiraCreateMeta);
+  app.use(['/rest/api/2/issue/createmeta', '/api/v1/webhooks/derscanner/rest/api/2/issue/createmeta'], handleJiraCreateMeta);
 
   app.post(['/rest/api/2/issue', '/api/v1/webhooks/derscanner/rest/api/2/issue'], handleJiraCreateIssue);
   const handleWildcard = async (req, res) => {
