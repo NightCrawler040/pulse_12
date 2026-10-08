@@ -61,8 +61,8 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
       createdAt: new Date().toISOString()
     };
   
-    if (!dbData.findings) dbData.findings = [];
-    dbData.findings.unshift(newFinding);
+    if (!dbData().findings) dbData().findings = [];
+    dbData().findings.unshift(newFinding);
     try { await broadcastUpdate('findings'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
   
     console.log(`🛡️ [Webhook Received] Добавлен инцидент от ${source.toUpperCase()}: "${newFinding.title}" (${newFinding.severity})`);
@@ -485,8 +485,8 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
       createdAt: new Date().toISOString()
     };
   
-    if (!dbData.findings) dbData.findings = [];
-    dbData.findings.unshift(newFinding);
+    if (!dbData().findings) dbData().findings = [];
+    dbData().findings.unshift(newFinding);
     try { await broadcastUpdate('findings'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
   
     console.log(`🛡️ [Jira REST API] Создан тикет от DerScanner: "${newFinding.title}" (${newFinding.severity})`);
