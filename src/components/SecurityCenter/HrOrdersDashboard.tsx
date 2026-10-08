@@ -123,7 +123,7 @@ export const HrOrdersDashboard: React.FC = () => {
                   ) : (
                     <div style={{ display: 'flex', gap: '4px' }}>
                     {order.taskId && (
-                      <button className="btn-secondary" style={{ padding: '4px 8px', minHeight: 'auto', background: 'hsl(var(--primary) / 0.1)', color: 'hsl(var(--primary))', border: 'none' }} onClick={() => setActiveTaskModalId(order.taskId)} title="Открыть задачу на доске">
+                      <button className="btn-secondary" style={{ padding: '4px 8px', minHeight: 'auto', background: 'hsl(var(--primary) / 0.1)', color: 'hsl(var(--primary))', border: 'none' }} onClick={() => setActiveTaskModalId(order.taskId as string)} title="Открыть задачу на доске">
                         <ExternalLink size={14} />
                       </button>
                     )}
