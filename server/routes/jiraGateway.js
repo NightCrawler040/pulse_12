@@ -203,7 +203,7 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
         { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10003`, id: "10003", name: "DevOps Infrastructure", description: "CI/CD & Docker" },
         { self: `${req.protocol}://${req.get('host')}/rest/api/2/component/10004`, id: "10004", name: "General Security", description: "Overall audit" }
       ],
-      issueTypes: getEnrichedIssueTypes(req).map(t => ({ self: t.self, id: t.id, name: t.name, description: t.description, iconUrl: t.iconUrl, subtask: t.subtask, avatarId: t.avatarId })),
+      issueTypes: getEnrichedIssueTypes(req),
       assigneeType: "PROJECT_LEAD",
       versions: [],
       roles: { "Administrators": `${req.protocol}://${req.get('host')}/rest/api/2/project/${pKey}/role/10002` }
@@ -216,14 +216,7 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
       ? dbData.projects.map(p => getProjectObject(req, p.key || p.id))
       : [getProjectObject(req, 'PULSE')];
       
-    const list = rawList.map(p => {
-      // В списке проектов отдаем облегченный issueTypes, без тяжелых fields и statuses (иначе Java парсер падает)
-      const cleanIssueTypes = (p.issueTypes || []).map(it => {
-        const { fields, statuses, ...itCompact } = it;
-        return itCompact;
-      });
-      return { ...p, issueTypes: cleanIssueTypes };
-    });
+    const list = rawList;
 
     if (url.includes('/project/search') || url.includes('/project?')) {
       return res.status(200).json({ maxResults: 50, startAt: 0, total: list.length, isLast: true, values: list, projects: list });
@@ -297,7 +290,14 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
       const found = issueTypes.find(t => t.id === matchedId) || issueTypes[2];
       return res.status(200).json(found);
     }
-    return res.status(200).json(issueTypes);
+    return res.status(200).json({
+      maxResults: 50,
+      startAt: 0,
+      total: issueTypes.length,
+      isLast: true,
+      values: issueTypes,
+      issueTypes: issueTypes
+    });
   };
   
   const handleJiraPriorities = async (req, res) => {
@@ -313,7 +313,14 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
       const found = priorities.find(p => p.id === matchedId) || priorities[0];
       return res.status(200).json(found);
     }
-    return res.status(200).json(priorities);
+    return res.status(200).json({
+      maxResults: 50,
+      startAt: 0,
+      total: priorities.length,
+      isLast: true,
+      values: priorities,
+      priorities: priorities
+    });
   };
   
   const handleJiraFields = async (req, res) => {
@@ -521,7 +528,8 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
   app.get(['/rest/api/2/issuetype', '/rest/api/2/issuetype/project', '/rest/api/3/issuetype/project', '/api/v1/webhooks/derscanner/rest/api/2/issuetype', '/api/v1/webhooks/derscanner/rest/api/2/issuetype/project'], handleJiraIssueTypes);
   app.get(['/rest/api/2/priority', '/rest/api/2/priority/project', '/api/v1/webhooks/derscanner/rest/api/2/priority', '/api/v1/webhooks/derscanner/rest/api/2/priority/project'], handleJiraPriorities);
   app.get(['/rest/api/2/field', '/rest/api/2/field/project', '/api/v1/webhooks/derscanner/rest/api/2/field', '/api/v1/webhooks/derscanner/rest/api/2/field/project'], handleJiraFields);
-  app.get(['/rest/api/2/issue/createmeta', '/api/v1/webhooks/derscanner/rest/api/2/issue/createmeta'], handleJiraCreateMeta);
+  app.use('/rest/api/2/issue/createmeta', handleJiraCreateMeta);
+  app.use('/api/v1/webhooks/derscanner/rest/api/2/issue/createmeta', handleJiraCreateMeta);
 
   app.post(['/rest/api/2/issue', '/api/v1/webhooks/derscanner/rest/api/2/issue'], handleJiraCreateIssue);
   const handleWildcard = async (req, res) => {
