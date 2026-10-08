@@ -89,11 +89,15 @@ const processEmail = async (message, uid) => {
         for (const att of parsedMail.attachments) {
           if (att.contentType === 'application/pdf' || (att.filename && att.filename.toLowerCase().endsWith('.pdf'))) {
             try {
+              console.log(`[IMAP] Найден PDF-файл ("${att.filename}"), попытка распознать HR-приказ...`);
               const parsedHr = await parseHrOrderPDF(att.content);
               if (parsedHr) {
+                console.log(`[IMAP] PDF успешно распознан как приказ: ${parsedHr.type} (${parsedHr.fullName})`);
                 hrOrderData = parsedHr;
                 hrPdfAttachment = att;
                 break;
+              } else {
+                console.log(`[IMAP] PDF-файл не является HR-приказом.`);
               }
             } catch (e) {
               console.error('[IMAP] Ошибка парсинга PDF приказа:', e);
