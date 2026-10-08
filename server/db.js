@@ -309,7 +309,7 @@ export const saveCollection = async (key, dataArrayOrObj) => {
           INSERT INTO pulse_store (key, data, updated_at)
           VALUES ($1, $2, CURRENT_TIMESTAMP)
           ON CONFLICT (key) DO UPDATE
-          SET data = $2, updated_at = CURRENT_TIMESTAMP;
+          SET data = EXCLUDED.data, updated_at = CURRENT_TIMESTAMP;
         `;
         await pool.query(query, [key, JSON.stringify(toSave)]);
       }
@@ -391,7 +391,7 @@ export const saveAllData = async (dataObj) => {
             INSERT INTO pulse_store (key, data, updated_at)
             VALUES ($1, $2, CURRENT_TIMESTAMP)
             ON CONFLICT (key) DO UPDATE
-            SET data = $2, updated_at = CURRENT_TIMESTAMP;
+            SET data = EXCLUDED.data, updated_at = CURRENT_TIMESTAMP;
           `;
           await client.query(query, [key, JSON.stringify(val)]);
         }

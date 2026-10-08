@@ -316,8 +316,7 @@ const requireAuth = async (req, res, next) => {
   if (!userId) {
     return res.status(401).json({ error: 'Отказано в доступе: требуется идентификатор пользователя' });
   }
-  const dbData = await getAllData(); setDbData(dbData);
-  const user = (dbData.users || []).find(u => u.id === userId && u.isActive !== false);
+  const user = (req.dbData.users || []).find(u => u.id === userId && u.isActive !== false);
   if (!user) {
     return res.status(401).json({ error: 'Учетная запись не найдена или заблокирована' });
   }
