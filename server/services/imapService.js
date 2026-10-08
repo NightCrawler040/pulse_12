@@ -553,14 +553,18 @@ export const startImapService = async (settings, dbData, broadcastUpdate) => {
         const uids = await client.search(searchOptions);
         if (uids.length > 0) console.log(`[IMAP] Найдено непрочитанных писем в INBOX: ${uids.length}`);
         if (uids.length === 0) { isProcessing = false; return; }
+        const messages = [];
         for await (let msg of client.fetch(uids, { source: true, uid: true, headers: ['message-id'] })) {
-          processingStartTime = Date.now(); // Reset timeout for each email
+          messages.push({ uid: msg.uid, source: msg.source });
+        }
+        
+        for (let msg of messages) {
+          processingStartTime = Date.now();
           try {
             await processEmail(msg, msg.uid);
           } catch (err) {
             console.error(`⚠️ [IMAP] Ошибка при обработке письма UID ${msg.uid}:`, err);
           }
-          // Всегда помечаем прочитанным, даже если была ошибка, чтобы не зациклиться на одном битом письме
           try {
             await client.messageFlagsAdd(msg.uid, ['\\Seen'], { uid: true });
           } catch (flagErr) {
