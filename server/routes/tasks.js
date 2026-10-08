@@ -21,7 +21,15 @@ export default function createTasksRouter(requireAuth) {
     if (!req.body.workspaceId && req.currentUser && req.currentUser.workspaceIds && req.currentUser.workspaceIds.length > 0) {
       req.body.workspaceId = req.currentUser.workspaceIds[0];
     }
-    const newId = newTaskData.id || `NEX-${Math.floor(100 + Math.random() * 900)}`;
+    let maxIdNum = 100;
+    (req.dbData.tasks || []).forEach(t => {
+      const m = t.id && String(t.id).match(/^NEX-(\d+)$/);
+      if (m) {
+        const num = parseInt(m[1], 10);
+        if (num > maxIdNum) maxIdNum = num;
+      }
+    });
+    const newId = newTaskData.id || `NEX-${maxIdNum + 1}`;
     const now = new Date().toISOString();
     const safeComments = Array.isArray(newTaskData.comments) 
       ? newTaskData.comments.map(c => ({ ...c, userId: req.currentUser ? req.currentUser.id : c.userId }))
