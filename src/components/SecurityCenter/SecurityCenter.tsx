@@ -56,7 +56,7 @@ export const SecurityCenter: React.FC = () => {
 
   const accessibleFindings = findings.filter(f => {
     if (isAdmin || !currentUser) return true;
-    
+    const userDept = currentUser.department || '';
     if (f && (f as any).allowedDepartments && Array.isArray((f as any).allowedDepartments) && !(f as any).allowedDepartments.includes('all')) {
       return (f as any).allowedDepartments.some((d: string) => userDept.includes(d) || d.includes(userDept));
     }
