@@ -41,9 +41,7 @@ export const SecurityCenter: React.FC = () => {
   const canAccessSystem = (source: string) => {
     if (isAdmin || !currentUser) return true;
     const userDept = currentUser.department || '';
-    if (source === 'derscanner') {
-      return ['Engineering', 'Security', 'QA Engineering', 'Product & Agile', 'Инженерный', 'Разработка', 'Кибербезопасность'].some(d => userDept.includes(d) || d.includes(userDept));
-    }
+    if (source === 'derscanner') { return true; }
     
     return true;
   };
