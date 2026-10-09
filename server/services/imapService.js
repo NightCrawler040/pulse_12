@@ -3,7 +3,7 @@ import { simpleParser } from 'mailparser';
 import sanitizeHtml from 'sanitize-html';
 import { parseHrOrderPDF } from './hrOrderParser.js';
 import { saveCollection } from '../db.js';
-import { banIpAddress } from './fortigateService.js';
+import { banIpAddress, allocateFortigateGroup } from './fortigateService.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
