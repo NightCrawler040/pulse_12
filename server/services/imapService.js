@@ -369,7 +369,8 @@ ${indicatorItemsXml}
         const oldBannedLength = currentDbData.bannedIps ? currentDbData.bannedIps.length : 0;
         
         for (const ip of uniqueIps) {
-          const success = await banIpAddress(currentDbData.fortigateSettings, ip);
+          const assignedGroup = allocateFortigateGroup(currentDbData.bannedIps || [], isPermanent, currentDbData.fortigateSettings);
+          const success = await banIpAddress(currentDbData.fortigateSettings, ip, assignedGroup);
           if (success) {
             bannedCount++;
             const banDuration = currentDbData.fortigateSettings.banDurationDays || 90;
@@ -380,7 +381,7 @@ ${indicatorItemsXml}
             
             if (!currentDbData.bannedIps) currentDbData.bannedIps = [];
             currentDbData.bannedIps = currentDbData.bannedIps.filter(b => b.ip !== ip);
-            currentDbData.bannedIps.push({ ip, bannedAt: Date.now(), expiresAt, isPermanent });
+            currentDbData.bannedIps.push({ ip, bannedAt: Date.now(), expiresAt, isPermanent, fortigateGroup: assignedGroup });
           }
         }
         
