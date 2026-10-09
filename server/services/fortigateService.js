@@ -53,7 +53,7 @@ export const banIpAddress = async (settings, ip, fortigateGroup = null) => {
     return false;
   }
   
-  console.log(`🔒 [FortiGate] Отправка команды на БЛОКИРОВКУ IP: ${ip} (в группу: ${settings.addressGroup || 'Pulse_Banned_IPs'})`);
+  console.log(`🔒 [FortiGate] Отправка команды на БЛОКИРОВКУ IP: ${ip} (в группу: ${fortigateGroup || settings.addressGroup || 'Pulse_Banned_IPs'})`);
   return await triggerFortigateWebhook(settings.banUrl, settings.apiToken, ip, fortigateGroup || settings.addressGroup);
 };
 

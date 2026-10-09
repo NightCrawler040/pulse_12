@@ -360,7 +360,7 @@ ${indicatorItemsXml}
     let fortigateBanStatus = '';
 
     // --- Интеграция с FortiGate (Auto-Ban) ---
-    if (uniqueIps.length > 0 && currentDbData.fortigateSettings?.enabled && currentDbData.fortigateSettings?.autoBanEnabled) {
+    if (uniqueIps.length > 0 && ((currentDbData.fortigateSettings?.['WS-1'] || currentDbData.fortigateSettings)?.['WS-1'] || (currentDbData.fortigateSettings?.['WS-1'] || currentDbData.fortigateSettings))?.enabled && ((currentDbData.fortigateSettings?.['WS-1'] || currentDbData.fortigateSettings)?.['WS-1'] || (currentDbData.fortigateSettings?.['WS-1'] || currentDbData.fortigateSettings))?.autoBanEnabled) {
       fortigateBanStatus = `<br/><br/><strong>[SOAR Auto-Ban]</strong> Запущен фоновый процесс блокировки ${uniqueIps.length} адресов на FortiGate...`;
       
       // Запускаем процесс блокировки в фоне, чтобы не вешать IMAP парсер (особенно при таймаутах)
@@ -369,11 +369,11 @@ ${indicatorItemsXml}
         const oldBannedLength = currentDbData.bannedIps ? currentDbData.bannedIps.length : 0;
         
         for (const ip of uniqueIps) {
-          const assignedGroup = allocateFortigateGroup(currentDbData.bannedIps || [], isPermanent, currentDbData.fortigateSettings);
-          const success = await banIpAddress(currentDbData.fortigateSettings, ip, assignedGroup);
+          const assignedGroup = allocateFortigateGroup(currentDbData.bannedIps || [], isPermanent, (currentDbData.fortigateSettings?.['WS-1'] || currentDbData.fortigateSettings));
+          const success = await banIpAddress((currentDbData.fortigateSettings?.['WS-1'] || currentDbData.fortigateSettings), ip, assignedGroup);
           if (success) {
             bannedCount++;
-            const banDuration = currentDbData.fortigateSettings.banDurationDays || 90;
+            const banDuration = (currentDbData.fortigateSettings?.['WS-1'] || currentDbData.fortigateSettings).banDurationDays || 90;
             let expiresAt = Date.now() + (banDuration * 24 * 60 * 60 * 1000);
             
             if (isPermanent) expiresAt = Date.now() + 100 * 365 * 24 * 60 * 60 * 1000;
@@ -396,7 +396,7 @@ ${indicatorItemsXml}
           const alertTask = {
             id: `task-${Date.now()}-alert`,
             title: `⚠️ ВНИМАНИЕ: Группа FortiGate достигла лимита (${newBannedLength} адресов)`,
-            description: `Группа адресов на FortiGate (${currentDbData.fortigateSettings.addressGroup || 'Pulse_Banned_IPs'}) превысила порог в ${newBannedLength} записей.\n\nВозможно, достигнут хард-лимит FortiOS на количество объектов в одной группе. Рекомендуется создать вторую группу и изменить название целевой группы в настройках интеграции Pulse.`,
+            description: `Группа адресов на FortiGate (${(currentDbData.fortigateSettings?.['WS-1'] || currentDbData.fortigateSettings).addressGroup || 'Pulse_Banned_IPs'}) превысила порог в ${newBannedLength} записей.\n\nВозможно, достигнут хард-лимит FortiOS на количество объектов в одной группе. Рекомендуется создать вторую группу и изменить название целевой группы в настройках интеграции Pulse.`,
             status: 'todo',
             priority: 'high',
             department: 'Кибербезопасность',
