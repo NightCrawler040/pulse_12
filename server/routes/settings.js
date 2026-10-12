@@ -14,8 +14,7 @@ export default function createSettingsRouter(requireAuth, requireAdmin) {
     try {
       const { theme } = req.body;
       req.dbData.globalSettings = { ...(req.dbData.globalSettings || {}), theme };
-      await saveCollection('globalSettings', req.dbData.globalSettings);
-      req.broadcastUpdate('globalSettings');
+      await req.broadcastUpdate('globalSettings');
       res.json({ success: true, settings: req.dbData.globalSettings });
     } catch (err) {
       console.error(err);

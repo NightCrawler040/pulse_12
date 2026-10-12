@@ -364,7 +364,12 @@ const requireAdmin = (req, res, next) => {
   // --- INJECT GLOBAL STATE INTO REQUEST FOR ROUTERS ---
   app.use((req, res, next) => {
     req.dbData = dbData;
-    req.broadcastUpdate = broadcastUpdate;
+    req.broadcastUpdate = (key) => {
+      if (key && req.dbData && req.dbData[key] !== undefined) {
+        return broadcastUpdate(key, req.dbData[key]);
+      }
+      return broadcastUpdate(key, req.dbData);
+    };
     next();
   });
   
@@ -468,10 +473,10 @@ app.get('/api/reports/pdf', requireAuth, async (req, res) => {
     if (targetUserId) {
       filename = `Pulse12_Employee_Report_${targetUserId}.pdf`;
     }
-    const dbData = await getAllData(); setDbData(dbData);
+    const reportData = await getAllData();
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    generateSprintPdf({ dbData, sprintId, targetUserId, stream: res });
+    generateSprintPdf({ dbData: reportData, sprintId, targetUserId, stream: res });
   } catch (err) {
     console.error('❌ Error generating PDF report:', err);
     if (!res.headersSent) {
@@ -539,6 +544,7 @@ app.post('/api/login', loginRateLimiter, async (req, res) => {
           user.isActive = true;
           if (ldapUser.email) user.email = ldapUser.email;
           if (ldapUser.department) user.department = ldapUser.department;
+          if (isAdminUser) { user.role = 'Администратор'; user.roleType = 'admin'; }
         } else {
           const newId = `usr-ad-${ldapUser.login || Math.floor(Math.random() * 90000 + 10000)}`;
           user = {
@@ -569,9 +575,7 @@ app.post('/api/login', loginRateLimiter, async (req, res) => {
               }
             });
           }
-          if (user.workspaceIds.length === 0 && dbData.workspaces && dbData.workspaces.find(w => w.id === 'WS-1')) {
-             if (!user.workspaceIds.includes('WS-1')) user.workspaceIds.push('WS-1');
-          }
+          if (!user.workspaceIds.includes('WS-1')) user.workspaceIds.push('WS-1');
           // ---------------------------------------
 
           await saveCollection('users', dbData.users);

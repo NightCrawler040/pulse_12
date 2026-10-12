@@ -104,19 +104,26 @@ export const getSanitizedDbDataForUser = (user) => {
   return { ...data, tasks: filteredTasks, findings: filteredFindings, sprints: filteredSprints, groups: filteredGroups, hr_orders: filteredHrOrders };
 };
 
-export const broadcastUpdate = async (key) => {
+export const broadcastUpdate = async (key, dataToSave = null) => {
   try {
-    if (key && dbData[key]) {
-      await saveCollection(key, dbData[key]);
+    if (key) {
+      if (dataToSave !== null && dataToSave !== undefined) {
+        dbData[key] = dataToSave;
+      }
+      if (dbData[key] !== undefined) {
+        await saveCollection(key, dbData[key]);
+      }
     } else {
+      if (dataToSave && typeof dataToSave === 'object') {
+        Object.assign(dbData, dataToSave);
+      }
       await saveAllData(dbData);
     }
     
     if (ioInstance) {
-      // 2. ?>?? ??> ??????? ??:???? ?'??>?? WebSockets
       ioInstance.sockets.sockets.forEach(socket => {
         if (socket.userId) {
-          const u = dbData.users.find(usr => usr.id === socket.userId);
+          const u = (dbData.users || []).find(usr => usr.id === socket.userId);
           if (u) {
             socket.emit('data-updated', getSanitizedDbDataForUser(u));
           } else {
