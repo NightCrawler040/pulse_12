@@ -33,7 +33,7 @@ const triggerFortigateWebhook = async (url, token, ip, addressGroup) => {
       httpsAgent
     });
 
-    console.log(`✅ [FortiGate] Успешный запрос к вебхуку для IP ${ip}. Статус: ${response.status}`);
+    console.log(`✅ [FortiGate] Успешный запрос к вебхуку для IP ${ip} (группа: ${payload.address_group}). Статус: ${response.status}`);
     return true;
   } catch (error) {
     console.error(`❌ [FortiGate] Ошибка запроса для IP ${ip}:`, error.message);
@@ -53,8 +53,9 @@ export const banIpAddress = async (settings, ip, fortigateGroup = null) => {
     return false;
   }
   
-  console.log(`🔒 [FortiGate] Отправка команды на БЛОКИРОВКУ IP: ${ip} (в группу: ${fortigateGroup || settings.addressGroup || 'Pulse_Banned_IPs'})`);
-  return await triggerFortigateWebhook(settings.banUrl, settings.apiToken, ip, fortigateGroup || settings.addressGroup);
+  const targetGroup = fortigateGroup || settings.addressGroup || 'Pulse_Banned_IPs';
+  console.log(`🔒 [FortiGate] Отправка команды на БЛОКИРОВКУ IP: ${ip} (в группу: ${targetGroup})`);
+  return await triggerFortigateWebhook(settings.banUrl, settings.apiToken, ip, targetGroup);
 };
 
 /**
@@ -66,8 +67,9 @@ export const unbanIpAddress = async (settings, ip, fortigateGroup = null) => {
     return false;
   }
 
-  console.log(`🔓 [FortiGate] Отправка команды на РАЗБЛОКИРОВКУ IP: ${ip} (из группы: ${settings.addressGroup || 'Pulse_Banned_IPs'})`);
-  return await triggerFortigateWebhook(settings.unbanUrl, settings.apiToken, ip, fortigateGroup || settings.addressGroup);
+  const targetGroup = fortigateGroup || settings.addressGroup || 'Pulse_Banned_IPs';
+  console.log(`🔓 [FortiGate] Отправка команды на РАЗБЛОКИРОВКУ IP: ${ip} (из группы: ${targetGroup})`);
+  return await triggerFortigateWebhook(settings.unbanUrl, settings.apiToken, ip, targetGroup);
 };
 
 
@@ -80,7 +82,9 @@ export const allocateFortigateGroup = (bannedIps, isPermanent, settings) => {
     return permGroup;
   }
 
-  const tempGroups = settings.tempGroups || ['Pulse_Temp_1', 'Pulse_Temp_2', 'Pulse_Temp_3'];
+  const tempGroups = (Array.isArray(settings.tempGroups) && settings.tempGroups.length > 0)
+    ? settings.tempGroups
+    : ['Malicious IP.s KZ-CERT Pulse_1', 'Malicious IP.s KZ-CERT Pulse_2', 'Malicious IP.s KZ-CERT Pulse_3'];
   const maxPerGroup = settings.maxPerGroup || 600;
 
   const groupCounts = {};
@@ -108,8 +112,7 @@ export const allocateFortigateGroup = (bannedIps, isPermanent, settings) => {
 export const startFortigateCron = (getDbDataFn, saveCollectionFn) => {
   console.log('🛡️ [FortiGate] Запуск cron-сервиса автоматического разбана (проверка каждый час)');
   
-  // Проверяем каждые 60 минут (60 * 60 * 1000)
-  setInterval(async () => {
+  const processExpiredBans = async () => {
     try {
       const dbData = getDbDataFn();
       if (!dbData || !Array.isArray(dbData.bannedIps) || dbData.bannedIps.length === 0) return;
@@ -120,26 +123,20 @@ export const startFortigateCron = (getDbDataFn, saveCollectionFn) => {
       for (const record of dbData.bannedIps) {
         if (record.isPermanent) continue; // Игнорируем перманентные баны
 
-        // Если время истекло
         if (record.expiresAt && now > record.expiresAt) {
-          console.log(`⏳ [FortiGate Cron] Время бана для IP ${record.ip} истекло. Выполняем разбан...`);
+          console.log(`⏳ [FortiGate Cron] Время бана для IP ${record.ip} истекло. Выполняем разбан (группа: ${record.fortigateGroup || 'default'})...`);
           
-          // Берем настройки для WS-1 или глобальные
-          const ws1Settings = dbData.fortigateSettings?.['WS-1'];
-          const globalSettings = dbData.fortigateSettings && !dbData.fortigateSettings.apiToken ? dbData.fortigateSettings : null;
-          const settings = ws1Settings || globalSettings;
+          const settings = dbData.fortigateSettings?.['WS-1'] || dbData.fortigateSettings;
           
           if (settings && settings.enabled && settings.unbanUrl) {
-            const success = await unbanIpAddress(settings, record.ip);
+            const success = await unbanIpAddress(settings, record.ip, record.fortigateGroup);
             if (success) {
-              // Помечаем на удаление
               record._readyToRemove = true;
               hasChanges = true;
             }
           } else {
-             // Если нет настроек, просто удаляем из локальной БД
-             record._readyToRemove = true;
-             hasChanges = true;
+            record._readyToRemove = true;
+            hasChanges = true;
           }
         }
       }
@@ -149,32 +146,14 @@ export const startFortigateCron = (getDbDataFn, saveCollectionFn) => {
         await saveCollectionFn('bannedIps', dbData.bannedIps);
         console.log('✅ [FortiGate Cron] База заблокированных IP успешно обновлена.');
       }
-
     } catch (e) {
       console.error('❌ [FortiGate Cron] Ошибка при проверке банов:', e.message);
     }
-  }, 60 * 60 * 1000); // Каждый час
+  };
+
+  // Проверяем каждые 60 минут
+  setInterval(processExpiredBans, 60 * 60 * 1000);
   
   // Выполним также сразу при старте (через 30 секунд после загрузки)
-  setTimeout(async () => {
-    try {
-      const dbData = getDbDataFn();
-      if (!dbData || !Array.isArray(dbData.bannedIps)) return;
-      const now = Date.now();
-      let hasChanges = false;
-      for (const record of dbData.bannedIps) {
-        if (!record.isPermanent && record.expiresAt && now > record.expiresAt) {
-          const ws1Settings = dbData.fortigateSettings?.['WS-1'] || dbData.fortigateSettings;
-          if (ws1Settings && ws1Settings.enabled && ws1Settings.unbanUrl) {
-            const success = await unbanIpAddress(ws1Settings, record.ip);
-            if (success) { record._readyToRemove = true; hasChanges = true; }
-          }
-        }
-      }
-      if (hasChanges) {
-        dbData.bannedIps = dbData.bannedIps.filter(r => !r._readyToRemove);
-        await saveCollectionFn('bannedIps', dbData.bannedIps);
-      }
-    } catch(e) {}
-  }, 30000);
+  setTimeout(processExpiredBans, 30000);
 };

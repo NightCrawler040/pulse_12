@@ -12,6 +12,16 @@ const safeUnbind = (client) => {
   } catch (e) {}
 };
 
+const escapeLdapFilter = (val) => {
+  if (!val) return '';
+  return String(val)
+    .replace(/\\/g, '\\5c')
+    .replace(/\*/g, '\\2a')
+    .replace(/\(/g, '\\28')
+    .replace(/\)/g, '\\29')
+    .replace(/\0/g, '\\00');
+};
+
 // Вспомогательная функция для автоматического разрешения имен групп AD (например internetdkb) в полный DN
 export const resolveGroupFilter = async (client, baseDN, userFilter) => {
   if (!userFilter || typeof userFilter !== 'string') return '(objectClass=person)';
@@ -30,10 +40,11 @@ export const resolveGroupFilter = async (client, baseDN, userFilter) => {
     const fullMatch = match[0];
     const groupName = match[1].trim();
     if (!groupName || groupName.toUpperCase().startsWith('CN=')) continue;
+    const safeGroup = escapeLdapFilter(groupName);
 
     const groupResult = await new Promise((resolve) => {
       try {
-        const groupSearchFilter = `(|(&(objectClass=group)(|(sAMAccountName=${groupName})(cn=${groupName})(name=${groupName})(displayName=${groupName})))(&(objectClass=organizationalUnit)(|(ou=${groupName})(name=${groupName}))))`;
+        const groupSearchFilter = `(|(&(objectClass=group)(|(sAMAccountName=${safeGroup})(cn=${safeGroup})(name=${safeGroup})(displayName=${safeGroup})))(&(objectClass=organizationalUnit)(|(ou=${safeGroup})(name=${safeGroup}))))`;
         client.search(baseDN, { filter: groupSearchFilter, scope: 'sub', sizeLimit: 5 }, (err, res) => {
           if (err) return resolve(null);
           let foundDn = null;
@@ -76,9 +87,9 @@ export const resolveGroupFilter = async (client, baseDN, userFilter) => {
           .slice(0, 250)
           .map(mDn => `(distinguishedName=${mDn})`)
           .join('');
-        replacementClause = `(|(memberOf=${gDn})(department=*${groupName}*)${dnAssertions})`;
+        replacementClause = `(|(memberOf=${escapeLdapFilter(gDn)})(department=*${safeGroup}*)${dnAssertions})`;
       } else {
-        replacementClause = `(|(memberOf=${gDn})(department=*${groupName}*))`;
+        replacementClause = `(|(memberOf=${escapeLdapFilter(gDn)})(department=*${safeGroup}*))`;
       }
 
       if (isSurroundedByParens) {
@@ -88,7 +99,7 @@ export const resolveGroupFilter = async (client, baseDN, userFilter) => {
       }
     } else {
       console.warn(`⚠️ [LDAP Group Resolve] Объект group/OU "${groupName}" не найден в BaseDN. Выполняется поиск сотрудников по атрибуту department/company/title.`);
-      const fallbackClause = `(|(department=*${groupName}*)(company=*${groupName}*)(description=*${groupName}*)(title=*${groupName}*))`;
+      const fallbackClause = `(|(department=*${safeGroup}*)(company=*${safeGroup}*)(description=*${safeGroup}*)(title=*${safeGroup}*))`;
       if (isSurroundedByParens) {
         filterWithGroupDns = filterWithGroupDns.slice(0, matchIndex - 1) + fallbackClause + filterWithGroupDns.slice(matchIndex + fullMatch.length + 1);
       } else {

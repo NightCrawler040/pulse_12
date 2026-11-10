@@ -71,6 +71,11 @@ export default function createUsersRouter(requireAuth, requireAdmin) {
       delete updates.role;
       delete updates.roleType;
       delete updates.isActive;
+      delete updates.workspaceIds;
+      delete updates.authSource;
+      delete updates.ldapDn;
+      delete updates.failedLoginAttempts;
+      delete updates.lockedUntil;
     }
 
     if (updates.email || updates.login) {

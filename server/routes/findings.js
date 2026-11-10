@@ -74,7 +74,15 @@ export default function createFindingsRouter(requireAuth) {
     resolvedAssigneeId = foundUser ? foundUser.id : finding.assignee;
   }
 
-  const newTaskId = `NEX-${Math.floor(100 + Math.random() * 900)}`;
+  let maxIdNum = 100;
+  (req.dbData.tasks || []).forEach(t => {
+    const m = t.id && String(t.id).match(/^NEX-(\d+)$/);
+    if (m) {
+      const num = parseInt(m[1], 10);
+      if (num > maxIdNum) maxIdNum = num;
+    }
+  });
+  const newTaskId = `NEX-${maxIdNum + 1}`;
   const promotedTask = {
       workspaceId: finding.workspaceId || 'WS-1', // Inherit workspace!
     id: newTaskId,

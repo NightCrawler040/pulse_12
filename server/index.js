@@ -38,6 +38,8 @@ import createGroupsRouter from './routes/groups.js';
 
 import createWorkspacesRouter from './routes/workspaces.js';
 import hrOrdersRouter from './routes/hrOrders.js';
+import { initLogInterceptor } from './services/logService.js';
+initLogInterceptor();
 
 
 
@@ -46,6 +48,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.set('trust proxy', 1);
 app.disable('x-powered-by'); // Скрыть информацию об использовании Express
 app.use(compression({ threshold: 1024 }));
 const server = http.createServer(app);
@@ -100,6 +103,7 @@ app.use(cors({
   origin: true, 
   credentials: true
 }));
+app.use(['/api/upload', '/api/upload-file'], express.json({ limit: '65mb' }));
 app.use(express.json({ limit: '2mb' })); // Ограничение размера JSON до безопасных 2 МБ (защита от Payload DoS)
 
 // Global HTTP Request Logger (для отслеживания любых обращений от внешних систем и DerScanner)
@@ -373,6 +377,7 @@ const requireAdmin = (req, res, next) => {
     next();
   });
   
+  app.use('/api', (req, res, next) => apiRateLimiter(req, res, next));
   app.use('/api/tasks', createTasksRouter(requireAuth));
   app.use('/api/users', createUsersRouter(requireAuth, requireAdmin));
   app.use('/api/sprints', createSprintsRouter(requireAuth, requireAdmin));
@@ -411,7 +416,7 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
-app.use('/api', apiRateLimiter);
+// Rate limiter moved before /api/* routers
 
 // --- KATA THREAT INTELLIGENCE FEED ENDPOINT ---
 app.get('/api/feeds/kata-hashes.txt', async (req, res) => {
@@ -431,7 +436,7 @@ app.get('/api/data', async (req, res) => { try {
     const tokenHeader = req.headers['x-api-token'] || (authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '');
     const user = userId ? dbData.users.find(u => u.id === userId && u.isActive !== false) : null;
 
-    if (user && (!tokenHeader || tokenHeader === generateAuthToken(user))) {
+    if (user && tokenHeader && tokenHeader === generateAuthToken(user)) {
       return res.json(getSanitizedDbDataForUser(user));
     }
 
@@ -814,6 +819,10 @@ setIo(io);
   socket.on('user-online', async (payload) => {
     const uid = typeof payload === 'string' ? payload : (payload?.userId);
     if (uid) {
+      const tok = (typeof payload === 'object' ? payload?.token : null) || socket.handshake?.auth?.token || '';
+      const usr = dbData.users.find(u => u.id === uid && u.isActive !== false);
+      if (!usr || (tok && tok !== generateAuthToken(usr))) return;
+      socket.userId = uid;
       onlineSockets.set(socket.id, uid);
       console.log(`🟢 User ${uid} is online on socket ${socket.id}`);
       broadcastOnlineUsers();
@@ -824,7 +833,8 @@ setIo(io);
   });
 
   socket.on('request-sync', async () => {
-    socket.emit('data-updated', getSanitizedDbData());
+    const syncUser = socket.userId ? dbData.users.find(u => u.id === socket.userId && u.isActive !== false) : null;
+    if (syncUser) socket.emit('data-updated', getSanitizedDbDataForUser(syncUser));
     broadcastOnlineUsers();
   });
 
@@ -850,7 +860,8 @@ setIo(io);
 
   socket.on('clear-user-notifications', async (userId) => {
     if (!Array.isArray(dbData.notifications)) dbData.notifications = [];
-    if (userId === 'all' || !userId) {
+    const caller = socket.userId ? dbData.users.find(u => u.id === socket.userId) : null;
+    if ((userId === 'all' || !userId) && caller?.roleType === 'admin') {
       dbData.notifications = [];
     } else {
       dbData.notifications = dbData.notifications.filter(n => n.userId !== userId && n.userId !== 'all');
@@ -896,7 +907,7 @@ setIo(io);
 
   
 
-  app.use(express.static(path.join(__dirname, '../dist')));
+
 const DIST_DIR = path.join(__dirname, '../dist');
 if (fs.existsSync(DIST_DIR)) {
   console.log(`📦 Serving production build from: ${DIST_DIR}`);
@@ -976,6 +987,23 @@ const startServer = async () => {
   if (migrated) {
     saveCollection('api_keys', dbData.api_keys).catch(() => {});
     saveCollection('fortigateSettings', dbData.fortigateSettings).catch(() => {});
+  }
+
+  if (Array.isArray(dbData.bannedIps) && dbData.bannedIps.length > 0) {
+    const fgCfg = dbData.fortigateSettings?.['WS-1'] || dbData.fortigateSettings || {};
+    const defaultTempGroup = (Array.isArray(fgCfg.tempGroups) && fgCfg.tempGroups[0]) ? fgCfg.tempGroups[0] : 'Malicious IP.s KZ-CERT Pulse_1';
+    const defaultPermGroup = fgCfg.permGroup || 'Pulse_Perm';
+    let ipsMigrated = false;
+    dbData.bannedIps.forEach(item => {
+      if (!item.fortigateGroup) {
+        item.fortigateGroup = item.isPermanent ? defaultPermGroup : defaultTempGroup;
+        ipsMigrated = true;
+      }
+    });
+    if (ipsMigrated) {
+      await saveCollection('bannedIps', dbData.bannedIps);
+      console.log(`✅ [FortiGate Migration] Автоматически привязаны старые заблокированные IP (${dbData.bannedIps.length} шт.) к группе "${defaultTempGroup}".`);
+    }
   }
 
   console.log(`✅ Инициализированы данные системы (${isPostgresMode() ? 'PostgreSQL' : 'Файловый режим'}): ${dbData.tasks.length} задач, ${dbData.users.length} сотрудников.`);

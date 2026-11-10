@@ -42,6 +42,8 @@ export const requireAuth = async (req, res, next) => {
     if (!isMatch) {
       return res.status(401).json({ error: 'Недействительный цифровой токен подписи API' });
     }
+  } else {
+    return res.status(401).json({ error: 'Для доступа требуется токен безопасности API (x-api-token)' });
   }
 
   req.currentUser = user;

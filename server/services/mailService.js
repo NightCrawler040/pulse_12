@@ -1,5 +1,15 @@
 import nodemailer from 'nodemailer';
 
+const escapeHtml = (str) => {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+};
+
 let mailConfig = {
   host: '',
   port: 25,
@@ -28,7 +38,6 @@ export function initMailService(dbData, saveCollection) {
     notificationEvents = { ...notificationEvents, ...dbData.notificationEvents };
   }
 
-  // Ensure settings are available in dbData
   dbData.mailSettings = mailConfig;
   dbData.notificationEvents = notificationEvents;
 
@@ -65,10 +74,6 @@ export function rebuildTransporter(newConfig = null) {
     };
   }
 
-  if (mailConfig.startTls === true || mailConfig.startTls === 'true') {
-    opts.tls.ciphers = 'SSLv3';
-  }
-
   transporter = nodemailer.createTransport(opts);
   console.log(`📧 [MailService] Транспорт пересоздан: ${mailConfig.host}:${mailConfig.port} (SSL: ${mailConfig.ssl}, TLS: ${mailConfig.startTls})`);
 }
@@ -95,10 +100,6 @@ export async function testMailConnection(testConfig) {
         user: testConfig.user || '',
         pass: testConfig.password || ''
       };
-    }
-
-    if (testConfig.startTls === true || testConfig.startTls === 'true') {
-      opts.tls.ciphers = 'SSLv3';
     }
 
     const testTransporter = nodemailer.createTransport(opts);
@@ -137,9 +138,8 @@ export async function sendMail(to, subject, htmlContent) {
 
 // Рассылка системных уведомлений (администраторам)
 export async function sendSystemAlertMail(subject, htmlContent, dbData) {
-  if (!notificationEvents.tokenExpiration) return; // Если выключено
+  if (!notificationEvents.tokenExpiration) return;
 
-  // Автоматически находим всех администраторов в базе
   const admins = (dbData?.users || []).filter(u => 
     u.id === 'usr-1' || 
     u.roleType === 'admin' || 
@@ -153,7 +153,6 @@ export async function sendSystemAlertMail(subject, htmlContent, dbData) {
     return;
   }
 
-  // Убираем дубликаты
   const uniqueEmails = [...new Set(emailList)];
 
   for (const email of uniqueEmails) {
@@ -163,10 +162,8 @@ export async function sendSystemAlertMail(subject, htmlContent, dbData) {
 
 // Отправка персонального уведомления по задаче (смена статуса / назначение)
 export async function sendMailNotification(recipient, notifText, eventType, task = null) {
-  // recipient - объект пользователя из базы (должен иметь поле email)
   if (!recipient || !recipient.email) return;
 
-  // Проверка настроек
   if (eventType === 'taskAssigned' && !notificationEvents.taskAssigned) return;
   if (eventType === 'taskStatusChanged' && !notificationEvents.taskStatusChanged) return;
 
@@ -174,11 +171,10 @@ export async function sendMailNotification(recipient, notifText, eventType, task
   if (task) {
     const formattedDate = task.dueDate ? new Date(task.dueDate).toLocaleDateString('ru-RU') : 'Не указан';
     
-    // Формируем список подзадач, если они есть
     let subtasksHtml = '';
     if (task.subtasks && task.subtasks.length > 0) {
       const subtasksList = task.subtasks.map(st => 
-        `<li style="margin-bottom: 4px;">${st.completed ? '✅' : '⬜'} ${st.title}</li>`
+        `<li style="margin-bottom: 4px;">${st.completed ? '✅' : '⬜'} ${escapeHtml(st.title)}</li>`
       ).join('');
       subtasksHtml = `
         <div style="margin-top: 15px;">
@@ -192,25 +188,25 @@ export async function sendMailNotification(recipient, notifText, eventType, task
 
     taskDetailsHtml = `
       <div style="margin-top: 20px; background-color: #f8fafc; border-radius: 6px; padding: 15px; border: 1px solid #e2e8f0;">
-        <h3 style="margin-top: 0; color: #1e293b; font-size: 16px;">${task.title} <span style="color: #64748b; font-size: 14px; font-weight: normal;">(${task.id})</span></h3>
+        <h3 style="margin-top: 0; color: #1e293b; font-size: 16px;">${escapeHtml(task.title)} <span style="color: #64748b; font-size: 14px; font-weight: normal;">(${escapeHtml(task.id)})</span></h3>
         
         <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
           <div style="background-color: #fff; padding: 8px 12px; border-radius: 4px; border: 1px solid #e2e8f0; font-size: 13px;">
             <span style="color: #64748b; display: block; margin-bottom: 2px;">Статус</span>
-            <strong style="color: #0f172a;">${task.status || 'К выполнению'}</strong>
+            <strong style="color: #0f172a;">${escapeHtml(task.status || 'К выполнению')}</strong>
           </div>
           <div style="background-color: #fff; padding: 8px 12px; border-radius: 4px; border: 1px solid #e2e8f0; font-size: 13px;">
             <span style="color: #64748b; display: block; margin-bottom: 2px;">Приоритет</span>
-            <strong style="color: #0f172a;">${task.priority || 'medium'}</strong>
+            <strong style="color: #0f172a;">${escapeHtml(task.priority || 'medium')}</strong>
           </div>
           <div style="background-color: #fff; padding: 8px 12px; border-radius: 4px; border: 1px solid #e2e8f0; font-size: 13px;">
             <span style="color: #64748b; display: block; margin-bottom: 2px;">Дедлайн</span>
-            <strong style="color: #ef4444;">${formattedDate}</strong>
+            <strong style="color: #ef4444;">${escapeHtml(formattedDate)}</strong>
           </div>
         </div>
 
         <strong style="color: #475569; font-size: 14px;">Описание:</strong>
-        <div style="margin-top: 8px; font-size: 14px; color: #334155; line-height: 1.6; white-space: pre-wrap;">${task.description || 'Нет описания'}</div>
+        <div style="margin-top: 8px; font-size: 14px; color: #334155; line-height: 1.6; white-space: pre-wrap;">${escapeHtml(task.description || 'Нет описания')}</div>
         
         ${subtasksHtml}
       </div>
@@ -220,7 +216,7 @@ export async function sendMailNotification(recipient, notifText, eventType, task
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
       <h2 style="color: #0f172a; margin-top: 0;">Уведомление Pulse</h2>
-      <p style="color: #334155; font-size: 16px; line-height: 1.5;">${notifText}</p>
+      <p style="color: #334155; font-size: 16px; line-height: 1.5;">${escapeHtml(notifText)}</p>
       
       ${taskDetailsHtml}
       
@@ -240,11 +236,11 @@ export async function sendMailDeadlineWarning(recipient, task, timeRemainingLabe
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #f59e0b; border-radius: 8px; background-color: #fffbeb;">
       <h2 style="color: #d97706; margin-top: 0;">⚠️ Внимание! Горящий дедлайн!</h2>
-      <p style="color: #334155; font-size: 16px; line-height: 1.5;">Уважаемый(ая) <b>${recipient.name || recipient.login}</b>,</p>
+      <p style="color: #334155; font-size: 16px; line-height: 1.5;">Уважаемый(ая) <b>${escapeHtml(recipient.name || recipient.login)}</b>,</p>
       <p style="color: #334155; font-size: 16px; line-height: 1.5;">
-        Напоминаем, что срок сдачи задачи <strong>"${task.title}"</strong> истекает через <b>${timeRemainingLabel}</b>.
+        Напоминаем, что срок сдачи задачи <strong>"${escapeHtml(task.title)}"</strong> истекает через <b>${escapeHtml(timeRemainingLabel)}</b>.
       </p>
-      <p style="color: #334155; font-size: 16px; line-height: 1.5;">Текущий статус: <strong>${task.status}</strong></p>
+      <p style="color: #334155; font-size: 16px; line-height: 1.5;">Текущий статус: <strong>${escapeHtml(task.status)}</strong></p>
       <hr style="border: 0; border-top: 1px solid #fcd34d; margin: 20px 0;" />
       <p style="color: #b45309; font-size: 12px; margin-bottom: 0;">Пожалуйста, актуализируйте статус задачи в системе Pulse.</p>
     </div>

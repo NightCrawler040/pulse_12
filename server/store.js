@@ -64,7 +64,9 @@ export const getSanitizedDbData = () => {
         roleType: safeUser.roleType || 'member'
       };
     });
-  };const sanitizeLdapSettings = (settings) => {
+  };
+
+  const sanitizeLdapSettings = (settings) => {
     if (!settings || typeof settings !== 'object') return {};
     return {
       ...settings,
@@ -77,12 +79,12 @@ export const getSanitizedDbData = () => {
     users: sanitizeUsers(dbData.users),
     hr_orders: dbData.hr_orders || [],
     hrSettings: dbData.hrSettings || {},
-    api_keys: [], // Hide API keys
+    api_keys: [], // Hide API keys for non-admins
     ldap_settings: sanitizeLdapSettings(dbData.ldap_settings),
-    mailSettings: dbData.mailSettings || {},
+    mailSettings: dbData.mailSettings ? { ...dbData.mailSettings, password: dbData.mailSettings.password ? '********' : '' } : {},
     imapSettings: dbData.imapSettings ? { ...dbData.imapSettings, password: dbData.imapSettings.password ? '********' : '' } : {},
     notificationEvents: dbData.notificationEvents || {},
-    fortigateSettings: {}, // Hide Fortigate settings
+    fortigateSettings: {}, // Hide Fortigate settings for non-admins
     bannedIps: dbData.bannedIps || [],
     kataHashes: dbData.kataHashes || []
   };
@@ -90,12 +92,20 @@ export const getSanitizedDbData = () => {
 
 export const getSanitizedDbDataForUser = (user) => {
   const data = getSanitizedDbData();
-  if (!user || user.roleType === 'admin') {
+  if (user && user.roleType === 'admin') {
     data.api_keys = dbData.api_keys || [];
-    data.fortigateSettings = dbData.fortigateSettings || {};
+    const fg = dbData.fortigateSettings || {};
+    const safeFg = { ...fg };
+    if (safeFg.apiToken) safeFg.apiToken = '********';
+    for (const [k, v] of Object.entries(safeFg)) {
+      if (v && typeof v === 'object' && !Array.isArray(v) && v.apiToken) {
+        safeFg[k] = { ...v, apiToken: '********' };
+      }
+    }
+    data.fortigateSettings = safeFg;
     return data;
   }
-  const userWorkspaces = user.workspaceIds || [];
+  const userWorkspaces = user?.workspaceIds || [];
   const filteredTasks = (data.tasks || []).filter(t => !t.workspaceId || userWorkspaces.includes(t.workspaceId));
   const filteredFindings = (data.findings || []).filter(f => !f.workspaceId || userWorkspaces.includes(f.workspaceId));
   const filteredSprints = (data.sprints || []).filter(s => !s.workspaceId || userWorkspaces.includes(s.workspaceId));
@@ -129,8 +139,6 @@ export const broadcastUpdate = async (key, dataToSave = null) => {
           } else {
             socket.emit('data-updated', getSanitizedDbData());
           }
-        } else {
-          socket.emit('data-updated', getSanitizedDbData());
         }
       });
     }

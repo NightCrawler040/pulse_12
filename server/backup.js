@@ -23,7 +23,7 @@ const redactSecrets = (obj) => {
   } else if (obj !== null && typeof obj === 'object') {
     const newObj = {};
     for (const [key, value] of Object.entries(obj)) {
-      if (['password', 'pin', 'apiToken', 'bindPassword'].includes(key)) {
+      if (['password', 'pin', 'apiToken', 'bindPassword', 'key'].includes(key)) {
         newObj[key] = '[REDACTED]';
       } else {
         newObj[key] = redactSecrets(value);

@@ -52,7 +52,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (currentUser?.id && isServerConnected) {
       try {
         const socket = getSocket();
-        socket.emit('user-online', currentUser.id);
+        const token = localStorage.getItem('korpjira-auth-token') || '';
+        socket.emit('user-online', { userId: currentUser.id, token });
       } catch (err) {
         console.error('Socket emit error:', err);
       }

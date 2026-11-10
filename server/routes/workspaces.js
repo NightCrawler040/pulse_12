@@ -59,7 +59,7 @@ export default function createRouter(requireAuth, requireAdmin) {
 
   req.dbData.workspaces = req.dbData.workspaces.filter(w => w.id !== id);
   
-  try { await req.broadcastUpdate('workspaces'); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
+  try { await req.broadcastUpdate(); } catch (e) { return res.status(500).json({error: 'Database save failed'}); }
   res.json({ success: true });
 });
 

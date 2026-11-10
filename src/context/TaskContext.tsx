@@ -372,7 +372,15 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addTask = (newTaskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'comments'>) => {
     if (activeWorkspaceId && !newTaskData.workspaceId) newTaskData.workspaceId = activeWorkspaceId;
-    const newId = `NEX-${Math.floor(100 + Math.random() * 900)}`;
+    let maxIdNum = 100;
+    tasks.forEach(t => {
+      const m = t.id && String(t.id).match(/^NEX-(\d+)$/);
+      if (m) {
+        const num = parseInt(m[1], 10);
+        if (num > maxIdNum) maxIdNum = num;
+      }
+    });
+    const newId = `NEX-${maxIdNum + 1}`;
     const now = new Date().toISOString();
     const newTask: Task = {
       ...newTaskData,

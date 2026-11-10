@@ -33,10 +33,13 @@ let socketInstance: Socket | null = null;
 export const getSocket = (): Socket => {
   if (!socketInstance) {
     const url = getServerUrl();
+    const userId = localStorage.getItem('korpjira-flowspace-auth-v1') || '';
+    const token = localStorage.getItem('korpjira-auth-token') || '';
     console.log(`🔌 Connecting to Pulse Socket.io server at: ${url}`);
     socketInstance = io(url, {
       reconnectionDelayMax: 2000,
-      timeout: 5000
+      timeout: 5000,
+      auth: { userId, token }
     });
   }
   return socketInstance;
@@ -233,6 +236,19 @@ export const apiService = {
     
   importDatabase: (data: DatabaseData) => 
     apiRequest<{ success: boolean }>('/api/import', { method: 'POST', body: JSON.stringify(data) }),
+
+  fetchSystemLogs: (params?: { category?: string; level?: string; search?: string; limit?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.category) query.set('category', params.category);
+    if (params?.level) query.set('level', params.level);
+    if (params?.search) query.set('search', params.search);
+    if (params?.limit) query.set('limit', String(params.limit));
+    const qs = query.toString();
+    return apiRequest<{ logs: Array<{ id: number; timestamp: string; level: string; category: string; message: string }> }>(`/api/settings/logs${qs ? '?' + qs : ''}`, { method: 'GET' });
+  },
+
+  clearSystemLogs: () =>
+    apiRequest<{ success: boolean }>('/api/settings/logs', { method: 'DELETE' }),
     
   loginUser: (login?: string, password?: string, pin?: string, userId?: string) => 
     apiRequest<{ success: boolean; user: User }>('/api/login', { 

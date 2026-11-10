@@ -22,14 +22,16 @@ export default function createTasksRouter(requireAuth) {
       req.body.workspaceId = req.currentUser.workspaceIds[0];
     }
     let maxIdNum = 100;
+    const existingIds = new Set();
     (req.dbData.tasks || []).forEach(t => {
+      if (t.id) existingIds.add(String(t.id));
       const m = t.id && String(t.id).match(/^NEX-(\d+)$/);
       if (m) {
         const num = parseInt(m[1], 10);
         if (num > maxIdNum) maxIdNum = num;
       }
     });
-    const newId = newTaskData.id || `NEX-${maxIdNum + 1}`;
+    const newId = (newTaskData.id && !existingIds.has(String(newTaskData.id))) ? newTaskData.id : `NEX-${maxIdNum + 1}`;
     const now = new Date().toISOString();
     const safeComments = Array.isArray(newTaskData.comments) 
       ? newTaskData.comments.map(c => ({ ...c, userId: req.currentUser ? req.currentUser.id : c.userId }))

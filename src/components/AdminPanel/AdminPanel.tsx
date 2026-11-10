@@ -8,6 +8,7 @@ import { MailSettingsTab } from './MailSettingsTab';
 import { FortigateSettingsTab } from './FortigateSettingsTab';
 import HrOrdersSettingsTab from './HrOrdersSettingsTab';
 import { WorkspacesTab } from './WorkspacesTab';
+import { SystemLogsTab } from './SystemLogsTab';
 import './AdminPanel.css';
 
 export const AdminPanel: React.FC = () => {
@@ -17,7 +18,7 @@ export const AdminPanel: React.FC = () => {
   const employeeUsers = users.filter(u => !isProtectedAdmin(u));
 
   const [selectedIntegrationWsId, setSelectedIntegrationWsId] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<'workspaces' | 'users' | 'groups' | 'integrations' | 'ldap' | 'mail' | 'fortigate' | 'appearance' | 'hr-orders'>('workspaces');
+  const [activeTab, setActiveTab] = useState<'workspaces' | 'users' | 'groups' | 'integrations' | 'ldap' | 'mail' | 'fortigate' | 'appearance' | 'hr-orders' | 'logs'>('workspaces');
   const [newKeyName, setNewKeyName] = useState('');
   const [newKeySource, setNewKeySource] = useState<'derscanner' | 'siem' | 'custom'>('derscanner');
   const [newKeyAllowedDepts, setNewKeyAllowedDepts] = useState<string[]>(['all']);
@@ -361,6 +362,10 @@ export const AdminPanel: React.FC = () => {
                 onClick={() => setActiveTab('appearance')}
               >
                 🎨 Темы (Админ)
+              </button>
+              <button className={`admin-tab-btn ${activeTab === 'logs' ? 'active' : ''}`} onClick={() => setActiveTab('logs')}>
+                📜 Логи (Live)
+              </button>
               </button>
             </div>
           </div>
@@ -914,6 +919,7 @@ export const AdminPanel: React.FC = () => {
         {activeTab === 'hr-orders' && (
           <HrOrdersSettingsTab />
         )}
+        {activeTab === 'logs' && <SystemLogsTab />}
 
       {/* Add / Edit USER Modal */}
       {isModalOpen && (
