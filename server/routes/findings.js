@@ -74,7 +74,7 @@ export default function createFindingsRouter(requireAuth) {
     resolvedAssigneeId = foundUser ? foundUser.id : finding.assignee;
   }
 
-  let maxIdNum = 100;
+  let maxIdNum = 2000;
   (req.dbData.tasks || []).forEach(t => {
     const m = t.id && String(t.id).match(/^NEX-(\d+)$/);
     if (m) {

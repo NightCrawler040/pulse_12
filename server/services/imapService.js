@@ -30,6 +30,17 @@ const MD5_REGEX = /\b[a-fA-F0-9]{32}\b/g;
 const SHA1_REGEX = /\b[a-fA-F0-9]{40}\b/g;
 const SHA256_REGEX = /\b[a-fA-F0-9]{64}\b/g;
 
+const getNextNexId = (tasks = []) => {
+  let maxIdNum = 2000;
+  tasks.forEach(t => {
+    const m = t.id && String(t.id).match(/^NEX-(\d+)$/);
+    if (m) {
+      const num = parseInt(m[1], 10);
+      if (num > maxIdNum) maxIdNum = num;
+    }
+  });
+  return `NEX-${maxIdNum + 1}`;
+};
 
 /**
  * Очистка префиксов пересылки из темы письма
@@ -81,110 +92,78 @@ const processEmail = async (message, uid) => {
       return;
     }
     const safePulseUser = pulseUser || { id: 'system', name: senderEmail };
-      // ---- HR JML Processing (PDF) ----
-      let hrOrderData = null;
-      let hrPdfAttachment = null;
 
-      if (parsedMail.attachments && parsedMail.attachments.length > 0) {
-        for (const att of parsedMail.attachments) {
-          if (att.contentType === 'application/pdf' || (att.filename && att.filename.toLowerCase().endsWith('.pdf'))) {
-            try {
-              console.log(`[IMAP] Найден PDF-файл ("${att.filename}"), попытка распознать HR-приказ...`);
-              const parsedHr = await parseHrOrderPDF(att.content);
-              if (parsedHr) {
-                console.log(`[IMAP] PDF успешно распознан как приказ: ${parsedHr.type} (${parsedHr.fullName})`);
-                hrOrderData = parsedHr;
-                hrPdfAttachment = att;
-                break;
-              } else {
-                console.log(`[IMAP] PDF-файл не является HR-приказом.`);
-              }
-            } catch (e) {
-              console.error('[IMAP] Ошибка парсинга PDF приказа:', e);
+    // ---- HR JML Processing (PDF) ----
+    let hrOrderData = null;
+    let hrPdfAttachment = null;
+
+    if (parsedMail.attachments && parsedMail.attachments.length > 0) {
+      for (const att of parsedMail.attachments) {
+        if (att.contentType === 'application/pdf' || (att.filename && att.filename.toLowerCase().endsWith('.pdf'))) {
+          try {
+            console.log(`[IMAP] Найден PDF-файл ("${att.filename}"), попытка распознать HR-приказ...`);
+            const parsedHr = await parseHrOrderPDF(att.content);
+            if (parsedHr) {
+              console.log(`[IMAP] PDF успешно распознан как приказ: ${parsedHr.type} (${parsedHr.fullName})`);
+              hrOrderData = parsedHr;
+              hrPdfAttachment = att;
+              break;
+            } else {
+              console.log(`[IMAP] PDF-файл не является HR-приказом.`);
             }
+          } catch (e) {
+            console.error('[IMAP] Ошибка парсинга PDF приказа:', e);
           }
         }
       }
+    }
 
-      if (hrOrderData) {
-        if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-        const safeFilename = 'hr_order_' + Date.now() + '_' + hrPdfAttachment.filename.replace(/[^a-zA-Z0-9.-]/g, '_');
-        const filePath = path.join(UPLOADS_DIR, safeFilename);
-        fs.writeFileSync(filePath, hrPdfAttachment.content);
-        
-        hrOrderData.pdfUrl = '/uploads/' + safeFilename;
+    if (hrOrderData) {
+      if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+      const safeFilename = 'hr_order_' + Date.now() + '_' + hrPdfAttachment.filename.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const filePath = path.join(UPLOADS_DIR, safeFilename);
+      fs.writeFileSync(filePath, hrPdfAttachment.content);
+      
+      hrOrderData.pdfUrl = '/uploads/' + safeFilename;
 
-        const hrSettings = currentDbData.hrSettings || { workspaceId: 'WS-1', groupId: null };
-        const targetWsId = hrSettings.workspaceId;
+      const hrSettings = currentDbData.hrSettings || { workspaceId: 'WS-1', groupId: null };
+      const targetWsId = hrSettings.workspaceId || 'WS-1';
 
-        hrOrderData.id = crypto.randomUUID();
-        const generatedTaskId = `task-${Date.now()}`;
-        hrOrderData.taskId = generatedTaskId;
-        hrOrderData.createdAt = new Date().toISOString();
-        hrOrderData.statusKaspersky = 'pending';
-        hrOrderData.statusDlpDg = 'pending';
-        hrOrderData.statusStaffcop = 'pending';
-        hrOrderData.statusCisco = 'pending';
-        hrOrderData.statusAd = 'pending';
-        hrOrderData.workspaceId = targetWsId;
+      hrOrderData.id = crypto.randomUUID();
+      hrOrderData.createdAt = new Date().toISOString();
+      hrOrderData.ad = hrOrderData.ad || 'Ожидает';
+      hrOrderData.kaspersky = hrOrderData.kaspersky || 'Ожидает';
+      hrOrderData.dlp = hrOrderData.dlp || 'Ожидает';
+      hrOrderData.staffcop = hrOrderData.staffcop || 'Ожидает';
+      hrOrderData.cisco = hrOrderData.cisco || 'Ожидает';
+      hrOrderData.statusKaspersky = 'pending';
+      hrOrderData.statusDlpDg = 'pending';
+      hrOrderData.statusStaffcop = 'pending';
+      hrOrderData.statusCisco = 'pending';
+      hrOrderData.statusAd = 'pending';
+      hrOrderData.isArchived = false;
+      hrOrderData.workspaceId = targetWsId;
 
-        if (!currentDbData.hr_orders) currentDbData.hr_orders = [];
-        currentDbData.hr_orders.push(hrOrderData);
-        await saveCollection('hr_orders', currentDbData.hr_orders);
+      if (!currentDbData.hr_orders) currentDbData.hr_orders = [];
+      currentDbData.hr_orders.unshift(hrOrderData);
+      await saveCollection('hr_orders', currentDbData.hr_orders);
 
-        console.log('[IMAP] Создан новый HR Приказ (JML) для', hrOrderData.fullName);
-        
-        // CREATE KANBAN TASK FOR THE GROUP
-        const newTask = {
-          id: generatedTaskId,
-          hrOrderId: hrOrderData.id,
-          title: `JML Приказ: ${hrOrderData.type} - ${hrOrderData.fullName}`,
-          description: `**HR Приказ JML**\nФИО: ${hrOrderData.fullName}\nДолжность: ${hrOrderData.newPosition || hrOrderData.oldPosition}\nДата: ${hrOrderData.date}\n
-Пожалуйста, выполните необходимые действия в системах.`,
-          status: 'todo',
-          priority: 'high',
-          creatorId: safePulseUser.id,
-          assigneeId: null,
-          assigneeGroupId: hrSettings.groupId || null,
-          workspaceId: targetWsId,
-          createdAt: new Date().toISOString(),
-          sprintId: 'unassigned',
-          comments: [],
-          storyPoints: 0,
-          estimatedHours: 0,
-          loggedHours: 0,
-          updatedAt: new Date().toISOString(),
-          subtasks: [
-            { id: `st-1-${Date.now()}`, title: 'Active Directory (Учетная запись)', completed: false },
-            { id: `st-2-${Date.now()}`, title: 'Kaspersky Endpoint Security', completed: false },
-            { id: `st-3-${Date.now()}`, title: 'Staffcop (Мониторинг)', completed: false },
-            { id: `st-4-${Date.now()}`, title: 'DLP (Защита от утечек)', completed: false },
-            { id: `st-5-${Date.now()}`, title: 'Cisco Duo (2FA)', completed: false }
-          ],
-          attachments: hrPdfAttachment ? [{ id: `att-${Date.now()}`, name: hrPdfAttachment.filename, url: `/uploads/${safeFilename}` }] : [],
-          tags: ['JML', 'Security']
-        };
+      console.log('[IMAP] Создан новый HR Приказ (JML) в реестре ИБ (без дублирования на Канбан-доске) для', hrOrderData.fullName);
 
-        if (!currentDbData.tasks) currentDbData.tasks = [];
-        currentDbData.tasks.push(newTask);
-        await saveCollection('tasks', currentDbData.tasks);
-
-        // MARK EMAIL AS PROCESSED
-        if (messageId) {
-          if (!currentDbData.processedEmails) currentDbData.processedEmails = [];
-          currentDbData.processedEmails.push(messageId);
-          if (currentDbData.processedEmails.length > 1000) currentDbData.processedEmails.shift();
-          await saveCollection('processedEmails', currentDbData.processedEmails);
-        }
-        
-        // Push notification handling
-        if (currentBroadcast) {
-          currentBroadcast('hr_orders');
-          currentBroadcast('tasks');
-        }
-        return;
+      // MARK EMAIL AS PROCESSED
+      if (messageId) {
+        if (!currentDbData.processedEmails) currentDbData.processedEmails = [];
+        currentDbData.processedEmails.push(messageId);
+        if (currentDbData.processedEmails.length > 1000) currentDbData.processedEmails.shift();
+        await saveCollection('processedEmails', currentDbData.processedEmails);
       }
-
+      
+      // Push notification handling
+      if (currentBroadcast) {
+        currentBroadcast('hr_orders');
+      }
+      return;
+    }
 
     let rawHtml = String(parsedMail.html || '') + ' ' + String(parsedMail.textAsHtml || '');
     
@@ -286,10 +265,8 @@ const processEmail = async (message, uid) => {
 
     const allUniqueHashes = [...uniqueMd5, ...uniqueSha1, ...uniqueSha256];
     if (allUniqueHashes.length > 0) {
-      // 1. Создаем TXT-файл на всякий случай
       createAttachment('KATA_Hashes.txt', allUniqueHashes.join('\n'));
       
-      // 2. Генерируем OpenIOC XML формат для кнопки "Импортировать" в KATA
       const nowIso = new Date().toISOString().split('.')[0] + 'Z';
       const rootId = crypto.randomUUID();
       const indicatorId = crypto.randomUUID();
@@ -336,15 +313,12 @@ ${indicatorItemsXml}
       createAttachment('KATA_Indicators.ioc', openIocXml);
     }
 
-
     // Проверяем срок действия (например, 'бессрочно' в бюллетенях KZ-CERT)
     const isPermanent = /бессрочно/i.test(bodyText);
     
-    // Ищем конкретные даты до какого числа (DD.MM.YYYY)
     let parsedExpirationDate = null;
     const foundDates = bodyText.match(DATE_REGEX) || [];
     if (foundDates.length > 0) {
-      // Берем самую позднюю дату из найденных в письме
       const timestamps = foundDates.map(d => {
         const [day, month, year] = d.split('.');
         return new Date(`${year}-${month}-${day}T00:00:00Z`).getTime();
@@ -363,7 +337,6 @@ ${indicatorItemsXml}
     if (uniqueIps.length > 0 && ((currentDbData.fortigateSettings?.['WS-1'] || currentDbData.fortigateSettings)?.['WS-1'] || (currentDbData.fortigateSettings?.['WS-1'] || currentDbData.fortigateSettings))?.enabled && ((currentDbData.fortigateSettings?.['WS-1'] || currentDbData.fortigateSettings)?.['WS-1'] || (currentDbData.fortigateSettings?.['WS-1'] || currentDbData.fortigateSettings))?.autoBanEnabled) {
       fortigateBanStatus = `<br/><br/><strong>[SOAR Auto-Ban]</strong> Запущен фоновый процесс блокировки ${uniqueIps.length} адресов на FortiGate...`;
       
-      // Запускаем процесс блокировки в фоне, чтобы не вешать IMAP парсер (особенно при таймаутах)
       (async () => {
         let bannedCount = 0;
         const oldBannedLength = currentDbData.bannedIps ? currentDbData.bannedIps.length : 0;
@@ -388,65 +361,71 @@ ${indicatorItemsXml}
         if (bannedCount > 0) {
           await saveCollection('bannedIps', currentDbData.bannedIps);
         
-        // Проверка лимитов группы FortiGate (например, 500 адресов)
-        const newBannedLength = currentDbData.bannedIps.length;
-        const threshold = 500;
-        if (Math.floor(oldBannedLength / threshold) < Math.floor(newBannedLength / threshold)) {
-          // Создаем отдельную задачу-алерт для админов
-          const alertTask = {
-            id: `task-${Date.now()}-alert`,
-            title: `⚠️ ВНИМАНИЕ: Группа FortiGate достигла лимита (${newBannedLength} адресов)`,
-            description: `Группа адресов на FortiGate (${(currentDbData.fortigateSettings?.['WS-1'] || currentDbData.fortigateSettings).addressGroup || 'Pulse_Banned_IPs'}) превысила порог в ${newBannedLength} записей.\n\nВозможно, достигнут хард-лимит FortiOS на количество объектов в одной группе. Рекомендуется создать вторую группу и изменить название целевой группы в настройках интеграции Pulse.`,
-            status: 'todo',
-            priority: 'high',
-            department: 'Кибербезопасность',
-            assigneeId: pulseUser.id,
-            authorId: 'system',
-            createdAt: new Date().toISOString()
-          };
-          if (!currentDbData.tasks) currentDbData.tasks = [];
-          currentDbData.tasks.push(alertTask);
-          await saveCollection('tasks', currentDbData.tasks);
-          if (currentBroadcast) {
-            currentBroadcast('newTask', alertTask);
+          const newBannedLength = currentDbData.bannedIps.length;
+          const threshold = 500;
+          if (Math.floor(oldBannedLength / threshold) < Math.floor(newBannedLength / threshold)) {
+            if (!currentDbData.tasks) currentDbData.tasks = [];
+            const alertTask = {
+              id: getNextNexId(currentDbData.tasks),
+              workspaceId: 'WS-1',
+              title: `⚠️ ВНИМАНИЕ: Группа FortiGate достигла лимита (${newBannedLength} адресов)`,
+              description: `Группа адресов на FortiGate превысила порог в ${newBannedLength} записей.\n\nРекомендуется проверить заполненность групп в настройках интеграции Pulse.`,
+              status: 'todo',
+              priority: 'high',
+              department: 'Кибербезопасность',
+              assigneeId: safePulseUser.id,
+              authorId: 'system',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              sprintId: 'unassigned',
+              subtasks: [],
+              comments: [],
+              tags: ['FortiGate', 'SOAR']
+            };
+            currentDbData.tasks.unshift(alertTask);
+            await saveCollection('tasks', currentDbData.tasks);
+            if (currentBroadcast) {
+              currentBroadcast('tasks');
+            }
           }
         }
-      }
       })();
     }
 
-          let displayBody = cleanBody;
-      if (uniqueIps.length > 5 && displayBody.length > 1000) {
-        displayBody = displayBody.substring(0, 800) + '... <br/><br/><i>[Длинный список адресов вырезан для сохранения читабельности задач и отчетов. Заблокировано IP: ' + uniqueIps.length + ']</i>';
-      }
+    let displayBody = cleanBody;
+    if (uniqueIps.length > 5 && displayBody.length > 1000) {
+      displayBody = displayBody.substring(0, 800) + '... <br/><br/><i>[Длинный список адресов вырезан для сохранения читабельности задач и отчетов. Заблокировано IP: ' + uniqueIps.length + ']</i>';
+    }
       
-      const newTask = {
-      id: `task-${Date.now()}`,
+    if (!currentDbData.tasks) currentDbData.tasks = [];
+    const activeWsSprint = (currentDbData.sprints || []).find(s => s.isActive && !s.isArchived && (!s.workspaceId || s.workspaceId === 'WS-1'));
+    const newTask = {
+      id: getNextNexId(currentDbData.tasks),
+      workspaceId: 'WS-1',
       title: cleanSubject(parsedMail.subject),
       description: `${displayBody}<br/><br/><strong>Найденные индикаторы (IP/DNS) сохранены в прикрепленных файлах.</strong>${fortigateBanStatus}`,
       status: 'todo',
       priority: 'high',
-      assigneeId: pulseUser.id,
+      assigneeId: safePulseUser.id,
       creatorId: safePulseUser.id,
       createdAt: new Date().toISOString(),
-      sprintId: 'unassigned',
-          comments: [],
-          storyPoints: 0,
-          estimatedHours: 0,
-          loggedHours: 0,
-          updatedAt: new Date().toISOString(),
+      sprintId: activeWsSprint ? activeWsSprint.id : 'unassigned',
+      comments: [],
+      subtasks: [],
+      tags: ['KZ-CERT', 'SOAR'],
+      storyPoints: 0,
+      estimatedHours: 0,
+      loggedHours: 0,
+      updatedAt: new Date().toISOString(),
       attachments: attachments
     };
 
-    if (!currentDbData.tasks) currentDbData.tasks = [];
-    currentDbData.tasks.push(newTask);
+    currentDbData.tasks.unshift(newTask);
     await saveCollection('tasks', currentDbData.tasks);
 
-    // Запоминаем, что обработали это письмо
     if (messageId) {
       if (!currentDbData.processedEmails) currentDbData.processedEmails = [];
       currentDbData.processedEmails.push(messageId);
-      // Ограничиваем историю 1000 последними письмами, чтобы база не пухла
       if (currentDbData.processedEmails.length > 1000) {
         currentDbData.processedEmails.shift();
       }
@@ -457,7 +436,7 @@ ${indicatorItemsXml}
       currentBroadcast('tasks');
     }
 
-    console.log(`✅ [IMAP] Создана новая задача "${newTask.title}" для ${pulseUser.name}`);
+    console.log(`✅ [IMAP] Создана новая задача ${newTask.id} ("${newTask.title}") для ${safePulseUser.name}`);
 
   } catch (err) {
     console.error('❌ [IMAP] Ошибка при обработке письма:', err);
@@ -488,7 +467,6 @@ export const stopImapService = async () => {
  * Запуск сервиса
  */
 export const startImapService = async (settings, dbData, broadcastUpdate) => {
-  // Останавливаем старый клиент, если он был
   await stopImapService();
 
   if (!settings || !settings.enabled || !settings.host || !settings.user || !settings.password) {
@@ -511,10 +489,9 @@ export const startImapService = async (settings, dbData, broadcastUpdate) => {
       user: settings.user,
       pass: settings.password
     },
-    logger: false // отключить спам в консоль
+    logger: false
   });
 
-  // Предотвращаем падение всего сервера Node.js при обрыве сокета (Socket timeout)
   client.on('error', err => {
     console.error('❌ [IMAP] Ошибка соединения (возможно таймаут):', err.message);
   });
@@ -533,12 +510,11 @@ export const startImapService = async (settings, dbData, broadcastUpdate) => {
 
     let lock = await client.getMailboxLock('INBOX');
     
-    // Функция для проверки непрочитанных писем
     let isProcessing = false;
     let processingStartTime = 0;
     const checkUnread = async () => {
       if (isProcessing) {
-        if (Date.now() - processingStartTime > 180000) { // 3 minutes timeout per email
+        if (Date.now() - processingStartTime > 180000) {
           console.error('⚠️ [IMAP] Проверка почты зависла (мертвый сокет). Принудительный рестарт...');
           if (client) {
             try { client.close(); } catch(e) {}
@@ -580,16 +556,13 @@ export const startImapService = async (settings, dbData, broadcastUpdate) => {
     };
 
     try {
-      // 1. Проверяем сразу при запуске
       await checkUnread();
 
-      // 2. Включаем подписку на новые письма (IMAP IDLE)
       client.on('exists', async (data) => {
         console.log(`[IMAP] Поступили новые письма (Всего в ящике: ${data.count})`);
         await checkUnread();
       });
 
-      // 3. Запускаем резервный таймер (каждые 60 секунд), так как корпоративный Exchange часто рвет IMAP IDLE
       const fetchInterval = setInterval(async () => {
         if (isProcessing) {
           await checkUnread();

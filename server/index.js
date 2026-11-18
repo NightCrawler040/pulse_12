@@ -1006,6 +1006,48 @@ const startServer = async () => {
     }
   }
 
+  // Auto-migrate and clean up duplicate HR Order (JML) tasks from Kanban board while preserving hr_orders
+  if (Array.isArray(dbData.tasks)) {
+    let hrOrdersChanged = false;
+    const jmlTasks = dbData.tasks.filter(t => t.hrOrderId || (typeof t.title === 'string' && t.title.startsWith('JML Приказ:')) || (Array.isArray(t.tags) && t.tags.includes('JML')));
+    if (jmlTasks.length > 0) {
+      if (Array.isArray(dbData.hr_orders)) {
+        jmlTasks.forEach(jt => {
+          const order = dbData.hr_orders.find(o => o.id === jt.hrOrderId || o.taskId === jt.id || (o.fullName && jt.title && jt.title.includes(o.fullName)));
+          if (order && Array.isArray(jt.subtasks)) {
+            jt.subtasks.forEach(st => {
+              if (!st.completed) return;
+              const titleLower = String(st.title || '').toLowerCase();
+              const doneLabel = order.type === 'Расторжение' ? 'Удален' : 'Установлен';
+              if (titleLower.includes('active directory')) { order.ad = doneLabel; hrOrdersChanged = true; }
+              if (titleLower.includes('kaspersky')) { order.kaspersky = doneLabel; hrOrdersChanged = true; }
+              if (titleLower.includes('staffcop')) { order.staffcop = doneLabel; hrOrdersChanged = true; }
+              if (titleLower.includes('dlp')) { order.dlp = doneLabel; hrOrdersChanged = true; }
+              if (titleLower.includes('cisco') || titleLower.includes('duo')) { order.cisco = doneLabel; hrOrdersChanged = true; }
+            });
+            delete order.taskId;
+            hrOrdersChanged = true;
+          }
+        });
+      }
+      dbData.tasks = dbData.tasks.filter(t => !(t.hrOrderId || (typeof t.title === 'string' && t.title.startsWith('JML Приказ:')) || (Array.isArray(t.tags) && t.tags.includes('JML'))));
+      await saveCollection('tasks', dbData.tasks);
+      console.log(`✅ [JML Migration] Удалено ${jmlTasks.length} дублирующих задач HR-приказов с Канбан-доски (все приказы сохранены в реестре HR Приказов).`);
+    }
+    if (Array.isArray(dbData.hr_orders)) {
+      dbData.hr_orders.forEach(o => {
+        if (!o.ad) { o.ad = o.statusAd === 'done' ? 'Установлен' : 'Ожидает'; hrOrdersChanged = true; }
+        if (!o.kaspersky) { o.kaspersky = o.statusKaspersky === 'done' ? 'Установлен' : 'Ожидает'; hrOrdersChanged = true; }
+        if (!o.dlp) { o.dlp = o.statusDlpDg === 'done' ? 'Установлен' : 'Ожидает'; hrOrdersChanged = true; }
+        if (!o.staffcop) { o.staffcop = o.statusStaffcop === 'done' ? 'Установлен' : 'Ожидает'; hrOrdersChanged = true; }
+        if (!o.cisco) { o.cisco = o.statusCisco === 'done' ? 'Установлен' : 'Ожидает'; hrOrdersChanged = true; }
+      });
+      if (hrOrdersChanged) {
+        await saveCollection('hr_orders', dbData.hr_orders);
+      }
+    }
+  }
+
   console.log(`✅ Инициализированы данные системы (${isPostgresMode() ? 'PostgreSQL' : 'Файловый режим'}): ${dbData.tasks.length} задач, ${dbData.users.length} сотрудников.`);
 
   const PORT = process.env.PORT || 3001;

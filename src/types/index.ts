@@ -97,6 +97,7 @@ export interface Sprint {
   isArchived?: boolean;
   archivedAt?: string;
   archivedBy?: string;
+  backupFilename?: string;
 }
 
 export interface FilterState {
@@ -121,7 +122,7 @@ export interface NotificationItem {
   taskData?: any;
 }
 
-export type ViewMode = 'board' | 'backlog' | 'workload' | 'analytics' | 'security' | 'profile' | 'admin' | 'help';
+export type ViewMode = 'board' | 'backlog' | 'workload' | 'analytics' | 'security' | 'architecture' | 'profile' | 'admin' | 'help';
 
 export interface ExternalFinding {
   id: string;
@@ -172,10 +173,13 @@ export interface HrOrder {
   department?: string;
   period?: string;
   pcName: string;
+  ad?: string;
   kaspersky: string;
   dlp: string;
   staffcop: string;
   cisco: string;
+  isArchived?: boolean;
+  archivedAt?: string;
   pdfUrl?: string;
   createdAt: string;
 }

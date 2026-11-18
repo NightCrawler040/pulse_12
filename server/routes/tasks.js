@@ -21,7 +21,7 @@ export default function createTasksRouter(requireAuth) {
     if (!req.body.workspaceId && req.currentUser && req.currentUser.workspaceIds && req.currentUser.workspaceIds.length > 0) {
       req.body.workspaceId = req.currentUser.workspaceIds[0];
     }
-    let maxIdNum = 100;
+    let maxIdNum = 2000;
     const existingIds = new Set();
     (req.dbData.tasks || []).forEach(t => {
       if (t.id) existingIds.add(String(t.id));

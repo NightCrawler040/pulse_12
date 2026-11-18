@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { KanbanColumn } from './KanbanColumn';
 import type { Status } from '../../types';
 import confetti from 'canvas-confetti';
-import { Download, Filter, List, LayoutGrid } from 'lucide-react';
+import { Download, Filter, List, LayoutGrid, Layers } from 'lucide-react';
 import { ListView } from './ListView';
 import './KanbanBoard.css';
 
@@ -21,6 +21,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
     tasks,
     sprints,
     activeSprintId,
+    setActiveSprintId,
     users, 
     moveTask, 
     setActiveTaskModalId,
@@ -31,12 +32,21 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
 
   const { currentUser, isAdmin, isManagerOrAdmin } = useAuth();
 
+  // Exclude archived sprints from the main active board selector
+  const nonArchivedSprints = React.useMemo(() => {
+    return sprints.filter(s => !s.isArchived);
+  }, [sprints]);
+
+  const archivedSprintIds = React.useMemo(() => {
+    return new Set(sprints.filter(s => s.isArchived).map(s => s.id));
+  }, [sprints]);
+
   const currentSprint = React.useMemo(() => {
-    if (activeSprintId !== 'all') {
+    if (activeSprintId && activeSprintId !== 'all' && activeSprintId !== 'unassigned') {
       return sprints.find(s => s.id === activeSprintId);
     }
-    return sprints.find(s => s.isActive) || sprints[0];
-  }, [sprints, activeSprintId]);
+    return nonArchivedSprints.find(s => s.isActive) || nonArchivedSprints[0] || null;
+  }, [sprints, nonArchivedSprints, activeSprintId]);
 
   const sprintStats = React.useMemo(() => {
     if (!currentSprint) return null;
@@ -56,27 +66,40 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
 
   const displayTasks = React.useMemo(() => {
     return filteredTasks.filter(task => {
-      const shouldFilterByMe = (!isManagerOrAdmin && currentUser) || (isManagerOrAdmin && currentUser && filters.myTasksOnly);
-        if (shouldFilterByMe) {
-          const isAssignee = task.assigneeId === currentUser.id;
-          const inGroup = task.assigneeGroupId && Array.isArray(groups) ? groups.some(g => g.id === task.assigneeGroupId && Array.isArray(g.memberIds) && g.memberIds.includes(currentUser?.id)) : false;
-          const isCommenter = Array.isArray(task.comments) ? task.comments.some(c => c.userId === currentUser?.id) : false;
-          const isCreator = task.creatorId === currentUser.id;
-          if (!isAssignee && !inGroup && !isCommenter && !isCreator) {
-            return false;
-          }
+      // 1. Never show tasks from archived sprints on the main board unless explicitly viewing that sprint
+      if (task.sprintId && archivedSprintIds.has(task.sprintId) && activeSprintId !== task.sprintId) {
+        return false;
+      }
+
+      // 2. Filter by selected board sprint mode
+      if (activeSprintId === 'unassigned') {
+        if (task.sprintId && task.sprintId !== 'unassigned') return false;
+      } else if (activeSprintId && activeSprintId !== 'all') {
+        if (task.sprintId !== activeSprintId) return false;
+      } else if (activeSprintId === 'all' && currentSprint) {
+        // Default: show active sprint tasks + operational tasks without a sprint, never mixing other sprints
+        if (task.sprintId && task.sprintId !== 'unassigned' && task.sprintId !== currentSprint.id) {
+          return false;
         }
+      }
+
+      const shouldFilterByMe = (!isManagerOrAdmin && currentUser) || (isManagerOrAdmin && currentUser && filters.myTasksOnly);
+      if (shouldFilterByMe) {
+        const isAssignee = task.assigneeId === currentUser.id;
+        const inGroup = task.assigneeGroupId && Array.isArray(groups) ? groups.some(g => g.id === task.assigneeGroupId && Array.isArray(g.memberIds) && g.memberIds.includes(currentUser?.id)) : false;
+        const isCommenter = Array.isArray(task.comments) ? task.comments.some(c => c.userId === currentUser?.id) : false;
+        const isCreator = task.creatorId === currentUser.id;
+        if (!isAssignee && !inGroup && !isCommenter && !isCreator) {
+          return false;
+        }
+      }
       return true;
     });
-  }, [filteredTasks, filters.myTasksOnly, currentUser, groups, isAdmin]);
+  }, [filteredTasks, filters.myTasksOnly, currentUser, groups, isAdmin, isManagerOrAdmin, activeSprintId, currentSprint, archivedSprintIds]);
 
   const handleDragEnd = (result: DropResult) => {
     const { destination, source, draggableId } = result;
-
-    // Dropped outside the list
     if (!destination) return;
-
-    // Dropped in the same place
     if (
       destination.droppableId === source.droppableId &&
       destination.index === source.index
@@ -87,7 +110,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
     const newStatus = destination.droppableId as Status;
     moveTask(draggableId, newStatus);
 
-    // Trigger confetti celebration if task is moved to 'done'
     if (newStatus === 'done' && source.droppableId !== 'done') {
       confetti({
         particleCount: 100,
@@ -100,9 +122,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
 
   const handleExportExcel = () => {
     const headers = ['ID', 'Название', 'Статус', 'Приоритет', 'Исполнитель', 'Story Points', 'Оценка (ч)', 'Затрачено (ч)', 'Теги'];
-    
-    let tableHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8" /><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Tasks</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body><table border="1"><thead><tr>`;
-    
+    let tableHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8" /></head><body><table border="1"><thead><tr>`;
     headers.forEach(h => { tableHtml += `<th>${h}</th>`; });
     tableHtml += `</tr></thead><tbody>`;
 
@@ -134,43 +154,66 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
 
   return (
     <div className="kanban-board-container">
-      {/* Board Top Toolbar: Excel Export & Priority Filter */}
+      {/* Board Top Toolbar: Sprint Selector, Priority Filter & Excel Export */}
       <div className="board-top-toolbar">
-        <div className="board-toolbar-left">
-          <Filter size={16} style={{ color: 'hsl(var(--primary))' }} />
-          <span className="toolbar-label">Приоритет:</span>
-          <select
-            value={filters.priority}
-            onChange={e => setFilters(prev => ({ ...prev, priority: e.target.value as any }))}
-            className="toolbar-select"
-          >
-            <option value="all">⭐ Все приоритеты</option>
-            <option value="urgent">🔥 Срочно!</option>
-            <option value="high">🔴 Высокий</option>
-            <option value="medium">🟡 Средний</option>
-            <option value="low">🔵 Низкий</option>
-          </select>
+        <div className="board-toolbar-left" style={{ flexWrap: 'wrap', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Layers size={16} style={{ color: 'hsl(var(--primary))' }} />
+            <span className="toolbar-label">Итерация:</span>
+            <select
+              value={activeSprintId}
+              onChange={e => setActiveSprintId(e.target.value)}
+              className="toolbar-select"
+              style={{ fontWeight: 600 }}
+            >
+              <option value="all">
+                🚀 {currentSprint ? `Текущий: ${currentSprint.name}` : 'Активные задачи'}
+              </option>
+              {nonArchivedSprints.map(sp => (
+                <option key={sp.id} value={sp.id}>
+                  {sp.isActive ? '🔥 ' : '📅 '}{sp.name}
+                </option>
+              ))}
+              <option value="unassigned">📋 Оперативные задачи (Вне спринта)</option>
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Filter size={16} style={{ color: 'hsl(var(--primary))' }} />
+            <span className="toolbar-label">Приоритет:</span>
+            <select
+              value={filters.priority}
+              onChange={e => setFilters(prev => ({ ...prev, priority: e.target.value as any }))}
+              className="toolbar-select"
+            >
+              <option value="all">⭐ Все приоритеты</option>
+              <option value="urgent">🔥 Срочно!</option>
+              <option value="high">🔴 Высокий</option>
+              <option value="medium">🟡 Средний</option>
+              <option value="low">🔵 Низкий</option>
+            </select>
+          </div>
 
           {isManagerOrAdmin && (
-              <button
-                className="btn-secondary"
-                onClick={() => setFilters(prev => ({ ...prev, myTasksOnly: !prev.myTasksOnly }))}
-            title="Показать только задачи, где вы назначены"
-            style={{
-              background: filters.myTasksOnly ? 'hsl(var(--primary))' : 'hsl(var(--bg-secondary))',
-              color: filters.myTasksOnly ? '#fff' : 'inherit',
-              borderColor: filters.myTasksOnly ? 'hsl(var(--primary))' : 'var(--border-color)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '4px 12px',
-              borderRadius: '6px',
-              fontWeight: 600,
-              fontSize: '0.8rem',
-              cursor: 'pointer'
-            }}
-          >
-            <span>{filters.myTasksOnly ? 'Только мои' : 'Все задачи'}</span>
+            <button
+              className="btn-secondary"
+              onClick={() => setFilters(prev => ({ ...prev, myTasksOnly: !prev.myTasksOnly }))}
+              title="Показать только задачи, где вы назначены"
+              style={{
+                background: filters.myTasksOnly ? 'hsl(var(--primary))' : 'hsl(var(--bg-secondary))',
+                color: filters.myTasksOnly ? '#fff' : 'inherit',
+                borderColor: filters.myTasksOnly ? 'hsl(var(--primary))' : 'var(--border-color)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '4px 12px',
+                borderRadius: '6px',
+                fontWeight: 600,
+                fontSize: '0.8rem',
+                cursor: 'pointer'
+              }}
+            >
+              <span>{filters.myTasksOnly ? 'Только мои' : 'Все задачи'}</span>
             </button>
           )}
         </div>
@@ -187,7 +230,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
           <button
             className="btn-secondary export-excel-btn"
             onClick={handleExportExcel}
-            title="Выгрузить текущий спринт / задачи в CSV (с поддержкой кодировки UTF-8 BOM для Microsoft Excel)"
+            title="Выгрузить текущий спринт / задачи в Excel"
           >
             <Download size={16} />
             <span>📥 Выгрузить в Excel / CSV</span>
@@ -195,7 +238,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
         </div>
       </div>
 
-      {currentSprint && sprintStats && (
+      {currentSprint && sprintStats && activeSprintId !== 'unassigned' && (
         <div style={{
           background: 'hsl(var(--bg-secondary))',
           border: '1px solid var(--border-color)',
@@ -220,6 +263,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
                   Активный спринт
                 </span>
               )}
+              {currentSprint?.isArchived && (
+                <span style={{ background: '#64748b', color: 'white', fontSize: '0.75rem', padding: '2px 8px', borderRadius: '12px', fontWeight: 'bold' }}>
+                  🗄️ Архивный спринт
+                </span>
+              )}
               {sprintStats && (
                 <span style={{
                   background: sprintStats.diffDays > 2 ? 'rgba(59, 130, 246, 0.15)' : sprintStats.diffDays >= 0 ? 'rgba(245, 158, 11, 0.15)' : 'rgba(239, 68, 68, 0.15)',
@@ -241,26 +289,26 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onOpenNewTaskModalWith
             )}
           </div>
 
-          {/* Progress Bar & Stats */}
           {sprintStats && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '240px', flex: '0 1 320px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 600, color: 'hsl(var(--text-secondary))' }}>
-              <span>Прогресс (Burn-down)</span>
-              <span style={{ color: 'hsl(var(--primary))' }}>{sprintStats.progressPercent}%</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '240px', flex: '0 1 320px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 600, color: 'hsl(var(--text-secondary))' }}>
+                <span>Прогресс (Burn-down)</span>
+                <span style={{ color: 'hsl(var(--primary))' }}>{sprintStats.progressPercent}%</span>
+              </div>
+              <div style={{ width: '100%', height: '10px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '6px', overflow: 'hidden' }}>
+                <div style={{
+                  width: `${sprintStats.progressPercent}%`,
+                  height: '100%',
+                  background: 'linear-gradient(90deg, #3b82f6 0%, #10b981 100%)',
+                  transition: 'width 0.5s ease'
+                }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'hsl(var(--text-muted))' }}>
+                <span>Задачи: <strong>{sprintStats.completedTasksCount} / {sprintStats.sprintTasksCount}</strong></span>
+                <span>Story Points: <strong>{sprintStats.completedPoints} / {sprintStats.totalPoints} SP</strong></span>
+              </div>
             </div>
-            <div style={{ width: '100%', height: '10px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '6px', overflow: 'hidden' }}>
-              <div style={{
-                width: `${sprintStats.progressPercent}%`,
-                height: '100%',
-                background: 'linear-gradient(90deg, #3b82f6 0%, #10b981 100%)',
-                transition: 'width 0.5s ease'
-              }} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'hsl(var(--text-muted))' }}>
-              <span>Задачи: <strong>{sprintStats.completedTasksCount} / {sprintStats.sprintTasksCount}</strong></span>
-              <span>Story Points: <strong>{sprintStats.completedPoints} / {sprintStats.totalPoints} SP</strong></span>
-            </div>
-          </div>)}
+          )}
         </div>
       )}
 

@@ -63,7 +63,8 @@ const DEFAULT_DB_STATE = {
   bannedIps: [], kataHashes: [], processedEmails: [],
   ldap_settings: { ...defaultLdapSettings }, mailSettings: {},
   fortigateSettings: { ...defaultFortigateSettings }, imapSettings: {},
-  hrSettings: {}, notificationEvents: {}, globalSettings: {}
+  hrSettings: {}, notificationEvents: {}, globalSettings: {},
+  dkbArchitecture: null
 };
 let localDbData = JSON.parse(JSON.stringify(DEFAULT_DB_STATE));
 

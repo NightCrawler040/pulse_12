@@ -148,7 +148,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
   const [viewMode, setViewModeState] = useState<ViewMode>(() => {
     const path = window.location.pathname.replace(/^\//, '').toLowerCase();
-    const validModes: ViewMode[] = ['board', 'backlog', 'workload', 'analytics', 'profile', 'admin'];
+    const validModes: ViewMode[] = ['board', 'backlog', 'workload', 'analytics', 'security', 'architecture', 'profile', 'admin'];
     if (validModes.includes(path as ViewMode)) {
       return path as ViewMode;
     }
@@ -166,7 +166,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const handlePopState = () => {
       const path = window.location.pathname.replace(/^\//, '').toLowerCase();
-      const validModes: ViewMode[] = ['board', 'backlog', 'workload', 'analytics', 'profile', 'admin'];
+      const validModes: ViewMode[] = ['board', 'backlog', 'workload', 'analytics', 'security', 'architecture', 'profile', 'admin'];
       if (validModes.includes(path as ViewMode)) {
         setViewModeState(path as ViewMode);
       } else {
@@ -219,7 +219,13 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (Array.isArray(data.findings)) setFindings(data.findings);
         if (Array.isArray(data.api_keys)) setApiKeys(data.api_keys);
         if ((data as any).globalSettings) setGlobalSettings((data as any).globalSettings);
-        if (Array.isArray(data.workspaces)) { setWorkspaces(data.workspaces); if (data.workspaces.length > 0) setActiveWorkspaceId(data.workspaces[0].id); }
+        if (Array.isArray(data.workspaces)) {
+          setWorkspaces(data.workspaces);
+          const savedWs = localStorage.getItem('korpjira-active-workspace');
+          if (!savedWs || !data.workspaces.some(w => w.id === savedWs)) {
+            if (data.workspaces.length > 0) setActiveWorkspaceId(data.workspaces[0].id);
+          }
+        }
         if (Array.isArray((data as any).hr_orders)) setHrOrders((data as any).hr_orders);
         setIsServerConnected(true);
         setIsDataLoading(false);
@@ -372,7 +378,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addTask = (newTaskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'comments'>) => {
     if (activeWorkspaceId && !newTaskData.workspaceId) newTaskData.workspaceId = activeWorkspaceId;
-    let maxIdNum = 100;
+    let maxIdNum = 2000;
     tasks.forEach(t => {
       const m = t.id && String(t.id).match(/^NEX-(\d+)$/);
       if (m) {
@@ -779,9 +785,10 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addGroup = (groupData: Omit<Group, 'id'>): Group => {
     const newId = `grp-${Date.now()}`;
-    const newGroup: Group = { ...groupData, id: newId };
+    const wsId = groupData.workspaceId || activeWorkspaceId || 'WS-1';
+    const newGroup: Group = { ...groupData, id: newId, workspaceId: wsId };
     setGroups(prev => [...prev, newGroup]);
-    apiService.createGroup(groupData).catch(err => console.error('Create group failed:', err));
+    apiService.createGroup({ ...groupData, workspaceId: wsId }).catch(err => console.error('Create group failed:', err));
     return newGroup;
   };
 
@@ -797,9 +804,10 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addSprint = (sprintData: Omit<Sprint, 'id'>): Sprint => {
     const newId = `sprint-${Date.now()}`;
-    const newSprint: Sprint = { ...sprintData, id: newId };
+    const wsId = sprintData.workspaceId || activeWorkspaceId || 'WS-1';
+    const newSprint: Sprint = { ...sprintData, id: newId, workspaceId: wsId };
     setSprints(prev => [...prev, newSprint]);
-    apiService.createSprint(sprintData).catch(err => console.error('Create sprint failed:', err));
+    apiService.createSprint({ ...sprintData, workspaceId: wsId }).catch(err => console.error('Create sprint failed:', err));
     return newSprint;
   };
 

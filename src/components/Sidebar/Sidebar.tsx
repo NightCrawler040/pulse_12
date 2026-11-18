@@ -12,7 +12,8 @@ import {
   HelpCircle,
   ShieldAlert,
   Activity,
-  ChevronLeft
+  ChevronLeft,
+  Network
 } from 'lucide-react';
 import './Sidebar.css';
 
@@ -30,8 +31,15 @@ export const Sidebar: React.FC = () => {
     localStorage.setItem('pulse_sidebar_collapsed', String(newValue));
   };
   
-  const employeeUsersCount = users.filter(u => u.id !== 'usr-1' && u.login?.toLowerCase() !== 'admin').length;
-    const canAccessSystem = (source: string) => {
+  const employeeUsersCount = users.filter(u => {
+    if (u.id === 'usr-1' || u.login?.toLowerCase() === 'admin') return false;
+    if (activeWorkspaceId && activeWorkspaceId !== 'WS-1') {
+      return (u.workspaceIds || []).includes(activeWorkspaceId);
+    }
+    return true;
+  }).length;
+
+  const canAccessSystem = (source: string) => {
     if (isAdmin || !currentUser) return true;
     const userDept = currentUser.department || '';
     if (source === 'derscanner') {
@@ -46,7 +54,7 @@ export const Sidebar: React.FC = () => {
 
   const navItems: { mode: ViewMode; label: string; icon: React.ReactNode; badge?: string }[] = [
     { mode: 'board', label: 'Доска', icon: <LayoutDashboard size={18} /> },
-    { mode: 'backlog', label: 'Бэклог', icon: <ListTodo size={18} /> },
+    { mode: 'backlog', label: 'Бэклог и Архив', icon: <ListTodo size={18} /> },
     { mode: 'workload', label: 'Команда', icon: <Users size={18} />, badge: String(employeeUsersCount) },
     { mode: 'analytics', label: 'Аналитика', icon: <BarChart3 size={18} /> },
     { 
@@ -55,6 +63,7 @@ export const Sidebar: React.FC = () => {
       icon: <ShieldAlert size={18} style={{ color: activeFindingsCount > 0 ? '#ef4444' : 'inherit' }} />, 
       badge: activeFindingsCount > 0 ? String(activeFindingsCount) : undefined 
     },
+    { mode: 'architecture', label: 'Схема ДКБ', icon: <Network size={18} style={{ color: '#38bdf8' }} /> },
     { mode: 'profile', label: 'Профиль', icon: <UserIcon size={18} /> },
     { mode: 'help', label: 'Помощь', icon: <HelpCircle size={18} /> },
   ];
@@ -62,7 +71,7 @@ export const Sidebar: React.FC = () => {
   const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId);
   const enabledModules = activeWorkspace?.enabledModules || ['kanban', 'security_center', 'integrations'];
 
-  let filteredNavItems = navItems.filter(item => {
+  const filteredNavItems = navItems.filter(item => {
     if (['board', 'backlog', 'workload', 'analytics'].includes(item.mode)) return enabledModules.includes('kanban');
     if (item.mode === 'security') return enabledModules.includes('security_center');
     return true;
@@ -78,7 +87,7 @@ export const Sidebar: React.FC = () => {
         <ChevronLeft size={14} />
       </button>
 
-            <div className="sidebar-brand">
+      <div className="sidebar-brand">
         <Activity size={24} className="logo-icon" />
         <span>Pulse</span>
       </div>
@@ -101,9 +110,9 @@ export const Sidebar: React.FC = () => {
             }}
           >
             {workspaces
-              .filter(ws => isAdmin || (currentUser.workspaceIds && currentUser.workspaceIds.includes(ws.id)))
+              .filter(ws => isAdmin || ws.ownerId === currentUser.id || (currentUser.workspaceIds && currentUser.workspaceIds.includes(ws.id)))
               .map(ws => (
-              <option key={ws.id} value={ws.id}>{ws.name}</option>
+              <option key={ws.id} value={ws.id} style={{ background: '#0f172a', color: '#f8fafc' }}>{ws.name}</option>
             ))}
           </select>
         </div>
@@ -124,8 +133,6 @@ export const Sidebar: React.FC = () => {
           ))}
         </nav>
       )}
-
-              
     </aside>
   );
 };

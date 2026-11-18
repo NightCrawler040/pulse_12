@@ -10,6 +10,7 @@ const Analytics = React.lazy(() => import('./components/Analytics/Analytics').th
 const Profile = React.lazy(() => import('./components/Profile/Profile').then(m => ({ default: m.Profile })));
 const AdminPanel = React.lazy(() => import('./components/AdminPanel/AdminPanel').then(m => ({ default: m.AdminPanel })));
 const SecurityCenter = React.lazy(() => import('./components/SecurityCenter/SecurityCenter').then(m => ({ default: m.SecurityCenter })));
+const DkbArchitectureMap = React.lazy(() => import('./components/Architecture/DkbArchitectureMap').then(m => ({ default: m.DkbArchitectureMap })));
 import { WelcomePage } from './components/Welcome/WelcomePage';
 import { LoginModal } from './components/Login/LoginModal';
 import { TaskModal } from './components/TaskModal/TaskModal';
@@ -88,6 +89,9 @@ const AppContent: React.FC = () => {
                 )}
                 {viewMode === 'security' && (
                   <SecurityCenter />
+                )}
+                {viewMode === 'architecture' && (
+                  <DkbArchitectureMap />
                 )}
               </React.Suspense>
             </>
