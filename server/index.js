@@ -103,7 +103,7 @@ app.use(cors({
   origin: true, 
   credentials: true
 }));
-app.use(['/api/upload', '/api/upload-file'], express.json({ limit: '65mb' }));
+app.use(['/api/upload', '/api/upload-file', '/api/tasks', '/api/import'], express.json({ limit: '100mb' }));
 app.use(express.json({ limit: '2mb' })); // Ограничение размера JSON до безопасных 2 МБ (защита от Payload DoS)
 
 // Global HTTP Request Logger (для отслеживания любых обращений от внешних систем и DerScanner)
@@ -684,7 +684,7 @@ app.post('/api/upload-file', requireAuth, async (req, res) => {
   }
   try {
     const ext = (path.extname(filename) || '').toLowerCase();
-    const ALLOWED_EXTENSIONS = ['.pdf', '.docx', '.doc', '.xlsx', '.xls', '.csv', '.txt', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.zip', '.rar', '.7z', '.ppt', '.pptx'];
+    const ALLOWED_EXTENSIONS = ['.pdf', '.docx', '.doc', '.xlsx', '.xls', '.csv', '.txt', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.zip', '.rar', '.7z', '.ppt', '.pptx', '.ioc', '.xml', '.json', '.log', '.msg', '.eml', '.pcap', '.pcapng', '.html', '.htm', '.md'];
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
       return res.status(400).json({ error: `Безопасность: загрузка файлов с расширением "${ext || 'без расширения'}" запрещена политикой безопасности!` });
     }
