@@ -1,7 +1,7 @@
 import React from 'react';
 import { Draggable } from '@hello-pangea/dnd';
 import type { Task, User } from '../../types';
-import { Clock, CheckSquare, MessageSquare, Paperclip } from 'lucide-react';
+import { Clock, CheckSquare, MessageSquare, Paperclip, AlertCircle } from 'lucide-react';
 import './KanbanBoard.css';
 
 interface TaskCardProps {
@@ -26,6 +26,36 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, users, groups, 
     urgent: 'Срочно!'
   };
 
+  // SLA & Deadline calculation
+  const slaBadge = React.useMemo(() => {
+    if (task.status === 'done') return null;
+    if (!task.dueDate) return null;
+    const dueTime = new Date(task.dueDate).getTime();
+    if (isNaN(dueTime)) return null;
+    const now = Date.now();
+    const diffHours = (dueTime - now) / (1000 * 60 * 60);
+    if (diffHours < -24) {
+      const daysOverdue = Math.ceil(Math.abs(diffHours) / 24);
+      return {
+        label: `🔥 Просрочено (${daysOverdue} дн.)`,
+        color: '#ef4444',
+        bg: 'rgba(239, 68, 68, 0.16)',
+        border: 'rgba(239, 68, 68, 0.45)',
+        isOverdue: true
+      };
+    }
+    if (diffHours <= 24) {
+      return {
+        label: '⏳ Дедлайн сегодня',
+        color: '#f59e0b',
+        bg: 'rgba(245, 158, 11, 0.16)',
+        border: 'rgba(245, 158, 11, 0.45)',
+        isOverdue: false
+      };
+    }
+    return null;
+  }, [task.dueDate, task.status]);
+
   return (
     <Draggable draggableId={task.id} index={index}>
       {(provided, snapshot) => (
@@ -37,11 +67,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, users, groups, 
           onClick={() => onCardClick(task.id)}
           style={{
             ...provided.draggableProps.style,
+            borderColor: slaBadge?.isOverdue ? 'rgba(239, 68, 68, 0.5)' : undefined,
+            boxShadow: slaBadge?.isOverdue ? '0 0 14px rgba(239, 68, 68, 0.15)' : undefined
           }}
         >
           {/* Top Row: Task ID & Priority */}
           <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
               <span className="task-id">{task.id}</span>
               {(task.externalFindingId || task.tags?.some(t => String(t).toLowerCase() === 'derscanner')) && !task.tags?.some(t => String(t).toLowerCase() === 'siem' || String(t).toLowerCase() === 'waf') && (
                 <span style={{
@@ -57,6 +89,22 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, users, groups, 
                   gap: '3px'
                 }} title="Задача создана автоматически из уязвимости DerScanner SAST">
                   🛡️ DerScanner
+                </span>
+              )}
+              {task.tags?.some(t => String(t).toLowerCase() === 'kz-cert') && (
+                <span style={{
+                  background: 'rgba(56, 189, 248, 0.15)',
+                  color: '#38bdf8',
+                  border: '1px solid rgba(56, 189, 248, 0.4)',
+                  padding: '2px 6px',
+                  borderRadius: '6px',
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px'
+                }} title="Бюллетень KZ-CERT SOAR">
+                  📧 KZ-CERT
                 </span>
               )}
               {task.tags?.some(t => String(t).toLowerCase() === 'siem') && (
@@ -97,6 +145,26 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, users, groups, 
             </span>
           </div>
 
+          {/* SLA Alert Pill */}
+          {slaBadge && (
+            <div style={{
+              marginTop: '6px',
+              padding: '3px 8px',
+              borderRadius: '6px',
+              fontSize: '0.7rem',
+              fontWeight: 700,
+              background: slaBadge.bg,
+              color: slaBadge.color,
+              border: `1px solid ${slaBadge.border}`,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}>
+              <AlertCircle size={12} />
+              <span>{slaBadge.label}</span>
+            </div>
+          )}
+
           {/* Project Badge */}
           {(task.project || task.externalFindingId) && (
             <div style={{ fontSize: '0.74rem', fontWeight: 700, color: '#60a5fa', margin: '4px 0', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -119,11 +187,22 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, users, groups, 
 
           {/* Mini Subtask Progress Bar */}
           {totalSubtasks > 0 && (
-            <div className="card-mini-progress">
-              <div 
-                className="card-mini-progress-fill" 
-                style={{ width: `${Math.round((completedSubtasks / totalSubtasks) * 100)}%` }} 
-              />
+            <div style={{ marginTop: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'hsl(var(--text-secondary))', marginBottom: '3px' }}>
+                <span>Чек-лист</span>
+                <span style={{ fontWeight: 700, color: completedSubtasks === totalSubtasks ? '#10b981' : 'inherit' }}>
+                  {Math.round((completedSubtasks / totalSubtasks) * 100)}% ({completedSubtasks}/{totalSubtasks})
+                </span>
+              </div>
+              <div className="card-mini-progress">
+                <div 
+                  className="card-mini-progress-fill" 
+                  style={{
+                    width: `${Math.round((completedSubtasks / totalSubtasks) * 100)}%`,
+                    background: completedSubtasks === totalSubtasks ? '#10b981' : 'hsl(var(--primary))'
+                  }} 
+                />
+              </div>
             </div>
           )}
 
@@ -169,7 +248,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, users, groups, 
                 </span>
               )}
               {task.dueDate && (
-                <span style={{ color: '#f59e0b', fontWeight: 600 }} title="Срок выполнения">
+                <span style={{ color: slaBadge?.color || '#f59e0b', fontWeight: 600 }} title="Срок выполнения">
                   До {task.dueDate}
                 </span>
               )}
@@ -198,12 +277,18 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, users, groups, 
               ) : (
                 <span className="unassigned-badge">Не назначен</span>
               )}
+              {assignee && (
+                <span className="assignee-name" style={{ fontSize: '0.75rem', color: 'hsl(var(--text-secondary))', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {assignee.name.split(' ')[0]}
+                </span>
+              )}
             </div>
 
-            <div className="story-points-badge" title="Story Points (Сложность)">
-              <span className="sp-number">{task.storyPoints}</span>
-              <span className="sp-label">SP</span>
-            </div>
+            {task.storyPoints > 0 && (
+              <div className="story-points-badge" title="Story Points">
+                {task.storyPoints} SP
+              </div>
+            )}
           </div>
         </div>
       )}
