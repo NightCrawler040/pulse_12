@@ -108,7 +108,7 @@ app.use(express.json({ limit: '2mb' })); // Ограничение размер�
 
 // Global HTTP Request Logger (для отслеживания любых обращений от внешних систем и DerScanner)
 app.use((req, res, next) => {
-  if (req.originalUrl && (req.originalUrl.includes('/rest/') || req.originalUrl.includes('/api/'))) {
+  if (req.originalUrl && (req.originalUrl.includes('/rest/') || req.originalUrl.includes('/api/')) && !req.originalUrl.startsWith('/api/settings/logs')) {
     console.log(`📥 [INCOMING HTTP] ${req.method} ${req.originalUrl}`);
   }
   next();

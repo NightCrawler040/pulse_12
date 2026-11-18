@@ -220,19 +220,20 @@
 
 /* Tabs */
 .admin-tabs {
-  display: flex;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
   margin-top: 16px;
   border-bottom: 1px solid var(--border-color);
-  padding-bottom: 12px;
+  padding-bottom: 14px;
   width: 100%;
 }
 
 .admin-tab-btn {
-  padding: 10px 20px;
+  padding: 12px 14px;
   border-radius: var(--radius-md);
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   background: hsl(var(--bg-tertiary));
   color: hsl(var(--text-secondary));
   border: 1px solid var(--border-color);
@@ -240,19 +241,22 @@
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
+  justify-content: center;
+  text-align: center;
   gap: 8px;
 }
 
 .admin-tab-btn:hover {
   background: hsl(var(--bg-card-hover));
   color: hsl(var(--text-primary));
+  border-color: hsl(var(--primary) / 0.4);
 }
 
 .admin-tab-btn.active {
-  background: hsl(var(--primary));
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
   color: #ffffff;
   border-color: hsl(var(--primary));
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 14px var(--primary-glow);
 }
 
 .reveal-btn {

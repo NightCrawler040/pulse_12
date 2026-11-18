@@ -172,7 +172,84 @@ button {
 .btn-secondary:hover {
   background: hsl(var(--bg-card-hover));
   border-color: rgba(255, 255, 255, 0.2);
-  
+}
+
+/* Global Form Controls & Theme-Adaptive Inputs */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="number"],
+input[type="date"],
+input[type="search"],
+select,
+textarea,
+.input-field,
+.form-input,
+.admin-input,
+.toolbar-select {
+  background-color: hsl(var(--bg-tertiary));
+  color: hsl(var(--text-primary));
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-family: var(--font-main);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+input[type="number"]:focus,
+input[type="date"]:focus,
+input[type="search"]:focus,
+select:focus,
+textarea:focus,
+.input-field:focus,
+.form-input:focus,
+.admin-input:focus,
+.toolbar-select:focus {
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: hsl(var(--text-muted));
+  opacity: 0.85;
+}
+
+select option {
+  background-color: hsl(var(--bg-secondary));
+  color: hsl(var(--text-primary));
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label,
+.form-label {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: hsl(var(--text-secondary));
+}
+
+.help-text {
+  font-size: 0.8rem;
+  color: hsl(var(--text-muted));
+  line-height: 1.45;
+}
+
+.admin-section {
+  background: hsl(var(--bg-secondary));
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: 24px 28px;
+  box-shadow: var(--shadow-md);
 }
 
 /* Badges & Tags */

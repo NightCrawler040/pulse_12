@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiService } from '../../services/api';
+import { RefreshCw, Trash2, Terminal } from 'lucide-react';
 
 interface LogEntry {
   id: number;
@@ -10,7 +11,8 @@ interface LogEntry {
 }
 
 const CATEGORIES = [
-  { id: 'all', label: 'Все модули' },
+  { id: 'all', label: '🌐 Все модули (Без HTTP шума)' },
+  { id: 'all_with_http', label: '📡 Все события (включая HTTP)' },
   { id: 'IMAP', label: '✉️ IMAP Почта' },
   { id: 'FortiGate', label: '🛡️ FortiGate SOAR' },
   { id: 'LDAP', label: '🔐 Active Directory (LDAP)' },
@@ -18,7 +20,7 @@ const CATEGORIES = [
   { id: 'SMTP', label: '📤 SMTP Уведомления' },
   { id: 'Security', label: '🚨 Безопасность' },
   { id: 'Backup', label: '💾 Бэкапы' },
-  { id: 'HTTP', label: '🌐 HTTP Запросы' },
+  { id: 'HTTP', label: '🌐 Только HTTP Запросы' },
   { id: 'System', label: '⚙️ Система' }
 ];
 
@@ -35,14 +37,18 @@ export const SystemLogsTab: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
+      const apiCat = category === 'all' || category === 'all_with_http' ? 'all' : category;
       const res = await apiService.fetchSystemLogs({
-        category,
+        category: apiCat,
         level,
         search: search.trim() || undefined,
         limit: 300
       });
       if (res && Array.isArray(res.logs)) {
-        setLogs(res.logs);
+        const filtered = category === 'all'
+          ? res.logs.filter(l => l.category !== 'HTTP' && !l.message.includes('/api/settings/logs'))
+          : res.logs.filter(l => !l.message.includes('/api/settings/logs'));
+        setLogs(filtered);
       }
     } catch (err: any) {
       setError(err.message || 'Ошибка загрузки логов');
@@ -90,36 +96,64 @@ export const SystemLogsTab: React.FC = () => {
   const getLevelStyle = (lvl: string) => {
     if (lvl === 'error') return { color: '#fca5a5', background: 'rgba(239, 68, 68, 0.14)', borderLeft: '3px solid #ef4444' };
     if (lvl === 'warn') return { color: '#fde68a', background: 'rgba(245, 158, 11, 0.12)', borderLeft: '3px solid #f59e0b' };
-    return { color: '#e2e8f0', background: 'rgba(15, 23, 42, 0.6)', borderLeft: '3px solid #334155' };
+    return { color: '#e2e8f0', background: 'rgba(15, 23, 42, 0.7)', borderLeft: '3px solid #334155' };
   };
 
   return (
     <div className="admin-section animate-fade-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
-        <div>
-          <h2 style={{ margin: 0 }}>📜 Журнал системных событий (Live Logs)</h2>
-          <p className="admin-subtitle" style={{ marginTop: '4px' }}>
-            Мониторинг почтового парсера IMAP, блокировок FortiGate SOAR, синхронизации LDAP и вебхуков в реальном времени
-          </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid var(--border-color)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'hsl(var(--primary) / 0.15)', border: '1px solid hsl(var(--primary) / 0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'hsl(var(--primary))' }}>
+            <Terminal size={22} />
+          </div>
+          <div>
+            <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'hsl(var(--text-primary))' }}>📜 Журнал системных событий (Live Logs)</h2>
+            <p className="admin-subtitle" style={{ marginTop: '4px' }}>
+              Мониторинг почтового парсера IMAP, блокировок FortiGate SOAR, синхронизации LDAP и вебхуков в реальном времени
+            </p>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
+
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              color: 'hsl(var(--text-primary))',
+              padding: '8px 12px',
+              borderRadius: '10px',
+              background: 'hsl(var(--bg-tertiary))',
+              border: '1px solid var(--border-color)'
+            }}
+          >
             <input
               type="checkbox"
               checked={autoRefresh}
               onChange={e => setAutoRefresh(e.target.checked)}
+              style={{ width: '16px', height: '16px', accentColor: 'hsl(var(--primary))' }}
             />
-            Автообновление (4 сек)
+            <span>Автообновление (4 сек)</span>
           </label>
-          <button className="admin-submit-btn" style={{ padding: '8px 14px' }} onClick={loadLogs} disabled={loading}>
-            🔄 Обновить
+          <button
+            className="btn-secondary"
+            style={{ padding: '8px 14px', fontSize: '0.85rem' }}
+            onClick={loadLogs}
+            disabled={loading}
+          >
+            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+            <span>Обновить</span>
           </button>
           <button
-            className="admin-action-btn delete"
-            style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.4)' }}
+            className="btn-secondary"
+            style={{ padding: '8px 14px', fontSize: '0.85rem', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.35)' }}
             onClick={handleClear}
           >
-            🗑️ Очистить
+            <Trash2 size={15} />
+            <span>Очистить</span>
           </button>
         </div>
       </div>
@@ -127,8 +161,8 @@ export const SystemLogsTab: React.FC = () => {
       {/* Filters */}
       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
         <select
-          className="admin-input"
-          style={{ maxWidth: '240px' }}
+          className="input-field"
+          style={{ minWidth: '250px' }}
           value={category}
           onChange={e => setCategory(e.target.value)}
         >
@@ -138,8 +172,8 @@ export const SystemLogsTab: React.FC = () => {
         </select>
 
         <select
-          className="admin-input"
-          style={{ maxWidth: '180px' }}
+          className="input-field"
+          style={{ minWidth: '170px' }}
           value={level}
           onChange={e => setLevel(e.target.value)}
         >
@@ -151,8 +185,8 @@ export const SystemLogsTab: React.FC = () => {
 
         <input
           type="text"
-          className="admin-input"
-          style={{ flex: 1, minWidth: '220px' }}
+          className="input-field"
+          style={{ flex: 1, minWidth: '240px' }}
           placeholder="🔍 Поиск по IP, тексту ошибки, названию группы или почте..."
           value={search}
           onChange={e => setSearch(e.target.value)}
@@ -168,21 +202,22 @@ export const SystemLogsTab: React.FC = () => {
       {/* Terminal Output */}
       <div
         style={{
-          background: '#0b0f19',
+          background: '#090d16',
           border: '1px solid #1e293b',
-          borderRadius: '10px',
-          padding: '12px',
+          borderRadius: '12px',
+          padding: '14px',
           maxHeight: '560px',
           overflowY: 'auto',
           fontFamily: '"JetBrains Mono", "Fira Code", Consolas, monospace',
           fontSize: '0.82rem',
           display: 'flex',
           flexDirection: 'column',
-          gap: '6px'
+          gap: '6px',
+          boxShadow: 'inset 0 2px 12px rgba(0,0,0,0.5)'
         }}
       >
         {logs.length === 0 ? (
-          <div style={{ color: '#64748b', textAlign: 'center', padding: '32px' }}>
+          <div style={{ color: '#64748b', textAlign: 'center', padding: '40px' }}>
             Записей по выбранным фильтрам пока нет.
           </div>
         ) : (
@@ -198,11 +233,11 @@ export const SystemLogsTab: React.FC = () => {
                 key={entry.id}
                 style={{
                   ...style,
-                  padding: '8px 10px',
+                  padding: '8px 12px',
                   borderRadius: '6px',
                   display: 'flex',
                   alignItems: 'flex-start',
-                  gap: '10px',
+                  gap: '12px',
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word',
                   lineHeight: 1.45
@@ -213,7 +248,7 @@ export const SystemLogsTab: React.FC = () => {
                   style={{
                     color: getCategoryColor(entry.category),
                     fontWeight: 700,
-                    minWidth: '110px',
+                    minWidth: '115px',
                     flexShrink: 0
                   }}
                 >
