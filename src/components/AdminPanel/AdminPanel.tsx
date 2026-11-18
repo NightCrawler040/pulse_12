@@ -366,7 +366,6 @@ export const AdminPanel: React.FC = () => {
               <button className={`admin-tab-btn ${activeTab === 'logs' ? 'active' : ''}`} onClick={() => setActiveTab('logs')}>
                 📜 Логи (Live)
               </button>
-              </button>
             </div>
           </div>
 
