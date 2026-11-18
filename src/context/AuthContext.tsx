@@ -62,15 +62,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [sessionExpired, setSessionExpired] = useState(false);
 
-  // 🕒 15-Minute Session Inactivity Timeout
+  // 🕒 2-Hour Session Inactivity Timeout
   useEffect(() => {
     if (!currentUser) return;
 
-    const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 минут
+    const INACTIVITY_TIMEOUT_MS = 2 * 60 * 60 * 1000; // 2 часа (120 минут)
     let timeoutId: ReturnType<typeof setTimeout>;
 
     const handleTimeout = () => {
-      console.warn('🕒 Сеанс завершен из-за неактивности в течение 15 минут');
+      console.warn('🕒 Сеанс завершен из-за неактивности в течение 2 часов');
       localStorage.removeItem('korpjira-auth-token');
       setCurrentUserId(null);
       setSessionExpired(true);
