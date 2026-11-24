@@ -108,6 +108,11 @@ app.use(express.json({ limit: '2mb' })); // Ограничение размер�
 
 // Global HTTP Request Logger (для отслеживания любых обращений от внешних систем и DerScanner)
 app.use((req, res, next) => {
+  const rawUrl = String(req.originalUrl || req.url || '');
+  if (rawUrl.includes('..') || /%2e/i.test(rawUrl) || /WEB-INF|META-INF|stagil|snjCustomDesignConfig/i.test(rawUrl)) {
+    console.warn(`🚨 [Security Block] Заблокирован Path Traversal / STAGIL запрос: ${req.method} ${rawUrl}`);
+    return res.status(404).json({ error: 'Not Found' });
+  }
   if (req.originalUrl && (req.originalUrl.includes('/rest/') || req.originalUrl.includes('/api/')) && !req.originalUrl.startsWith('/api/settings/logs')) {
     console.log(`📥 [INCOMING HTTP] ${req.method} ${req.originalUrl}`);
   }

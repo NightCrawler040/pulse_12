@@ -92,10 +92,10 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
   const handleJiraServerInfo = async (req, res) => {
     res.status(200).json({
       baseUrl: req.protocol + '://' + req.get('host'),
-      version: "9.4.0",
-      versionNumbers: [9, 4, 0],
+      version: "11.3.12",
+      versionNumbers: [11, 3, 12],
       deploymentType: "Server",
-      buildNumber: 940000,
+      buildNumber: 1103012,
       buildDate: "2026-07-21T00:00:00.000+0500",
       serverTitle: "Pulse Corporate Security & Jira Gateway",
       scmInfo: "release"
@@ -500,13 +500,18 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
   
   // GET эндпоинты для проверки состояния вебхуков
   app.get(['/api/v1/webhooks/derscanner', '/api/webhooks/derscanner', '/api/v1/integrations/findings'], async (req, res) => {
-    res.status(200).json({ status: 'ok', service: 'Pulse DerScanner Webhook & Jira REST Gateway', version: '9.4.0' });
+    res.status(200).json({ status: 'ok', service: 'Pulse DerScanner Webhook & Jira REST Gateway', version: '11.3.12' });
   });
   
   app.post(['/api/v1/webhooks/derscanner', '/api/webhooks/derscanner', '/api/v1/integrations/findings'], handleExternalWebhook);
   
   // Регистрация Jira REST API путей
   app.use(['/rest', '/api/v1/webhooks/derscanner/rest'], (req, res, next) => {
+    const rawUrl = String(req.originalUrl || req.url || '');
+    if (rawUrl.includes('..') || /%2e/i.test(rawUrl) || /WEB-INF|META-INF|stagil|snjCustomDesignConfig/i.test(rawUrl)) {
+      console.warn(`🚨 [Security Block] Заблокирована попытка Path Traversal / STAGIL probe: ${req.method} ${rawUrl}`);
+      return res.status(404).json({ error: 'Not Found' });
+    }
     console.log(`📡 [DerScanner -> Jira API] ${req.method} ${req.originalUrl || req.url}`);
     if (!req.path.includes('/serverInfo') && !req.path.includes('/universal_avatar')) return requireJiraAuth(req, res, next);
     next();
@@ -529,7 +534,7 @@ export function mountJiraGateway(app, dbData, broadcastUpdate, saveCollection) {
   const handleWildcard = async (req, res) => {
     const url = req.originalUrl || req.url || req.path || '';
     console.log(`⚠️ [Jira Gateway Wildcard] ${req.method} ${url}`);
-    res.status(200).json({ success: true, warning: 'Wildcard mocked response' });
+    res.status(404).json({ error: 'Endpoint not found' });
   };
 
   app.use('/rest', handleWildcard);
